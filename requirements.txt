@@ -1,0 +1,6 @@
+matplotlib
+numpy
+pandas
+memory_profiler
+PyQt5
+cx_Freeze
