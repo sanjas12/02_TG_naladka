@@ -1,4 +1,10 @@
-﻿import numpy as np
+﻿# -*- coding: utf-8 -*-
+"""
+Created on Tue Aug 18 11:25:26 2020
+
+@author: sanja_s
+"""
+import numpy as np
 import matplotlib.pyplot as plt
 import time
 from matplotlib.widgets import CheckButtons
@@ -23,7 +29,7 @@ def stepper(event):
 
     opened_csv_files = fd.askopenfiles(title='Открыть CSV файл с ШАГАМИ', filetypes=[('CSV files', '*.csv'), ], initialdir='')
 
-    # print(opened_csv_files)
+    print(opened_csv_files)
 
     # определение номера канала из названия файла
     name_ch = str(opened_csv_files)
@@ -39,6 +45,7 @@ def stepper(event):
     time_data = []
 
     for file_ in opened_csv_files:
+        print(file_)
         df = pd.read_csv(file_, header=0, delimiter=';', usecols=fields)
 
     # поиск количества строк
@@ -61,12 +68,15 @@ def stepper(event):
     # отрисовка окна для графиков
     point_f = 10
 
-    #print('точек отрисовки:', int(len(time_data)/point_f))
-    print(f'точек отрисовки: {int(len(time_data)/point_f)}')
+    print('точек отрисовки:', int(len(time_data)/point_f))
+#    print(f'точек отрисовки: {int(len(time_data)/point_f)}')
 
     fig = plt.figure(figsize=(6, 6))
     fig.canvas.set_window_title('Скачки/Шаги')
-    ax = fig.add_subplot(211, facecolor='#FFFFCC')
+    if matplotlib.__version__ == '1.4.3':
+        ax = fig.add_subplot(211,)
+    else:
+        ax = fig.add_subplot(211, facecolor='#FFFFCC')
     line, = ax.plot(time_data[1::point_f], df[GSM_A_column][1::point_f],
                     linewidth=1, color='b', label="ГСМ-А")  # ГСМ-А
     line1, = ax.plot(time_data[1::point_f], df[GSM_B_column][1::point_f],
@@ -83,7 +93,11 @@ def stepper(event):
     ax.legend((line, line1, line2), ('ГСМ-А', 'ГСМ-Б', 'Задание'))
 
     # отрисовка 2 графика
-    ax2 = fig.add_subplot(212, facecolor='#FFFFCC')
+    if matplotlib.__version__ == '1.4.3':
+        ax2 = fig.add_subplot(212,)
+    else:
+        ax2 = fig.add_subplot(212, facecolor='#FFFFCC')
+
     line02, = ax2.plot(time_data[1::point_f], df[GSM_A_column][1::point_f], lw=1, color='b', label="ГСМ-А")  # ГСМ-А
     line12, = ax2.plot(time_data[1::point_f], df[GSM_B_column][1::point_f], lw=1, color='r', label="ГСМ-Б")  # ГСМ-Б
     line22, = ax2.plot(time_data[1::point_f], df[Zadanie_column][1::point_f], lw=1, color='black', label="Задание")  # задание
@@ -94,7 +108,8 @@ def stepper(event):
     # функция выделения_старая
     def onselect(xmin, xmax):
         print('*'*20)
-        print(f'от курсора: {xmin}, {xmax}')
+#        print(f'от курсора: {xmin}, {xmax}')
+        print('от курсора:', xmin, xmax)
         indmin, indmax = np.searchsorted(time_data,
                                          (float(xmin), float(xmax)))  # получение минимального и максимального
         print('min_max', indmin, indmax)
@@ -188,9 +203,11 @@ def velosity(event):
                 break
         if n == len(count):
             n = 0
-            print(f'Колонка {name_column} не найдена. !!!!!!!!!!')
+#            print(f'Колонка {name_column} не найдена. !!!!!!!!!!')
+            print('Колонка ',name_column,' не найдена. !!!!!!!!!!')
         else:
-            print(f'{name_column} - колонка номер : {n}')
+#            print(f'{name_column} - колонка номер : {n}')
+            print(name_column, ' - колонка номер :', n)
         infile.close()
         return n
 
