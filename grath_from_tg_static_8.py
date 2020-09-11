@@ -6,6 +6,7 @@ Created on Tue Aug 18 11:25:26 2020
 """
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
 import time
 from matplotlib.widgets import CheckButtons
 from matplotlib.widgets import SpanSelector
