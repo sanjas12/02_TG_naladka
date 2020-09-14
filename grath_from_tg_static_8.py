@@ -36,9 +36,9 @@ def stepper(event):
     name_ch = str(opened_csv_files)
     name_temp = name_ch = name_ch.split('/')
     if int(name_ch[len(name_ch) - 1][3]) == 1:
-        name_ch = '1 канал'
+        name_ch = '1 channel'
     else:
-        name_ch = '2 канал'
+        name_ch = '2 channel'
 
     # определение номера ТГ из названия файла
     name_TG = int(name_temp[len(name_temp) - 1][2])
@@ -79,19 +79,19 @@ def stepper(event):
     else:
         ax = fig.add_subplot(211, facecolor='#FFFFCC')
     line, = ax.plot(time_data[1::point_f], df[GSM_A_column][1::point_f],
-                    linewidth=1, color='b', label="ГСМ-А")  # ГСМ-А
+                    linewidth=1, color='b', label="GSM-A")  # ГСМ-А
     line1, = ax.plot(time_data[1::point_f], df[GSM_B_column][1::point_f],
-                     linewidth=1, color='r', label="ГСМ-Б")  # ГСМ-Б
+                     linewidth=1, color='r', label="GSM-B")  # ГСМ-Б
     line2, = ax.plot(time_data[1::point_f], df[Zadanie_column][1::point_f],
-                     lw=1, color='black', label="Задание")  # Задание
+                     lw=1, color='black', label="Zadanie")  # Задание
 
-    ax.set_xlabel('Время, c')
-    ax.set_ylabel('ГСМ, мм')
+    ax.set_xlabel('Time, c')
+    ax.set_ylabel('GSM, mm')
     ax.grid(linestyle='--', linewidth=0.5, alpha=.85)
-    plt.title('ТГ-' + str(name_TG) +', ' + str(name_ch), fontsize='large')
+    plt.title('TG-' + str(name_TG) +', ' + str(name_ch), fontsize='large')
 
     # отрисовка легенды
-    ax.legend((line, line1, line2), ('ГСМ-А', 'ГСМ-Б', 'Задание'))
+    ax.legend((line, line1, line2), ('GSM-A', 'GSM-B', 'Zadanie'))
 
     # отрисовка 2 графика
     if matplotlib.__version__ == '1.4.3':
@@ -99,11 +99,11 @@ def stepper(event):
     else:
         ax2 = fig.add_subplot(212, facecolor='#FFFFCC')
 
-    line02, = ax2.plot(time_data[1::point_f], df[GSM_A_column][1::point_f], lw=1, color='b', label="ГСМ-А")  # ГСМ-А
-    line12, = ax2.plot(time_data[1::point_f], df[GSM_B_column][1::point_f], lw=1, color='r', label="ГСМ-Б")  # ГСМ-Б
-    line22, = ax2.plot(time_data[1::point_f], df[Zadanie_column][1::point_f], lw=1, color='black', label="Задание")  # задание
-    ax2.set_xlabel('Время, c')
-    ax2.set_ylabel('ГСМ, мм')
+    line02, = ax2.plot(time_data[1::point_f], df[GSM_A_column][1::point_f], lw=1, color='b', label="GSM-A")  # ГСМ-А
+    line12, = ax2.plot(time_data[1::point_f], df[GSM_B_column][1::point_f], lw=1, color='r', label="GSM-B")  # ГСМ-Б
+    line22, = ax2.plot(time_data[1::point_f], df[Zadanie_column][1::point_f], lw=1, color='black', label="Zadanie")  # задание
+    ax2.set_xlabel('Time, c')
+    ax2.set_ylabel('GSM, mm')
     ax2.grid(linestyle='--', linewidth=0.5, alpha=.85)
 
     # функция выделения_старая
@@ -138,32 +138,32 @@ def stepper(event):
 
     # функция - отображения графиков 1 чек-бокс
     def func(label):
-        if label == 'ГСМ-А':
+        if label == 'GSM-A':
             line.set_visible(not line.get_visible())
-        elif label == 'ГСМ-Б':
+        elif label == 'GSM-B':
             line1.set_visible(not line1.get_visible())
-        elif label == 'Задание':
+        elif label == 'Zadanie':
             line2.set_visible(not line2.get_visible())
         plt.draw()
 
     # работа со списком чек-боксов отображающих графики 1
     rax = plt.axes([0.0, 0.5, 0.1, 0.08])  # положение чекбокса - x,y, х1,y1 - размер окна
-    check = CheckButtons(rax, ('ГСМ-А', 'ГСМ-Б', 'Задание'), (True, True, True))
+    check = CheckButtons(rax, ('GSM-A', 'GSM-B', 'Zadanie'), (True, True, True))
     check.on_clicked(func)
 
     # функция - отображения графиков 2 чек-бокс
     def func_2(label):
-        if label == 'ГСМ-А':
+        if label == 'GSM-A':
             line02.set_visible(not line02.get_visible())
-        elif label == 'ГСМ-Б':
+        elif label == 'GSM-B':
             line12.set_visible(not line12.get_visible())
-        elif label == 'Задание':
+        elif label == 'Zadanie':
             line22.set_visible(not line22.get_visible())
         plt.draw()
 
     # работа со списком чек-боксов отображающих графики 2
     rax_2 = plt.axes([0.0, 0.01, 0.1, 0.08])  # положение чекбокса - x,y, х1,y1 - размер окна
-    check_2 = CheckButtons(rax_2, ('ГСМ-А', 'ГСМ-Б', 'Задание'), (True, True, True))
+    check_2 = CheckButtons(rax_2, ('GSM-A', 'GSM-B', 'Zadanie'), (True, True, True))
     check_2.on_clicked(func_2)
 
     plt.show()
@@ -282,8 +282,8 @@ def velosity(event):
 
     # отрисовка 1 графика
     ax = fig.add_subplot(211, facecolor='#FFFFCC')
-    line, = ax.plot(data_from_file[2], data_from_file[0], lw=2,  color='b', label="ГСМ-А")       # ГСМ-А
-    line1, = ax.plot(data_from_file[2], data_from_file[1], lw=2, color='r', label="ГСМ-Б")       # ГСМ-Б
+    line, = ax.plot(data_from_file[2], data_from_file[0], lw=2,  color='b', label="GSM-A")       # ГСМ-А
+    line1, = ax.plot(data_from_file[2], data_from_file[1], lw=2, color='r', label="GSM-B")       # GSM-B
     ax.set_xlabel('Время, c')
     ax.set_ylabel('ГСМ, мм')
     ax.grid(linestyle='--', linewidth=0.5, alpha=.85)
@@ -294,12 +294,12 @@ def velosity(event):
     # ax.xaxis.set_major_locator(ticker.MultipleLocator(30))
 
     # отрисовка легенды
-    fig.legend((line, line1), ('ГСМ-А', 'ГСМ-Б', ))
+    fig.legend((line, line1), ('GSM-A', 'GSM-B', ))
 
     # отрисовка 2 графика
     ax2 = fig.add_subplot(212, facecolor='#FFFFCC')
-    line02, = ax2.plot(data_from_file[2], data_from_file[0], lw=2,  color='b', label="ГСМ-А")       # ГСМ-А
-    line12, = ax2.plot(data_from_file[2], data_from_file[1], lw=2, color='r', label="ГСМ-Б")       # ГСМ-Б
+    line02, = ax2.plot(data_from_file[2], data_from_file[0], lw=2,  color='b', label="GSM-A")       # ГСМ-А
+    line12, = ax2.plot(data_from_file[2], data_from_file[1], lw=2, color='r', label="GSM-B")       # ГСМ-Б
     ax2.set_xlabel('Время, c')
     ax2.set_ylabel('ГСМ, мм')
     ax2.grid(linestyle='--', linewidth=0.5, alpha=.85)
@@ -328,32 +328,32 @@ def velosity(event):
 
     # функция - отображения графиков 1 чек-бокс
     def func(label):
-        if label == 'ГСМ-А':
+        if label == 'GSM-A':
             line.set_visible(not line.get_visible())
-        elif label == 'ГСМ-Б':
+        elif label == 'GSM-B':
             line1.set_visible(not line1.get_visible())
-        # elif label == 'Задание':
+        # elif label == 'Zadanie':
         #     line2.set_visible(not line2.get_visible())
         plt.draw()
 
     # работа со списком чек-боксов отображающих графики 1
     rax = plt.axes([0.0, 0.5, 0.1, 0.08])       # положение чекбокса - x,y, х1,y1 - размер окна
-    check = CheckButtons(rax, ('ГСМ-А', 'ГСМ-Б'), (True, True))
+    check = CheckButtons(rax, ('GSM-A', 'GSM-B'), (True, True))
     check.on_clicked(func)
 
     # функция - отображения графиков 2 чек-бокс
     def func_2(label):
-        if label == 'ГСМ-А':
+        if label == 'GSM-A':
             line02.set_visible(not line02.get_visible())
-        elif label == 'ГСМ-Б':
+        elif label == 'GSM-B':
             line12.set_visible(not line12.get_visible())
-        # elif label == 'Задание':
+        # elif label == 'Zadanie':
         #     line22.set_visible(not line22.get_visible())
         plt.draw()
 
     # работа со списком чек-боксов отображающих графики 2
     rax_2 = plt.axes([0.0, 0.01, 0.1, 0.08])    # положение чекбокса - x,y, х1,y1 - размер окна
-    check_2 = CheckButtons(rax_2, ('ГСМ-А', 'ГСМ-Б'), (True, True))
+    check_2 = CheckButtons(rax_2, ('GSM-A', 'GSM-B'), (True, True))
     check_2.on_clicked(func_2)
 
 
@@ -654,9 +654,9 @@ def one_channel(event):
             line13.set_visible(not line13.get_visible())
         elif label == "ГСМ":
             line2.set_visible(not line2.get_visible())
-        elif label == "ГСМ-А":
+        elif label == "GSM-A":
             line21.set_visible(not line21.get_visible())
-        elif label == "ГСМ-Б":
+        elif label == "GSM-B":
             line22.set_visible(not line22.get_visible())
         elif label == Save_TG:
             line14.set_visible(not line14.get_visible())
@@ -664,8 +664,8 @@ def one_channel(event):
 
     # Чек-боксы графиков
     rax = plt.axes([0.0, 0.1, 0.12, 0.13])       # положение чекбокса - x,y, х1,y1 - размер окна
-    check = CheckButtons(rax, ('ОЗ_А', 'ОЗ_Б', "Ведущий канал", "ОЗ_А задание",  "ОЗ_Б задание", 'ГСМ', 'ГСМ-А',
-                               'ГСМ-Б', Save_TG),
+    check = CheckButtons(rax, ('ОЗ_А', 'ОЗ_Б', "Ведущий канал", "ОЗ_А задание",  "ОЗ_Б задание", 'ГСМ', 'GSM-A',
+                               'GSM-B', Save_TG),
                          (True, True, True, True, True, True, True, True, True))
     check.on_clicked(func)
 
@@ -783,9 +783,9 @@ def shift_oz(event):
         point = point_f//2
         if name == 'Движение ГСМ-А. n=' or name == 'Движение ГСМ-Б. n=':
             line, = ax.plot(GSM_up[::point], OZ_up[::point], lw=2, color='b', label="ГСМ-А.Оригин")  # ГСМ-А
-            line1, = ax.plot(GSM_up[::point_f], OZ_up_filtr[::point_f], lw=2, color='r', label="ГСМ-Б")  # ГСМ-Б
-            line2, = ax.plot(GSM_down[::point], OZ_down[::point], lw=2, color='g', label="ГСМ-Б")  # ГСМ-Б
-            line3, = ax.plot(GSM_down[::point_f], OZ_down_filtr[::point_f], lw=2, color='r', label="ГСМ-Б")  # ГСМ-Б
+            line1, = ax.plot(GSM_up[::point_f], OZ_up_filtr[::point_f], lw=2, color='r', label="GSM-B")  # ГСМ-Б
+            line2, = ax.plot(GSM_down[::point], OZ_down[::point], lw=2, color='g', label="GSM-B")  # ГСМ-Б
+            line3, = ax.plot(GSM_down[::point_f], OZ_down_filtr[::point_f], lw=2, color='r', label="GSM-B")  # ГСМ-Б
         else:
             line, = ax.plot(GSM_up, OZ_up_filtr, 'ro', markersize=2, color='b', label="Вверх")  # ГСМ-А
             line1, = ax.plot(GSM_up, OZ_down_filtr, 'ro', markersize=2, color='g', label="Вниз")  # ГСМ-Б
