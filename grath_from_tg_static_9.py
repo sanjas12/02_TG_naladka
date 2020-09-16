@@ -8,6 +8,7 @@ Created on Tue Aug 18 11:25:26 2020
 import sys
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
+import pandas as pd
 
 
 class Filedialogdemo(QWidget):
@@ -23,9 +24,23 @@ class Filedialogdemo(QWidget):
         self.setWindowTitle("File Dialog")
 
     def open_gz(self):
+        # self.columns.clear()
+        # self.axe_y.clear()
+        # self.axe_x.clear()
+
         # self.files = QFileDialog.getOpenFileNames(self, 'Open GZ files', '*.gz')
-        fname = QFileDialog.getOpenFileName(self, 'Open file', "Open GZ files (*.gz)")
-        # print(len(self.files[0]))
+        fname = QFileDialog.getOpenFileNames(self, 'Open file', '*.gz')
+        print(fname[0])
+
+        # self.name_column = pd.read_csv(fname[0], encoding="cp1251", delim_whitespace=True, nrows=0)
+        self.name_column = pd.read_csv(fname[0], encoding="cp1251", sep='\t', header=None)
+
+        print(self.name_column)
+
+        # заполняем колонку ось columns (Выбирай параметр)
+        # for i, _ in enumerate(self.name_column):
+        #     print(i, _)
+            # self.columns.insertItem(i, _)
 
         # dlg = QFileDialog()
         # dlg.setFileMode(QFileDialog.AnyFile)
