@@ -28,18 +28,22 @@ class Filedialogdemo(QWidget):
         # self.axe_y.clear()
         # self.axe_x.clear()
 
+        # Считывание названия всех колонок
         # self.files = QFileDialog.getOpenFileNames(self, 'Open GZ files', '*.gz')
         fname = QFileDialog.getOpenFileNames(self, 'Open file', '*.gz')
         print(fname[0])
 
         # self.name_column = pd.read_csv(fname[0], encoding="cp1251", delim_whitespace=True, nrows=0)
-        self.name_column = pd.read_csv(fname[0], encoding="cp1251", sep='\t', header=None)
+        # self.columns = pd.read_csv(fname[0], encoding="utf-16", sep='\t', nrows=1)
+        self.columns = pd.read_csv(fname[0], encoding="mac_cyrillic", sep='\t', nrows=1)
+        # self.columns = pd.read_csv(fname[0], encoding="cp1251", sep='\t', nrows=1)
 
-        print(self.name_column)
+        # print(len(self.columns))
+        # print(self.columns)
 
         # заполняем колонку ось columns (Выбирай параметр)
-        # for i, _ in enumerate(self.name_column):
-        #     print(i, _)
+        for i, _ in enumerate(self.columns):
+            print(i, _)
             # self.columns.insertItem(i, _)
 
         # dlg = QFileDialog()
