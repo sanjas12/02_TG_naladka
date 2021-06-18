@@ -4,7 +4,7 @@
 	
 
     read_csv_3_any - текущая версия программы (GUI-QT) выбора любого графика для загрузки данных из файлов csv
-    
+
     grath - модуль построения графиков на matplotlib
 
 2.  Создание exe (второй вариант)
@@ -14,6 +14,10 @@
 
 
 3. конвертирование ui в py (через терминал) ------ python -m PyQt5.uic.pyuic -x qt_des.ui -o qt_des.py
+
+Help
+Run->Edit Configurations -> Emulate terminal in output console* (для расшифровки ошибок  pyqt5)
+
 
 
 TODO
