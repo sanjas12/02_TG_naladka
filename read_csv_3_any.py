@@ -246,8 +246,7 @@ class MainWindow(QWidget):
         print('-' * 30)
 
         # TODO
-        # если есть отличия в данных от чисел
-        # не работает с gz файлами
+
 
     def plot_grath(self):
 
