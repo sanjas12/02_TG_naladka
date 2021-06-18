@@ -90,7 +90,7 @@ class WindowGrath(QDialog):
                     lw=1, label=self.data_y[_])
             ax.legend()
 
-        ax.set_xlabel('c')
+        ax.set_xlabel('time, c')
 
         # refresh canvas
         self.canvas.draw()
@@ -107,7 +107,10 @@ def main():
     app = QApplication(sys.argv)
     ex = WindowGrath(df, time, gg)
     ex.show()
-    sys.exit(app.exec_())
+    try:
+        sys.exit(app.exec_())
+    except:
+        print('close: ', __file__)
 
 
 if __name__ == '__main__':
