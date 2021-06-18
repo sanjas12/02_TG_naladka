@@ -3,7 +3,8 @@ import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGroupBox, \
     QVBoxLayout, QGridLayout, QLabel, QFileDialog, QListWidget, QComboBox, QMainWindow
 from grath import WindowGrath
-
+import chardet
+import gzip
 
 class MainWindow(QWidget):
 
@@ -100,16 +101,49 @@ class MainWindow(QWidget):
         self.axe_y.clear()
         self.axe_x.clear()
 
-        self.files, _filter = QFileDialog.getOpenFileNames(self, ' ', '*.gz')
+        self.files, _filter = QFileDialog.getOpenFileNames(self, 'Выбор данных: ', '',
+                                                           "GZ Files (*.gz) ;; CSV Files (*.csv)")
+        try:
+            # Определение кодировки
+            if self.filename_extension():
+                with open(self.files[0], 'rb') as f:
+                    raw_data = f.read(20000)
+                    self.encoding = chardet.detect(raw_data)['encoding']
+                # и разделителя csv
+                with open(self.files[0], 'r', encoding=self.encoding) as f:
+                    print(f.readline(100))
+                    if f.readline(100).count(';'):
+                        self.delimiter = ';'
+                    else:
+                        self.delimiter = '\t'
 
-        print(len(self.files))
+                # Считывание названия всех колонок
+                self.name_column = pd.read_csv(self.files[0], encoding=self.encoding, delimiter=self.delimiter,
+                                               nrows=0)
 
-        # Считывание названия всех колонок
-        self.name_column = pd.read_csv(self.files[0], encoding="cp1251", delimiter=';', nrows=0)
+                # заполняем колонку ось columns (Выбирай параметр)
+                for i, _ in enumerate(self.name_column):
+                    self.columns.insertItem(i, _)
+            else:
+                # Определение кодировки
+                with gzip.open(self.files[0], 'rb') as f:
+                    raw_data = f.read(20000)
+                    self.encoding = chardet.detect(raw_data)['encoding']
+                # и разделителя gz
+                with gzip.open(self.files[0], 'r') as f:
+                    if f.readline(100).decode(self.encoding).count(';'):
+                        self.delimiter = ';'
+                    else:
+                        self.delimiter = '\t'
 
-        # заполняем колонку ось columns (Выбирай параметр)
-        for i, _ in enumerate(self.name_column):
-            self.columns.insertItem(i, _)
+                # Считывание названия всех колонок
+                self.name_column = pd.read_csv(self.files[0], encoding=self.encoding, delimiter=self.delimiter, nrows=0)
+
+                # заполняем колонку ось columns (Выбирай параметр)
+                for i, _ in enumerate(self.name_column):
+                    self.columns.insertItem(i, _)
+        except IndexError as e:
+            print('не выбраны данные')
 
         # по умолчанию на ось columns (Выбирай параметр) добавляем 'time'
         # и тут же ее перемещяем на ось Х
@@ -118,6 +152,19 @@ class MainWindow(QWidget):
         self.axe_x.addItem(self.columns.takeItem(self.columns.currentRow()))
         self.columns.setCurrentRow(0)
         self.axe_x.setCurrentRow(0)
+
+    # определение расширения
+    def filename_extension(self):
+        """
+        true -> file is 'csv;
+        false -> file is 'gz;
+        :rtype: object
+        """
+        extension = self.files[0][-3:]
+        if extension == 'csv':
+            return True
+        else:
+            return False
 
     def add_to_x(self):
         self.axe_x.addItem(self.columns.takeItem(self.columns.currentRow()))
@@ -156,7 +203,7 @@ class MainWindow(QWidget):
         if self.axe_x.count() > 0 and self.axe_y.count() > 0:
             list_ = []
             for file in self.files:
-                df = pd.read_csv(file, header=0, encoding="cp1251", delimiter=';', usecols=self.field_y)
+                df = pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter, usecols=self.field_y)
                 list_.append(df)
 
             # only single file
@@ -199,13 +246,13 @@ class MainWindow(QWidget):
         print('-' * 30)
 
         # TODO
-        # при загрузке  преообразовывать тип данных объект во чтото правильное
         # если есть отличия в данных от чисел
+        # не работает с gz файлами
 
     def plot_grath(self):
 
         grath = WindowGrath(self.df, self.field_x, self.field_y, step=self.combobox_dot.currentText())
-        grath.exec_()()
+        grath.exec_()
 
 
 def main():
