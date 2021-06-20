@@ -6,6 +6,7 @@ from grath import WindowGrath
 import chardet
 import gzip
 
+
 class MainWindow(QWidget):
 
     def __init__(self):
@@ -216,7 +217,7 @@ class MainWindow(QWidget):
             self.time_c = 'time, c'
             time_data = []
             summa = 0
-            for z in range(len(self.df.index)):
+            for _ in range(len(self.df.index)):
                 time_data.append(float('%.2f' % summa))
                 summa = summa + 0.01
             self.df[self.time_c] = time_data
@@ -246,7 +247,6 @@ class MainWindow(QWidget):
         print('-' * 30)
 
         # TODO
-
 
     def plot_grath(self):
 
