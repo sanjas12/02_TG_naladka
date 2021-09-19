@@ -1,11 +1,18 @@
 ﻿1.  grath_from_tg_static_8.py - текущая версия программы (GUI-tkinter)
     grath_from_tg_static_9.py - аналог read_csv_3_any только под(GUI-tkinter), для Xp - последняя версия питона 3.4.2, PyQT5 ставиться на 3.5 и выше
     grath_from_tg_static_9(Qt4).py - аналог read_csv_3_any только под(Qt4) через anaconda, для Xp - последняя версия питона 3.4.2, PyQT5 ставиться на 3.5 и выше
+
 	
+    ******************************************************
 
     read_csv_3_any - текущая версия программы (GUI-QT) выбора любого графика для загрузки данных из файлов csv
 
     grath - модуль построения графиков на matplotlib
+
+    
+    *********************************
+
+
 
 2.  Создание exe (второй вариант)
     1. https://stackoverflow.com/questions/41570359/how-can-i-convert-a-py-to-exe-for-python

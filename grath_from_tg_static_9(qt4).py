@@ -7,6 +7,7 @@ Created on Wed Sep 30 11:13:06 2020
 
 from PyQt4 import QtCore, QtGui
 import pandas as pd
+import gzip
 
 
 class MyWindow(QtGui.QWidget):
@@ -29,6 +30,35 @@ class MyWindow(QtGui.QWidget):
 
         self.setWindowTitle("File Dialog")
         self.resize(300, 70)
+
+
+        # Определение кодировки 
+    def detect_encoding_delimiter(self, filename):
+        if self.filename_extension():
+            with open(filename, 'rb') as f:
+                raw_data = f.read(20000)
+                self.encoding = chardet.detect(raw_data)['encoding']
+            # и разделителя csv
+            with open(filename, 'r', encoding=self.encoding) as f:
+                print(f.readline(100))
+                if f.readline(100).count(';'):
+                    self.delimiter = ';'
+                else:
+                    self.delimiter = '\t'
+            # заполняем колонку ось columns (Выбирай параметр)
+        else:
+            # Определение кодировки
+            with gzip.open(self.files[0], 'rb') as f:
+                raw_data = f.read(20000)
+                self.encoding = chardet.detect(raw_data)['encoding']
+            # и разделителя gz
+            with gzip.open(self.files[0], 'r') as f:
+                if f.readline(100).decode(self.encoding).count(';'):
+                    self.delimiter = ';'
+                else:
+                    self.delimiter = '\t'
+    return self.encoding, self.delimiter
+
 
     def open_gz(self):
         self.columns.clear()

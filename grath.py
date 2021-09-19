@@ -6,6 +6,7 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 import matplotlib.pyplot as plt
 import random
 import pandas as pd
+from matplotlib.widgets import CheckButtons
 
 
 class WindowGrath(QDialog):
@@ -16,7 +17,7 @@ class WindowGrath(QDialog):
         data_x -> должен быть list \n
         data_y -> должен быть list
         """
-        super(WindowGrath, self).__init__()
+        super().__init__()
         self.setWindowTitle('Графики')
         # print(1)
         self.data = data
@@ -59,12 +60,24 @@ class WindowGrath(QDialog):
         windowLayout.addWidget(self.horizontalGroupBox_2, 0, 1)
         self.setLayout(windowLayout)
 
+        self.label_list = []
+        self.lines_list = []
+
         self.plot()
 
     def update(self):
         self.step = self.combobox_dot.currentText()
         print(self.step)
         self.canvas.draw()
+
+    # checkbox для выбора графиков
+    def set_visible(self, label):
+        print(label)
+        index = self.label_list.index(label)
+        print(index)
+        self.lines_list[index].set_visible(not self.lines_list[index].get_visible())
+
+        plt.draw()
 
     def plot(self):
 
@@ -80,7 +93,7 @@ class WindowGrath(QDialog):
         ax = self.figure.add_subplot(111, facecolor='#FFFFCC')
         ax.grid(linestyle='--', linewidth=0.5, alpha=.85)
 
-        self.number_point.setText(str(len(self.data.index)//self.step))
+        self.number_point.setText(str(len(self.data.index) // self.step))
 
         # plt.title('Количество точек данных:' + str(len(self.data.index)//self.step), fontsize='large')
 
@@ -88,7 +101,17 @@ class WindowGrath(QDialog):
         for _ in range(len(self.data_y)):
             ax.plot(self.data[self.data_x[0]][1::self.step], self.data[self.data_y[_]][1::self.step],
                     lw=1, label=self.data_y[_])
+
+            self.label_list.append(self.data_y[_])
+
+            plt.draw()
+
             ax.legend()
+
+        # Чек-боксы графиков
+        rax = plt.axes([0.0, 0.1, 0.12, 0.13])  # положение чекбокса - x,y, х1,y1 - размер окна
+        check = CheckButtons(rax, self.label_list, (True for i, s in enumerate(self.label_list)))
+        check.on_clicked(self.set_visible)
 
         ax.set_xlabel('time, c')
 
@@ -108,14 +131,13 @@ def main():
     ex = WindowGrath(df, time, gg)
     ex.show()
     try:
-        sys.exit(app.exec_())
+        sys.exit(app.exec())
     except:
         print('close: ', __file__)
 
 
 if __name__ == '__main__':
     main()
-
 
 # TODO
 # Овновление графика добавить
