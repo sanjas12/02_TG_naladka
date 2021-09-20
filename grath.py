@@ -80,7 +80,6 @@ class WindowGrath(QDialog):
         plt.draw()
 
     def plot(self):
-
         # instead of ax.hold(False)
         self.figure.clear()
 

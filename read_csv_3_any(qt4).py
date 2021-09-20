@@ -247,9 +247,7 @@ class MainWindow(QWidget):
 
         # TODO
 
-
     def plot_grath(self):
-
         grath = WindowGrath(self.df, self.field_x, self.field_y, step=self.combobox_dot.currentText())
         grath.resize(1820, 880)
         grath.exec_()
