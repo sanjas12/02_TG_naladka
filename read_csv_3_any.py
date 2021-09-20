@@ -10,16 +10,17 @@ import gzip
 class MainWindow(QWidget):
 
     def __init__(self):
-        super(MainWindow, self).__init__()
+        super().__init__()
         self.width = 640
         self.height = 400
         self.files = 0
         self.setup_UI()
 
     def setup_UI(self):
-        self.setWindowTitle('read_csv_3_any')
+        self.setWindowTitle(__file__)
         # self.setGeometry(10, 10, self.width, self.height)
 
+        # колонка Выбирай параметр:
         inner_layout_1 = QVBoxLayout()
         inner_layout_1.addWidget(QLabel('Выбирай параметр:'))
         self.columns = QListWidget()
@@ -30,6 +31,7 @@ class MainWindow(QWidget):
         self.horizontalGroupBox = QGroupBox()
         self.horizontalGroupBox.setLayout(inner_layout_1)
 
+        # колонка Ось Y
         vertical_lay_2 = QGridLayout()
         vertical_lay_2.addWidget(QLabel('Ось Y:'), 0, 0)
         self.axe_y = QListWidget()
@@ -43,6 +45,7 @@ class MainWindow(QWidget):
         self.horizontalGroupBox_2 = QGroupBox()
         self.horizontalGroupBox_2.setLayout(vertical_lay_2)
 
+        # колонка Ось X
         vertical_lay_3 = QGridLayout()
         vertical_lay_3.addWidget(QLabel('Ось X:'), 0, 0)
         self.axe_x = QListWidget()
@@ -56,10 +59,26 @@ class MainWindow(QWidget):
         self.horizontalGroupBox_3 = QGroupBox()
         self.horizontalGroupBox_3.setLayout(vertical_lay_3)
 
+        # колонка Ось Y2
+        vertical_lay_4 = QGridLayout()
+        vertical_lay_4.addWidget(QLabel('Ось Y2:'), 0, 0)
+        self.axe_y2 = QListWidget()
+        vertical_lay_4.addWidget(self.axe_y2, 1, 0)
+        button_add_to_y2 = QPushButton('Add to Y2')
+        button_add_to_y2.clicked.connect(self.add_to_y2)
+        vertical_lay_4.addWidget(button_add_to_y2, 2, 0)
+        button_remove_y2 = QPushButton('Remove from X')
+        button_remove_y2.clicked.connect(self.remove_y2)
+        vertical_lay_4.addWidget(button_add_to_y2, 3, 0)
+        self.horizontalGroupBox_4 = QGroupBox()
+        self.horizontalGroupBox_4.setLayout(vertical_lay_4)
+
         self.first_huge_lay = QHBoxLayout()
         self.first_huge_lay.addWidget(self.horizontalGroupBox)
         self.first_huge_lay.addWidget(self.horizontalGroupBox_2)
+        self.first_huge_lay.addWidget(self.horizontalGroupBox_4)
         self.first_huge_lay.addWidget(self.horizontalGroupBox_3)
+
         self.first_huge_GroupBox = QGroupBox()
         self.first_huge_GroupBox.setLayout(self.first_huge_lay)
 
@@ -183,8 +202,17 @@ class MainWindow(QWidget):
         self.columns.addItem(self.axe_y.takeItem(self.axe_y.currentRow()))
         self.columns.setCurrentRow(0)
 
+    def add_to_y2(self):
+        self.axe_y2.addItem(self.columns.takeItem(self.columns.currentRow()))
+        self.axe_y2.setCurrentRow(0)
+
+    def remove_y2(self):
+        self.columns.addItem(self.axe_y2.takeItem(self.axe_y2.currentRow()))
+        self.columns.setCurrentRow(0)
+
     def clear_y(self):
         self.axe_y.clear()
+        self.axe_y2.clear()
 
     def load_data(self):
 
@@ -200,11 +228,18 @@ class MainWindow(QWidget):
                 self.field_y.append(self.axe_y.item(_).text())
             print('Ось Y:', self.field_y)
 
+        if self.axe_y2.count() > 0:
+            self.field_y2 = []
+            for _ in range(self.axe_y2.count()):
+                self.field_y2.append(self.axe_y2.item(_).text())
+            print('Ось Y2:', self.field_y2)
+
         # Основная загрузка данных (из множества CSV файлов)
-        if self.axe_x.count() > 0 and self.axe_y.count() > 0:
+        if self.axe_x.count() > 0 and self.axe_y.count() > 0 and self.axe_y2.count() > 0:
             list_ = []
             for file in self.files:
-                df = pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter, usecols=self.field_y)
+                df = pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
+                                 usecols=self.field_y + self.field_y2)
                 list_.append(df)
 
             # only single file
@@ -217,7 +252,7 @@ class MainWindow(QWidget):
             self.time_c = 'time, c'
             time_data = []
             summa = 0
-            for _ in range(len(self.df.index)):
+            for z in range(len(self.df.index)):
                 time_data.append(float('%.2f' % summa))
                 summa = summa + 0.01
             self.df[self.time_c] = time_data
@@ -232,8 +267,7 @@ class MainWindow(QWidget):
                        'Ток момента двигателя ЭМП ОЗ ГСМ-А, десятки мА',
                        'Ток момента двигателя ЭМП ОЗ ГСМ-Б, десятки мА',
                        'Ток статора ЭМП ОЗ ГСМ-А, десятки мА',
-                       'Ток статора ЭМП ОЗ ГСМ-Б, десятки мА'
-                       ]
+                       'Ток статора ЭМП ОЗ ГСМ-Б, десятки мА']
         for _ in self.field_y:
             if _ in name_column:
                 self.df[_] = self.df[_].where(lambda x: x < 50000, lambda x: x - 65536)
@@ -251,6 +285,7 @@ class MainWindow(QWidget):
     def plot_grath(self):
 
         grath = WindowGrath(self.df, self.field_x, self.field_y, step=self.combobox_dot.currentText())
+        grath.resize(1820, 880)
         grath.exec_()
 
 
@@ -259,9 +294,9 @@ def main():
     ex = MainWindow()
     ex.show()
     try:
-        sys.exit(app.exec_())
+        sys.exit(app.exec())
     except:
-        print("Каряво закрыли")
+        print("Пока")
 
 
 if __name__ == '__main__':
