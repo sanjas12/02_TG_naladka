@@ -1,3 +1,4 @@
+
 import sys
 from PyQt5.QtWidgets import QApplication, QComboBox, QGridLayout, QLabel, QGroupBox, QVBoxLayout, QWidget, \
     QDialog, QPushButton, QMainWindow
@@ -7,28 +8,36 @@ import matplotlib.pyplot as plt
 import random
 import pandas as pd
 from matplotlib.widgets import CheckButtons
+import numpy as np
 
 
 class WindowGrath(QDialog):
 
-    def __init__(self, data, data_x, data_y, step=1):
+    def __init__(self, data: list, columns_y: list, columns_y2: list,
+                 step: int = 1) -> None:
         """
         data -> должен поддерживать ndim \n
-        data_x -> должен быть list \n
-        data_y -> должен быть list
+        step -> должен быть int \n
         """
+        self.data = data
+        self.data_x = self.data['time, c']
+        self.data_y = self.data.drop('time, c', axis=1)
+        self.step = int(step)
+        self.columns_y = []
+        self.columns_y.append(columns_y)
+        self.columns_y2 = []
+        self.columns_y2.append(columns_y2)
+        self.columns = self.data.columns
+
+        self.ui()
+
+    def ui(self):
+
         super().__init__()
         self.setWindowTitle('Графики')
-        # print(1)
-        self.data = data
-        self.data_x = data_x
-        self.data_y = data_y
-        self.step = int(step)
-        # print('step', type(self.step), self.step)
 
         self.horizontalGroupBox = QGroupBox()
         grid = QVBoxLayout()
-        # grid.addWidget(QLabel('Число для деления данных:'))
         grid.addWidget(QLabel('Число отображаемых точек: '))
 
         self.number_point = QLabel()
@@ -40,6 +49,7 @@ class WindowGrath(QDialog):
         self.combobox_dot.setCurrentIndex(0)
         grid.addWidget(self.combobox_dot)
 
+        #TODO
         # button_grath = QPushButton('Обновить графики')
         # button_grath.clicked.connect(self.update)
         # grid.addWidget(button_grath)
@@ -80,39 +90,45 @@ class WindowGrath(QDialog):
         plt.draw()
 
     def plot(self):
-        # instead of ax.hold(False)
+        # первый вариант
+        # fig = plt.figure(figsize=(20, 20))
+        # ax=fig.add_subplot()
+
+        # второй вариант
         self.figure.clear()
+        self.figure.suptitle(__file__)
 
-        # fig = plt.figure(figsize=(10, 10))
 
-        # print('index', len(self.data.index))
-        # print(len(self.data.index) // self.step)
+        ax1 = self.figure.add_subplot(111, facecolor='#FFFFCC')
+        ax1.grid(linestyle='--', linewidth=0.5, alpha=.85)
 
-        # create an axis
-        ax = self.figure.add_subplot(111, facecolor='#FFFFCC')
-        ax.grid(linestyle='--', linewidth=0.5, alpha=.85)
+        # self.number_point.setText(str(len(self.data.index) // self.step))
 
-        self.number_point.setText(str(len(self.data.index) // self.step))
+        for _ in self.columns_y:
+                                # X                     Y
+            ax1.plot(self.data_x[::self.step], self.data[_][::self.step], lw=2, label=_)
+            ax1.set_ylabel(_)  # we already handled the x-label with ax1
 
-        # plt.title('Количество точек данных:' + str(len(self.data.index)//self.step), fontsize='large')
+        color = 'tab:red'
+        for _ in self.columns_y2:
+            ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+            ax2.set_ylabel(_, color='tab:red')  # we already handled the x-label with ax1
+            ax2.plot(self.data_x[::self.step], self.data[_][::self.step], ls='-.',
+                     color=color, label=_)
+            ax2.tick_params(axis='y', labelcolor='tab:red')
 
-        # plot multiply graths
-        for _ in range(len(self.data_y)):
-            ax.plot(self.data[self.data_x[0]][1::self.step], self.data[self.data_y[_]][1::self.step],
-                    lw=1, label=self.data_y[_])
+        plt.draw()
 
-            self.label_list.append(self.data_y[_])
+        ax1.legend(loc=2)
+        ax2.legend(loc=4)
 
-            plt.draw()
-
-            ax.legend()
+        ax1.set_xlabel('time, c')
 
         # Чек-боксы графиков
-        rax = plt.axes([0.0, 0.1, 0.12, 0.13])  # положение чекбокса - x,y, х1,y1 - размер окна
-        check = CheckButtons(rax, self.label_list, (True for i, s in enumerate(self.label_list)))
-        check.on_clicked(self.set_visible)
-
-        ax.set_xlabel('time, c')
+        # положение чекбокса - x,y, х1,y1 - размер окна
+        # rax = plt.axes([0.0, 0.1, 0.12, 0.13])
+        # check = CheckButtons(rax, self.label_list, (True for _, s in enumerate(self.label_list)))
+        # check.on_clicked(self.set_visible)
 
         # refresh canvas
         self.canvas.draw()
@@ -120,14 +136,16 @@ class WindowGrath(QDialog):
 
 def main():
     df = pd.DataFrame()
-    df['time, c'] = [i for i in range(10)]
-    df['ГСМ'] = [random.randint(1, 10) for _ in range(10)]
-    df['ОЗ'] = [random.random() for _ in range(10)]
-    time = ["time, c", ]
-    gg = ['ГСМ', 'ОЗ']
+    number_point = 11
+    df['ГСМ-А'] = [random.randint(300, 321) for _ in range(number_point)]
+    df['ГСМ-Б'] = [random.randint(300, 321) for _ in range(number_point)]
+    df['time, c'] = [i for i in range(number_point)]
+    df['ОЗ'] = [random.random() for _ in range(number_point)]
+    df['ОЗ-2'] = [random.random() for _ in range(number_point)]
 
     app = QApplication(sys.argv)
-    ex = WindowGrath(df, time, gg)
+    ex = WindowGrath(df, ['ГСМ-А', 'ГСМ-Б'], ['ОЗ', 'ОЗ-2'])
+    ex.resize(1220, 680)
     ex.show()
     try:
         sys.exit(app.exec())
@@ -136,7 +154,10 @@ def main():
 
 
 if __name__ == '__main__':
+    # import matplotlib
+    # print(matplotlib.matplotlib_fname())
     main()
 
 # TODO
 # Овновление графика добавить
+# разница между plt.show() и plt.draw()

@@ -1,3 +1,4 @@
+
 import pandas as pd
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGroupBox, \
@@ -5,7 +6,6 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGr
 from grath import WindowGrath
 import chardet
 import gzip
-
 
 class MainWindow(QWidget):
 
@@ -58,7 +58,8 @@ class MainWindow(QWidget):
         vertical_lay_3.addWidget(button_remove_x, 3, 0)
         self.horizontalGroupBox_3 = QGroupBox()
         self.horizontalGroupBox_3.setLayout(vertical_lay_3)
-
+        
+        
         # колонка Ось Y2
         vertical_lay_4 = QGridLayout()
         vertical_lay_4.addWidget(QLabel('Ось Y2:'), 0, 0)
@@ -227,19 +228,19 @@ class MainWindow(QWidget):
             for _ in range(self.axe_y.count()):
                 self.field_y.append(self.axe_y.item(_).text())
             print('Ось Y:', self.field_y)
-
+        
         if self.axe_y2.count() > 0:
             self.field_y2 = []
             for _ in range(self.axe_y2.count()):
                 self.field_y2.append(self.axe_y2.item(_).text())
             print('Ось Y2:', self.field_y2)
 
+
         # Основная загрузка данных (из множества CSV файлов)
         if self.axe_x.count() > 0 and self.axe_y.count() > 0 and self.axe_y2.count() > 0:
             list_ = []
             for file in self.files:
-                df = pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
-                                 usecols=self.field_y + self.field_y2)
+                df = pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter, usecols=self.field_y+self.field_y2)
                 list_.append(df)
 
             # only single file
@@ -277,15 +278,15 @@ class MainWindow(QWidget):
                 # print(_, ' - нет такого')
 
         print('-' * 30)
-        print(self.df.info())
+        # print(self.df.info())
         print('-' * 30)
 
         # TODO
 
     def plot_grath(self):
-
-        grath = WindowGrath(self.df, self.field_x, self.field_y, step=self.combobox_dot.currentText())
-        grath.resize(1820, 880)
+        # print(self.combobox_dot.currentText())
+        grath = WindowGrath(self.df, self.field_y, self.field_y2, step=self.combobox_dot.currentText())
+        grath.resize(1220, 680)
         grath.exec_()
 
 
