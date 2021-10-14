@@ -1,4 +1,3 @@
-
 import sys
 from PyQt5.QtWidgets import QApplication, QComboBox, QGridLayout, QLabel, QGroupBox, QVBoxLayout, QWidget, \
     QDialog, QPushButton, QMainWindow
@@ -14,25 +13,34 @@ import numpy as np
 class WindowGrath(QDialog):
 
     def __init__(self, data: list, columns_y: list, columns_y2: list,
-                 step: int = 1) -> None:
+                 step: int = 1, filename: str = None) -> None:
         """
         data -> должен поддерживать ndim \n
         step -> должен быть int \n
+        filename -> должен быть str \n
         """
+        self.filename = filename
         self.data = data
         self.data_x = self.data['time, c']
         self.data_y = self.data.drop('time, c', axis=1)
         self.step = int(step)
-        self.columns_y = []
-        self.columns_y.append(columns_y)
-        self.columns_y2 = []
-        self.columns_y2.append(columns_y2)
+        if columns_y:
+            self.columns_y = []
+            self.columns_y.append(columns_y)
+        else:
+            self.columns_y = None
+        if columns_y2:
+            self.columns_y2 = []
+            self.columns_y2.append(columns_y2)
+        else:
+            self.columns_y2 = None
         self.columns = self.data.columns
+        self.label_list = []
+        self.lines_list = []
 
         self.ui()
 
     def ui(self):
-
         super().__init__()
         self.setWindowTitle('Графики')
 
@@ -70,10 +78,12 @@ class WindowGrath(QDialog):
         windowLayout.addWidget(self.horizontalGroupBox_2, 0, 1)
         self.setLayout(windowLayout)
 
-        self.label_list = []
-        self.lines_list = []
-
-        self.plot()
+        if self.columns_y and self.columns_y2:
+            self.plot_y_y2()
+        elif self.columns_y:
+            self.plot_y()
+        else:
+            self.plot_y2()
 
     def update(self):
         self.step = self.combobox_dot.currentText()
@@ -89,16 +99,17 @@ class WindowGrath(QDialog):
 
         plt.draw()
 
-    def plot(self):
+    # Plot both y and y2
+    def plot_y_y2(self):
+        print('plot_y_y2')
+        self.figure.clear()
+        self.set_suptitle_grath()
+
         # первый вариант
         # fig = plt.figure(figsize=(20, 20))
         # ax=fig.add_subplot()
 
         # второй вариант
-        self.figure.clear()
-        self.figure.suptitle(__file__)
-
-
         ax1 = self.figure.add_subplot(111, facecolor='#FFFFCC')
         ax1.grid(linestyle='--', linewidth=0.5, alpha=.85)
 
@@ -113,8 +124,8 @@ class WindowGrath(QDialog):
         for _ in self.columns_y2:
             ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
             ax2.set_ylabel(_, color='tab:red')  # we already handled the x-label with ax1
-            ax2.plot(self.data_x[::self.step], self.data[_][::self.step], ls='-.',
-                     color=color, label=_)
+            ax2.plot(self.data_x[::self.step], self.data[_][::self.step], ls='-.', color=color,
+                     label=_)
             ax2.tick_params(axis='y', labelcolor='tab:red')
 
         plt.draw()
@@ -133,6 +144,70 @@ class WindowGrath(QDialog):
         # refresh canvas
         self.canvas.draw()
 
+    # Plot only y
+    def plot_y(self):
+        print('plot_y')
+        self.figure.clear()
+        self.set_suptitle_grath()
+
+        # первый вариант
+        # fig = plt.figure(figsize=(20, 20))
+        # ax=fig.add_subplot()
+
+        # второй вариант
+        ax1 = self.figure.add_subplot(111, facecolor='#FFFFCC')
+        ax1.grid(linestyle='--', linewidth=0.5, alpha=.85)
+
+        for _ in self.columns_y:
+                                # X                     Y
+            ax1.plot(self.data_x[::self.step], self.data[_][::self.step], lw=2, label=_)
+            ax1.set_ylabel(_)  # we already handled the x-label with ax1
+
+        plt.draw()
+
+        ax1.legend(loc=2)
+
+        ax1.set_xlabel('time, c')
+
+        self.canvas.draw()
+
+    # Plot only y
+    def plot_y2(self):
+        print('plot_y2')
+        self.figure.clear()
+        self.set_suptitle_grath()
+
+        # первый вариант
+        # fig = plt.figure(figsize=(20, 20))
+        # ax=fig.add_subplot()
+
+        # второй вариант
+        ax1 = self.figure.add_subplot(111, facecolor='#FFFFCC')
+        ax1.grid(linestyle='--', linewidth=0.5, alpha=.85)
+
+        for _ in self.columns_y2:
+                                # X                     Y
+            ax1.plot(self.data_x[::self.step], self.data[_][::self.step], lw=2, label=_)
+            ax1.set_ylabel(_)  # we already handled the x-label with ax1
+
+        plt.draw()
+
+        ax1.legend(loc=2)
+
+        ax1.set_xlabel('time, c')
+
+        self.canvas.draw()
+
+    def set_suptitle_grath(self):
+        print('set')
+        if not self.filename:
+            self.figure.suptitle(__file__)
+        else:
+            index_tg = self.filename.find('ТГ')
+            print(index_tg, type(index_tg), self.filename[index_tg+2])
+            self.figure.suptitle(f'ТГ:{self.filename[index_tg+2]}, '
+                                 f'канал:{self.filename[index_tg+3]}')
+
 
 def main():
     df = pd.DataFrame()
@@ -144,9 +219,10 @@ def main():
     df['ОЗ-2'] = [random.random() for _ in range(number_point)]
 
     app = QApplication(sys.argv)
-    ex = WindowGrath(df, ['ГСМ-А', 'ГСМ-Б'], ['ОЗ', 'ОЗ-2'])
+    ex = WindowGrath(df, None, ['ГСМ-А', 'ГСМ-Б'], filename='E:/ТГ41-2021-06-25_134810_14099.csv.gz ')
     ex.resize(1220, 680)
     ex.show()
+
     try:
         sys.exit(app.exec())
     except:
@@ -161,3 +237,4 @@ if __name__ == '__main__':
 # TODO
 # Овновление графика добавить
 # разница между plt.show() и plt.draw()
+# ex.resize(1220, 680) - получать расшерения экрана

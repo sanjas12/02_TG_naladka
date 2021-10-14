@@ -14,10 +14,12 @@ class MainWindow(QWidget):
         self.width = 640
         self.height = 400
         self.files = 0
-        self.setup_UI()
+        self.field_x = []
+        self.field_y = []
+        self.field_y2 = []
+        self.setup_ui()
 
-    def setup_UI(self):
-        self.setWindowTitle(__file__)
+    def setup_ui(self):
         # self.setGeometry(10, 10, self.width, self.height)
 
         # колонка Выбирай параметр:
@@ -68,9 +70,9 @@ class MainWindow(QWidget):
         button_add_to_y2 = QPushButton('Add to Y2')
         button_add_to_y2.clicked.connect(self.add_to_y2)
         vertical_lay_4.addWidget(button_add_to_y2, 2, 0)
-        button_remove_y2 = QPushButton('Remove from X')
+        button_remove_y2 = QPushButton('Remove from Y2')
         button_remove_y2.clicked.connect(self.remove_y2)
-        vertical_lay_4.addWidget(button_add_to_y2, 3, 0)
+        vertical_lay_4.addWidget(button_remove_y2, 3, 0)
         self.horizontalGroupBox_4 = QGroupBox()
         self.horizontalGroupBox_4.setLayout(vertical_lay_4)
 
@@ -218,23 +220,19 @@ class MainWindow(QWidget):
     def load_data(self):
 
         if self.axe_x.count() > 0:
-            self.field_x = []
             for _ in range(self.axe_x.count()):
                 self.field_x.append(self.axe_x.item(_).text())
             print('Ось Х:', self.field_x)
 
         if self.axe_y.count() > 0:
-            self.field_y = []
             for _ in range(self.axe_y.count()):
                 self.field_y.append(self.axe_y.item(_).text())
             print('Ось Y:', self.field_y)
         
         if self.axe_y2.count() > 0:
-            self.field_y2 = []
             for _ in range(self.axe_y2.count()):
                 self.field_y2.append(self.axe_y2.item(_).text())
             print('Ось Y2:', self.field_y2)
-
 
         # Основная загрузка данных (из множества CSV файлов)
         if self.axe_x.count() > 0 and self.axe_y.count() > 0 and self.axe_y2.count() > 0:
@@ -276,6 +274,13 @@ class MainWindow(QWidget):
             else:
                 pass
                 # print(_, ' - нет такого')
+        for _ in self.field_y2:
+            if _ in name_column:
+                self.df[_] = self.df[_].where(lambda x: x < 50000, lambda x: x - 65536)
+                print(_, ' - есть такой')
+            else:
+                pass
+                # print(_, ' - нет такого')
 
         print('-' * 30)
         # print(self.df.info())
@@ -285,7 +290,10 @@ class MainWindow(QWidget):
 
     def plot_grath(self):
         # print(self.combobox_dot.currentText())
-        grath = WindowGrath(self.df, self.field_y, self.field_y2, step=self.combobox_dot.currentText())
+        print(self.files[0])
+        grath = WindowGrath(self.df, self.field_y, self.field_y2,
+                            step=self.combobox_dot.currentText(),
+                            filename=self.files[0])
         grath.resize(1220, 680)
         grath.exec_()
 
