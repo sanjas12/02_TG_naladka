@@ -132,7 +132,7 @@ class MainWindow(QWidget):
         self.field_y2 = []
 
         self.files, _filter = QFileDialog.getOpenFileNames(self, 'Выбор данных: ', '',
-                                                           "GZ Files (*.gz) ;; CSV Files (*.csv)")
+                                                           "GZ Files (*.gz) ;; CSV Files (*.csv) ;; txt (*.txt)")
         try:
             # Определение кодировки
             if self.filename_extension():
