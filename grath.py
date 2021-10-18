@@ -6,6 +6,7 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 import matplotlib.pyplot as plt
 import random
 import pandas as pd
+import ctypes
 from matplotlib.widgets import CheckButtons
 import numpy as np
 
@@ -19,11 +20,14 @@ class WindowGrath(QDialog):
         step -> должен быть int \n
         filename -> должен быть str \n
         """
+        print(data.info())
         self.filename = filename
         self.data = data
         self.data_x = self.data['time, c']
         self.data_y = self.data.drop('time, c', axis=1)
         self.step = int(step)
+        self.color = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
+        self.color_inv = self.color[::-1]
         if columns_y:
             self.columns_y = []
             self.columns_y.append(columns_y)
@@ -110,23 +114,27 @@ class WindowGrath(QDialog):
         # ax=fig.add_subplot()
 
         # второй вариант
-        ax1 = self.figure.add_subplot(111, facecolor='#FFFFCC')
+        ax1 = self.figure.add_subplot(111, facecolor='#f8fadc')
         ax1.grid(linestyle='--', linewidth=0.5, alpha=.85)
 
         # self.number_point.setText(str(len(self.data.index) // self.step))
 
-        for _ in self.columns_y:
+        for i, v in enumerate(self.columns_y):
+            for _ in v:
                                 # X                     Y
-            ax1.plot(self.data_x[::self.step], self.data[_][::self.step], lw=2, label=_)
-            ax1.set_ylabel(_)  # we already handled the x-label with ax1
+                ax1.plot(self.data_x[::self.step], self.data[_][::self.step], lw=2,
+                         label=_)
+                ax1.set_ylabel(self.columns_y[i])
 
-        color = 'tab:red'
-        for _ in self.columns_y2:
+        # color = 'tab:olive'
+
+        for i, v in enumerate(self.columns_y2):
             ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-            ax2.set_ylabel(_, color='tab:red')  # we already handled the x-label with ax1
-            ax2.plot(self.data_x[::self.step], self.data[_][::self.step], ls='-.', color=color,
-                     label=_)
-            ax2.tick_params(axis='y', labelcolor='tab:red')
+            for i2, _ in enumerate(v):
+                ax2.plot(self.data_x[::self.step], self.data[_][::self.step], ls='-.', lw=2, label=_,
+                         color=self.color_inv[i2])
+            ax2.set_ylabel(self.columns_y2[i], color='b')  # we already handled the x-label with ax1
+            ax2.tick_params(axis='y', labelcolor='b')
 
         plt.draw()
 
@@ -155,13 +163,15 @@ class WindowGrath(QDialog):
         # ax=fig.add_subplot()
 
         # второй вариант
-        ax1 = self.figure.add_subplot(111, facecolor='#FFFFCC')
+        ax1 = self.figure.add_subplot(111, facecolor='#f8fadc')
         ax1.grid(linestyle='--', linewidth=0.5, alpha=.85)
 
-        for _ in self.columns_y:
-                                # X                     Y
-            ax1.plot(self.data_x[::self.step], self.data[_][::self.step], lw=2, label=_)
-            ax1.set_ylabel(_)  # we already handled the x-label with ax1
+        for i, v in enumerate(self.columns_y):
+            for i2, _ in enumerate(v):
+                # X                     Y
+                ax1.plot(self.data_x[::self.step], self.data[_][::self.step], lw=2, label=_,
+                         color=self.color[i2])
+                ax1.set_ylabel(self.columns_y[i])
 
         plt.draw()
 
@@ -171,7 +181,7 @@ class WindowGrath(QDialog):
 
         self.canvas.draw()
 
-    # Plot only y
+    # Plot only y2
     def plot_y2(self):
         print('plot_y2')
         self.figure.clear()
@@ -182,13 +192,15 @@ class WindowGrath(QDialog):
         # ax=fig.add_subplot()
 
         # второй вариант
-        ax1 = self.figure.add_subplot(111, facecolor='#FFFFCC')
+        ax1 = self.figure.add_subplot(111, facecolor='#f8fadc')
         ax1.grid(linestyle='--', linewidth=0.5, alpha=.85)
 
-        for _ in self.columns_y2:
+        for i, v in enumerate(self.columns_y2):
+            for i2, _ in enumerate(v):
                                 # X                     Y
-            ax1.plot(self.data_x[::self.step], self.data[_][::self.step], lw=2, label=_)
-            ax1.set_ylabel(_)  # we already handled the x-label with ax1
+                ax1.plot(self.data_x[::self.step], self.data[_][::self.step], lw=2, ls='-.',
+                         label=_, color=self.color_inv[i2])
+                ax1.set_ylabel(self.columns_y2[i])
 
         plt.draw()
 
@@ -199,12 +211,11 @@ class WindowGrath(QDialog):
         self.canvas.draw()
 
     def set_suptitle_grath(self):
-        print('set')
         if not self.filename:
             self.figure.suptitle(__file__)
         else:
             index_tg = self.filename.find('ТГ')
-            print(index_tg, type(index_tg), self.filename[index_tg+2])
+            # print(index_tg, type(index_tg), self.filename[index_tg+2])
             self.figure.suptitle(f'ТГ:{self.filename[index_tg+2]}, '
                                  f'канал:{self.filename[index_tg+3]}')
 
@@ -215,12 +226,17 @@ def main():
     df['ГСМ-А'] = [random.randint(300, 321) for _ in range(number_point)]
     df['ГСМ-Б'] = [random.randint(300, 321) for _ in range(number_point)]
     df['time, c'] = [i for i in range(number_point)]
-    df['ОЗ'] = [random.random() for _ in range(number_point)]
-    df['ОЗ-2'] = [random.random() for _ in range(number_point)]
+    df['ОЗ-А'] = [random.random() for _ in range(number_point)]
+    df['ОЗ-Б'] = [random.random() for _ in range(number_point)]
+
+    y2 = ['ГСМ-А', 'ГСМ-Б']
+    y1 = ['ОЗ-А', 'ОЗ-Б']
 
     app = QApplication(sys.argv)
-    ex = WindowGrath(df, None, ['ГСМ-А', 'ГСМ-Б'], filename='E:/ТГ41-2021-06-25_134810_14099.csv.gz ')
-    ex.resize(1220, 680)
+    ex = WindowGrath(df, y1, y2, filename='E:/ТГ41-2021-06-25_134810_14099.csv.gz ')
+    user32 = ctypes.windll.user32
+    screensize = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
+    ex.resize(screensize[0]-10, screensize[1]-150)
     ex.show()
 
     try:
@@ -237,4 +253,3 @@ if __name__ == '__main__':
 # TODO
 # Овновление графика добавить
 # разница между plt.show() и plt.draw()
-# ex.resize(1220, 680) - получать расшерения экрана

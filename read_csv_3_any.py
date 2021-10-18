@@ -1,4 +1,3 @@
-
 import pandas as pd
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGroupBox, \
@@ -6,6 +5,9 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGr
 from grath import WindowGrath
 import chardet
 import gzip
+import ctypes
+import time
+
 
 class MainWindow(QWidget):
 
@@ -17,10 +19,12 @@ class MainWindow(QWidget):
         self.field_x = []
         self.field_y = []
         self.field_y2 = []
+        self.time_c = 'time, c'
         self.setup_ui()
 
     def setup_ui(self):
         # self.setGeometry(10, 10, self.width, self.height)
+        self.setWindowTitle(__file__)
 
         # колонка Выбирай параметр:
         inner_layout_1 = QVBoxLayout()
@@ -60,8 +64,7 @@ class MainWindow(QWidget):
         vertical_lay_3.addWidget(button_remove_x, 3, 0)
         self.horizontalGroupBox_3 = QGroupBox()
         self.horizontalGroupBox_3.setLayout(vertical_lay_3)
-        
-        
+
         # колонка Ось Y2
         vertical_lay_4 = QGridLayout()
         vertical_lay_4.addWidget(QLabel('Ось Y2:'), 0, 0)
@@ -98,7 +101,7 @@ class MainWindow(QWidget):
         self.number_point_grath = QLabel()
         second_vertical_lay.addWidget(self.number_point_grath, 3, 1)
 
-        list_dot = ['1', '10', '100', '1000']
+        list_dot = ['1', '10', '100', '1000', '10000']
         self.combobox_dot = QComboBox()
         self.combobox_dot.addItems(list_dot)
         self.combobox_dot.setCurrentIndex(1)
@@ -122,7 +125,11 @@ class MainWindow(QWidget):
         # очищаем колонки
         self.columns.clear()
         self.axe_y.clear()
+        self.axe_y2.clear()
         self.axe_x.clear()
+        self.field_x = []
+        self.field_y = []
+        self.field_y2 = []
 
         self.files, _filter = QFileDialog.getOpenFileNames(self, 'Выбор данных: ', '',
                                                            "GZ Files (*.gz) ;; CSV Files (*.csv)")
@@ -143,6 +150,8 @@ class MainWindow(QWidget):
                 # Считывание названия всех колонок
                 self.name_column = pd.read_csv(self.files[0], encoding=self.encoding, delimiter=self.delimiter,
                                                nrows=0)
+
+                # self.name_column.pop()
 
                 # заполняем колонку ось columns (Выбирай параметр)
                 for i, _ in enumerate(self.name_column):
@@ -216,77 +225,90 @@ class MainWindow(QWidget):
     def clear_y(self):
         self.axe_y.clear()
         self.axe_y2.clear()
+        # self.axe_x.clear()
 
     def load_data(self):
-
+        print('Time load data:', time.asctime())
         if self.axe_x.count() > 0:
+            self.field_x = []
             for _ in range(self.axe_x.count()):
                 self.field_x.append(self.axe_x.item(_).text())
             print('Ось Х:', self.field_x)
+        else:
+            print('Ось X:', 'нет данных')
 
         if self.axe_y.count() > 0:
+            self.field_y = []
             for _ in range(self.axe_y.count()):
                 self.field_y.append(self.axe_y.item(_).text())
             print('Ось Y:', self.field_y)
-        
+        else:
+            print('Ось Y:', 'нет данных')
+
         if self.axe_y2.count() > 0:
+            self.field_y2 = []
             for _ in range(self.axe_y2.count()):
                 self.field_y2.append(self.axe_y2.item(_).text())
             print('Ось Y2:', self.field_y2)
+        else:
+            print('Ось Y2:', 'нет данных')
 
         # Основная загрузка данных (из множества CSV файлов)
-        if self.axe_x.count() > 0 and self.axe_y.count() > 0 and self.axe_y2.count() > 0:
+        # if self.axe_x.count() > 0 and self.axe_y.count() > 0 and self.axe_y2.count() > 0:
+        if True:
             list_ = []
             for file in self.files:
                 df = pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter, usecols=self.field_y+self.field_y2)
                 list_.append(df)
 
-            # only single file
-            # df = pd.read_csv(open(self.files[0], 'r'), header=0, delimiter=';', usecols=self.field_y)
-
             # создаем другой df
             self.df = pd.concat(list_)
 
-            # добавляем колонку time
-            self.time_c = 'time, c'
+            self.number_point.setText(str(len(self.df.index)))
+
+            # для токов и мощностей учет отрицательных значений
+            name_column = ['Электрическая мощность двигателя ЭМП ОЗ ГСМ-А, десятки Вт',
+                           'Электрическая мощность двигателя ЭМП ОЗ ГСМ-Б, десятки Вт',
+                           'Ток момента двигателя ЭМП ОЗ ГСМ-А, десятки мА',
+                           'Ток момента двигателя ЭМП ОЗ ГСМ-Б, десятки мА',
+                           'Ток статора ЭМП ОЗ ГСМ-А, десятки мА',
+                           'Ток статора ЭМП ОЗ ГСМ-Б, десятки мА']
+            for _ in self.field_y:
+                if _ in name_column:
+                    self.df[_] = self.df[_].where(lambda x: x < 50000, lambda x: x - 65536)
+                    print(_, ' - есть такой')
+                else:
+                    pass
+                    # print(_, ' - нет такого')
+            for _ in self.field_y2:
+                if _ in name_column:
+                    self.df[_] = self.df[_].where(lambda x: x < 50000, lambda x: x - 65536)
+                    print(_, ' - есть такой')
+                else:
+                    pass
+                    # print(_, ' - нет такого')
+
+            # print(self.df.info())
+        else:
+            # print('No data.Ось Y')
+            pass
+
+        # добавляем колонку time если ее нет
+        if self.time_c not in self.df:
+            print('add time')
             time_data = []
             summa = 0
             for z in range(len(self.df.index)):
                 time_data.append(float('%.2f' % summa))
                 summa = summa + 0.01
             self.df[self.time_c] = time_data
-
-            self.number_point.setText(str(len(self.df.index)))
         else:
-            print('No data.Ось Y')
+            print("колонка time уже есть")
 
-        # для токов и мощностей учет отрицательных значений
-        name_column = ['Электрическая мощность двигателя ЭМП ОЗ ГСМ-А, десятки Вт',
-                       'Электрическая мощность двигателя ЭМП ОЗ ГСМ-Б, десятки Вт',
-                       'Ток момента двигателя ЭМП ОЗ ГСМ-А, десятки мА',
-                       'Ток момента двигателя ЭМП ОЗ ГСМ-Б, десятки мА',
-                       'Ток статора ЭМП ОЗ ГСМ-А, десятки мА',
-                       'Ток статора ЭМП ОЗ ГСМ-Б, десятки мА']
-        for _ in self.field_y:
-            if _ in name_column:
-                self.df[_] = self.df[_].where(lambda x: x < 50000, lambda x: x - 65536)
-                print(_, ' - есть такой')
-            else:
-                pass
-                # print(_, ' - нет такого')
-        for _ in self.field_y2:
-            if _ in name_column:
-                self.df[_] = self.df[_].where(lambda x: x < 50000, lambda x: x - 65536)
-                print(_, ' - есть такой')
-            else:
-                pass
-                # print(_, ' - нет такого')
-
-        print('-' * 30)
-        # print(self.df.info())
         print('-' * 30)
 
         # TODO
+        # при загрузки некоторых файлов в конце добавляется неименнованный параметр
 
     def plot_grath(self):
         # print(self.combobox_dot.currentText())
@@ -294,7 +316,9 @@ class MainWindow(QWidget):
         grath = WindowGrath(self.df, self.field_y, self.field_y2,
                             step=self.combobox_dot.currentText(),
                             filename=self.files[0])
-        grath.resize(1220, 680)
+        user32 = ctypes.windll.user32
+        screensize = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
+        grath.resize(screensize[0] - 10, screensize[1] - 150)
         grath.exec_()
 
 
