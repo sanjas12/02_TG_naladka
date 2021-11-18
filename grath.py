@@ -213,6 +213,10 @@ class WindowGrath(QDialog):
     def set_suptitle_grath(self):
         if not self.filename:
             self.figure.suptitle(__file__)
+        elif self.filename.find('ШУР') >= 0:
+            index_tg = self.filename.find('ШУР')
+            self.figure.suptitle(f'ТГ:{self.filename[index_tg + 3]}, '
+                                 f'канал:{self.filename[index_tg + 4]}')
         else:
             index_tg = self.filename.find('ТГ')
             # print(index_tg, type(index_tg), self.filename[index_tg+2])
