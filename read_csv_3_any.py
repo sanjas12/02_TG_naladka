@@ -123,6 +123,8 @@ class MainWindow(QWidget):
         self.show()
 
     def open_files(self):
+        self.number_point.setText('0')
+        
         # очищаем колонки
         self.columns.clear()
         self.axe_y.clear()
