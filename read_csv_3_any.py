@@ -149,7 +149,7 @@ class MainWindow(QWidget):
                         self.delimiter = ';'
                     else:
                         self.delimiter = '\t'
-                print('delimiter:', self.delimiter)
+                print('delimiter:', repr(self.delimiter))
 
                 # и decimal в csv файле
                 with open(self.files[0], 'r', encoding=self.encoding) as f:
@@ -173,7 +173,7 @@ class MainWindow(QWidget):
                         self.delimiter = ';'
                     else:
                         self.delimiter = '\t'
-                    print('delimiter:', self.delimiter)
+                    print('delimiter:', repr(self.delimiter))
 
                 # и decimal qz
                 with gzip.open(self.files[0], 'r') as f:
