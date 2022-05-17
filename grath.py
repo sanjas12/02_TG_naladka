@@ -8,7 +8,7 @@ import random
 import pandas as pd
 import ctypes
 from matplotlib.widgets import CheckButtons
-import numpy as np
+import matplotlib.ticker as ticker
 
 
 class WindowGrath(QDialog):
@@ -86,8 +86,10 @@ class WindowGrath(QDialog):
             self.plot_y_y2()
         elif self.columns_y:
             self.plot_y()
-        else:
+        elif self.columns_y2:
             self.plot_y2()
+        else:
+            print('Не выбраны данные')
 
     def update(self):
         self.step = self.combobox_dot.currentText()
@@ -114,7 +116,7 @@ class WindowGrath(QDialog):
         # ax=fig.add_subplot()
 
         # второй вариант
-        ax1 = self.figure.add_subplot(111, facecolor='#f8fadc')
+        ax1 = self.figure.add_subplot(111)
         ax1.grid(linestyle='--', linewidth=0.5, alpha=.85)
 
         # self.number_point.setText(str(len(self.data.index) // self.step))
@@ -125,6 +127,8 @@ class WindowGrath(QDialog):
                 ax1.plot(self.data_x[::self.step], self.data[_][::self.step], lw=2,
                          label=_)
                 ax1.set_ylabel(self.columns_y[i])
+                ax1.xaxis.set_major_locator(ticker.MaxNLocator(20))
+                ax1.yaxis.set_major_locator(ticker.MaxNLocator(20))
 
         # color = 'tab:olive'
 
@@ -133,8 +137,10 @@ class WindowGrath(QDialog):
             for i2, _ in enumerate(v):
                 ax2.plot(self.data_x[::self.step], self.data[_][::self.step], ls='-.', lw=2, label=_,
                          color=self.color_inv[i2])
-            ax2.set_ylabel(self.columns_y2[i], color='b')  # we already handled the x-label with ax1
-            ax2.tick_params(axis='y', labelcolor='b')
+                ax2.set_ylabel(self.columns_y2[i], color='b')  # we already handled the x-label with ax1
+                ax2.tick_params(axis='y', labelcolor='b')
+                ax2.xaxis.set_major_locator(ticker.MaxNLocator(20))
+                ax2.yaxis.set_major_locator(ticker.MaxNLocator(20))
 
         plt.draw()
 
@@ -172,6 +178,8 @@ class WindowGrath(QDialog):
                 ax1.plot(self.data_x[::self.step], self.data[_][::self.step], lw=2, label=_,
                          color=self.color[i2])
                 ax1.set_ylabel(self.columns_y[i])
+                ax1.xaxis.set_major_locator(ticker.MaxNLocator(20))
+                ax1.yaxis.set_major_locator(ticker.MaxNLocator(20))
 
         plt.draw()
 
@@ -206,7 +214,7 @@ class WindowGrath(QDialog):
 
         ax1.legend(loc=2)
 
-        ax1.set_xlabel('time, c')
+        ax1.set_xlabel('Время, c')
 
         self.canvas.draw()
 
