@@ -7,6 +7,7 @@ import chardet
 import gzip
 import ctypes
 import time
+from itertools import islice
 
 
 class MainWindow(QWidget):
@@ -134,48 +135,64 @@ class MainWindow(QWidget):
         self.files, _filter = QFileDialog.getOpenFileNames(self, 'Выбор данных: ', '',
                                                            "GZ Files (*.gz) ;; CSV Files (*.csv) ;; txt (*.txt)")
         try:
-            # Определение кодировки
             if self.filename_extension():
+
+                # Определение кодировки в csv файле
                 with open(self.files[0], 'rb') as f:
                     raw_data = f.read(20000)
                     self.encoding = chardet.detect(raw_data)['encoding']
-                # и разделителя csv
+                print('encoding:', self.encoding)
+
+                # и разделителя в csv файле
                 with open(self.files[0], 'r', encoding=self.encoding) as f:
-                    print(f.readline(100))
                     if f.readline(100).count(';'):
                         self.delimiter = ';'
                     else:
                         self.delimiter = '\t'
+                print('delimiter:', self.delimiter)
 
-                # Считывание названия всех колонок
-                self.name_column = pd.read_csv(self.files[0], encoding=self.encoding, delimiter=self.delimiter,
-                                               nrows=0)
+                # и decimal в csv файле
+                with open(self.files[0], 'r', encoding=self.encoding) as f:
+                    s = str(f.readlines()[2])
+                    if s.count('.') > s.count(','):
+                        self.decimal = '.'
+                    else:
+                        self.decimal = ','
+                print('decimal:', self.decimal)
 
-                # self.name_column.pop()
-
-                # заполняем колонку ось columns (Выбирай параметр)
-                for i, _ in enumerate(self.name_column):
-                    self.columns.insertItem(i, _)
             else:
-                # Определение кодировки
+                # Определение кодировки в gz
                 with gzip.open(self.files[0], 'rb') as f:
                     raw_data = f.read(20000)
                     self.encoding = chardet.detect(raw_data)['encoding']
+                    print('encoding:', self.encoding)
+
                 # и разделителя gz
                 with gzip.open(self.files[0], 'r') as f:
                     if f.readline(100).decode(self.encoding).count(';'):
                         self.delimiter = ';'
                     else:
                         self.delimiter = '\t'
+                    print('delimiter:', self.delimiter)
 
-                # Считывание названия всех колонок
-                self.name_column = pd.read_csv(self.files[0], encoding=self.encoding, delimiter=self.delimiter, nrows=0)
+                # и decimal qz
+                with gzip.open(self.files[0], 'r') as f:
+                    data = f.readlines()[2].decode(self.encoding)
+                    if data.count('.') > data.count(','):
+                        self.decimal = '.'
+                    else:
+                        self.decimal = ','
+                print('decimal:', self.decimal)
 
-                # заполняем колонку ось columns (Выбирай параметр)
-                for i, _ in enumerate(self.name_column):
-                    self.columns.insertItem(i, _)
         except IndexError as e:
             print('не выбраны данные')
+
+        # Считывание названия всех колонок
+        self.name_column = pd.read_csv(self.files[0], encoding=self.encoding, delimiter=self.delimiter, nrows=0)
+
+        # заполняем колонку ось columns (Выбирай параметр)
+        for i, _ in enumerate(self.name_column):
+            self.columns.insertItem(i, _)
 
         # по умолчанию на ось columns (Выбирай параметр) добавляем 'time'
         # и тут же ее перемещяем на ось Х
@@ -257,8 +274,11 @@ class MainWindow(QWidget):
         # if self.axe_x.count() > 0 and self.axe_y.count() > 0 and self.axe_y2.count() > 0:
         if True:
             list_ = []
+
             for file in self.files:
-                df = pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter, usecols=self.field_y+self.field_y2)
+                # print(self.delimiter)
+                df = pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
+                                 usecols=self.field_y+self.field_y2, decimal=self.decimal)
                 list_.append(df)
 
             # создаем другой df
@@ -295,7 +315,7 @@ class MainWindow(QWidget):
 
         # добавляем колонку time если ее нет
         if self.time_c not in self.df:
-            print('add time')
+            print('Time added.')
             time_data = []
             summa = 0
             for z in range(len(self.df.index)):
