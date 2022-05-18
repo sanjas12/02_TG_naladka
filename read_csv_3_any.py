@@ -275,16 +275,9 @@ class MainWindow(QWidget):
         # Основная загрузка данных (из множества CSV файлов)
         # if self.axe_x.count() > 0 and self.axe_y.count() > 0 and self.axe_y2.count() > 0:
         if True:
-            list_ = []
 
-            for file in self.files:
-                # print(self.delimiter)
-                df = pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
-                                 usecols=self.field_y+self.field_y2, decimal=self.decimal)
-                list_.append(df)
-
-            # создаем другой df
-            self.df = pd.concat(list_)
+            self.df = pd.concat(pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
+                                            usecols=self.field_y+self.field_y2, decimal=self.decimal) for file in self.files)
 
             self.number_point.setText(str(len(self.df.index)))
 
