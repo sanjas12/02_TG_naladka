@@ -191,7 +191,10 @@ class MainWindow(QWidget):
 
         # Считывание названия всех колонок
         self.name_column = pd.read_csv(self.files[0], encoding=self.encoding, delimiter=self.delimiter, nrows=0)
-
+        
+        # удаляем лишние колонки
+        self.name_column = self.name_column.loc[:, ~self.name_column.columns.str.contains('^Unnamed')]
+        
         # заполняем колонку ось columns (Выбирай параметр)
         for i, _ in enumerate(self.name_column):
             self.columns.insertItem(i, _)
