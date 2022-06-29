@@ -10,7 +10,7 @@ from cx_Freeze import setup, Executable
 
 base = None
 
-executables = [Executable('read_csv_3_any.py', base=base)]
+executables = [Executable('main.py', base=base)]
 
 packages = ["idna"]
 options = {
