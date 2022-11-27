@@ -1,10 +1,12 @@
 from pyModbusTCP.client import ModbusClient 
 import time
 
+LOCAL = 'localhost'
+SHUR_11 = '192.168.30.111'
 
 try:
-    # c = ModbusClient(host='localhost', port=502)
-    c = ModbusClient(host='192.168.30.111', port=502)
+    c = ModbusClient(host=LOCAL, port=502)
+    # c = ModbusClient(host=SHUR_11, port=502)
 except ValueError:
     print("Error with host or port params")
 

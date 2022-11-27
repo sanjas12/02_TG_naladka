@@ -1,1 +1,3 @@
 pyModbusTCP
+PyQt5
+pyqtgraph
