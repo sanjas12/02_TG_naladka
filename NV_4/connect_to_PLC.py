@@ -5,14 +5,9 @@ import time
 class ConnectPLC():
 
     def __init__(self):
-
         self.model = ModelNV()
-
-        
         self.start_addr = 15
         
-    
-    
     def connect(self):
         try:
             self.c = ModbusClient(host=self.hosts[0], port=502)
