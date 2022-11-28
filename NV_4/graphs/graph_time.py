@@ -15,6 +15,9 @@ class graph_time(pg.PlotItem):
 
 
     def update(self, value):
+        # print(value)
         self.time_text.setText('')
-        self.tiempo = round(int(value) / 60000, 2)
+        # self.tiempo = round(int(value+1) / 60000, 2)
+        self.tiempo = value+1
+        # print("time..", self.tiempo)
         self.time_text.setText(str(self.tiempo))

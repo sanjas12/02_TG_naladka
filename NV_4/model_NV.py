@@ -27,7 +27,7 @@ class ModelNV():
         self.regim = [9,10, 11, 12, 14, 15, 16, 17, 20, 21, 22, 23, 24, 29]
         self.ready = 0
         self.pressure_max = 70
-        self.data_for_gui = [self.hosts, self.time_d, self.regim_name, self.regim, self.ready, self.pressure_max]
+        self.data_to_PLC_for_gui = [self.hosts, self.time_d, self.regim_name, self.regim, self.ready, self.pressure_max]
 
 
         try:
@@ -43,20 +43,23 @@ class ModelNV():
 
         # 4 - готовность к пуску (1 - готов)            -> M[19]
         # 5 - Переход в режим (10 - default)            -> M[20]
-        self.data = [0, 0, 0, 0,
+        self.data_to_PLC = [0, 0, 0, 0,
                 self.ready, self.regim[1]]
 
-    def set_data(self):
-        w = self.c.write_multiple_registers(regs_addr=15, regs_value=self.data)
-        self.data[0] = self.data[0] + 1
-        if self.data[0] >= self.pressure_max:
-            self.data[0] = 1
-        self.data[1] = self.data[1] + 2
-        if self.data[1] >= self.pressure_max:
-            self.data[1] = 1
-        self.data[2] = self.data[2] + 3
-        if self.data[2] >= self.pressure_max:
-            self.data[2] = 1
-        r = self.c.read_input_registers(reg_addr=15, reg_nb=len(self.data))
-        print(r)
-        time.sleep(self.time_d)
+    def update_data(self):
+        # w = self.c.write_multiple_registers(regs_addr=15, regs_value=self.data_to_PLC)
+        self.data_to_PLC[0] = self.data_to_PLC[0] + 1
+        if self.data_to_PLC[0] >= self.pressure_max:
+            self.data_to_PLC[0] = 1
+        self.data_to_PLC[1] = self.data_to_PLC[1] + 2
+        if self.data_to_PLC[1] >= self.pressure_max:
+            self.data_to_PLC[1] = 1
+        self.data_to_PLC[2] = self.data_to_PLC[2] + 3
+        if self.data_to_PLC[2] >= self.pressure_max:
+            self.data_to_PLC[2] = 1
+        # r = self.c.read_input_registers(reg_addr=15, reg_nb=len(self.data_to_PLC))
+        # print(r)
+        # time.sleep(self.time_d)
+
+    def get_data(self):
+        return self.data_to_PLC

@@ -5,8 +5,8 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGr
 import chardet
 import gzip
 import model_NV
-from graths.grath_gpk import graph_gpk
-from graths.grath_time import graph_time
+from graphs.graph_gpk import graph_gpk
+from graphs.graph_time import graph_time
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from data_base import data_base

@@ -1,43 +1,45 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGroupBox, \
-    QVBoxLayout, QGridLayout, QLabel, QFileDialog, QListWidget, QComboBox, QMainWindow
-from graths.grath_gpk import graph_gpk
-from graths.grath_time import graph_time
-import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
+import pyqtgraph as pg
+from graphs.graph_gpk import graph_gpk
+from graphs.graph_time import graph_time
+from graphs.graph_value import graph_value
+from PyQt5.QtWidgets import QApplication, QWidget
 from data_base import data_base
+from model_NV import ModelNV
+import time 
 
-# class ImitatorGui(QMainWindow):
-class ImitatorGui(QWidget):
+class ImitarorWindow(QWidget):
 
     def __init__(self):
-        super().__init__()
-        self.width = 640
-        self.height = 400
+        # Fonts for text items
+        
+        self.data = None
+        
+        font = QtGui.QFont()
+        font.setPixelSize(40)
+        
+        self.gpk_0 = graph_gpk(title='Первый датчик', pen='r')
+        self.gpk_1 = graph_gpk(title='Второй датчик', pen='b')
+        self.gpk_2 = graph_gpk(title='Третий датчик', pen='g')
+        self.gpk_value_0 = graph_value(color='r', font=font)
+        self.gpk_value_1 = graph_value(color='b', font=font)
+        self.gpk_value_2 = graph_value(color='g', font=font)
+        self.time = graph_time(font=font)
         self.setup_ui()
 
     def setup_ui(self):
-        # self.setGeometry(10, 10, self.width, self.height)
-        self.setWindowTitle(__file__)
-
         pg.setConfigOption('background', (33, 33, 33))
         pg.setConfigOption('foreground', (197, 198, 199))
+
         # Interface variables
+        # app = QtWidgets.QApplication(sys.argv)
         view = pg.GraphicsView()
         Layout = pg.GraphicsLayout()
         view.setCentralItem(Layout)
         view.show()
-        
-        view.setWindowTitle('Flight monitoring')
+        view.setWindowTitle('Imitator')
         view.resize(1200//2, 700//2)
-        
-
-        # Fonts for text items
-        font = QtGui.QFont()
-        font.setPixelSize(90)
-        
-        # declare random data
-        data_ran = data_base()
 
         # buttons style
         style = "background-color:rgb(29, 185, 84);color:rgb(0,0,0);font-size:14px;"
@@ -45,34 +47,26 @@ class ImitatorGui(QWidget):
         # Declare graphs
         # Button 1
         proxy = QtWidgets.QGraphicsProxyWidget()
-        save_button = QtWidgets.QPushButton('Start')
+        save_button = QtWidgets.QPushButton('Start storage')
         save_button.setStyleSheet(style)
-        save_button.clicked.connect(data_ran.start)
+        save_button.clicked.connect(data_base.start)
         proxy.setWidget(save_button)
 
-        # Button 2
+        # # Button 2
         proxy2 = QtWidgets.QGraphicsProxyWidget()
-        end_save_button = QtWidgets.QPushButton('Stop')
+        end_save_button = QtWidgets.QPushButton('Stop storage')
         end_save_button.setStyleSheet(style)
-        end_save_button.clicked.connect(data_ran.stop)
+        end_save_button.clicked.connect(data_base.stop)
         proxy2.setWidget(end_save_button)
-            
-        # GPK grath
-        self.gpk = graph_gpk()
-        self.time = graph_time(font=font)
-        
+
         ## Setting the graphs in the layout 
         # Title at top
-        text = """
-        My imitator
-        """
-
+        text = """My Imitator"""
         Layout.addLabel(text, col=1, colspan=21)
         Layout.nextRow()
 
         # Put vertical label on left side
-        Layout.addLabel('LIDER - ATL research hotbed', angle=-90, rowspan=3)
-                        
+        Layout.addLabel('Давление в ГПК(кг/см²).', angle=-90, rowspan=3)
         Layout.nextRow()
 
         lb = Layout.addLayout(colspan=21)
@@ -82,50 +76,64 @@ class ImitatorGui(QWidget):
 
         Layout.nextRow()
 
+        # First column
         l1 = Layout.addLayout(colspan=20, rowspan=2)
-        l11 = l1.addLayout(rowspan=1, border=(83, 83, 83))
-
-        # Altitude, speed
-        l11.addItem(self.gpk)
+        l1.addItem(self.gpk_0)
         l1.nextRow()
+        l1.addItem(self.gpk_1)
+        l1.nextRow()
+        l1.addItem(self.gpk_2)
 
-        # Acceleration, gyro, pressure, temperature
-        l12 = l1.addLayout(rowspan=1, border=(83, 83, 83))
+        # Second column
+        l2 = Layout.addLayout(border=(83, 83, 83))
+        l2.addItem(self.gpk_value_0)
+        l2.nextRow()
+        l2.addItem(self.gpk_value_1)
+        l2.nextRow()
+        l2.addItem(self.gpk_value_2)
 
-        # Time, battery and free fall graphs
+        # Time
         l2 = Layout.addLayout(border=(83, 83, 83))
         l2.addItem(self.time)
-        l2.nextRow()
-        
 
-        if  True:
-            timer = pg.QtCore.QTimer()
-            timer.timeout.connect(self.update)
-            timer.start(500)
-        else:
-            print("something is wrong with the update call")
-
-
-        self.show()
-
-    # you have to put the position of the CSV stored in the value_chain list
-    # that represent the date you want to visualize
     def update(self):
         try:
-            value_chain = [0, 0]
-            self.gpk.update(value_chain[1])
-            self.time.update(value_chain[0])
-            data_base.guardar(value_chain)
+            # init value imitator
+            value_chain = [40, 40, 40, 1]
+            
+            self.gpk_0.update(value_chain[0])
+            self.gpk_1.update(value_chain[1])
+            self.gpk_2.update(value_chain[2])
+            self.gpk_value_0.update(self.gpk_0.get_data())
+            self.gpk_value_1.update(self.gpk_1.get_data())
+            self.gpk_value_2.update(self.gpk_2.get_data())
+            
+            self.time.update(value_chain[3])
         except IndexError:
             print('starting, please wait a moment')
 
+        if True:
+            timer = pg.QtCore.QTimer()
+            timer.timeout.connect(self.update)
+            timer.start(1000)
+
+    def set_data(self, data):
+        self.data = data
+   
 def main():
     app = QApplication(sys.argv)
-    ex = ImitatorGui()
-    ex.show
-    if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
-        QtWidgets.QApplication.instance().exec_()
-    sys.exit(app.exec())
+    model = ModelNV()
+    ex = ImitarorWindow()
+    while True:
+        model.update_data()
+        new_data = model.get_data()
+        print(new_data)
+        ex.set_data(new_data)
+        time.sleep(1)
+    ex.show()
+    # if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
+        # QtWidgets.QApplication.instance().exec_()
+    app.exec_()
 
 
 if __name__ == '__main__':
