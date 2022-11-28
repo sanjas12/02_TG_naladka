@@ -15,6 +15,7 @@ from tkinter.ttk import *  # для combobox
 import csv
 from tkinter import filedialog as fd
 import pandas as pd
+import os
 
 
 # from memory_profiler import profile
