@@ -29,7 +29,14 @@ class ModelNV():
                        # 0 - local,      1-шур_11
         self.hosts = ["localhost", "192.168.30.111", "192.168.30.121", "192.168.30.211", "192.168.30.221"]
         self.time_d = 3
-
+        
+        # 0 - 1 Датчик ГПК                              -> M[15]
+        # 1 - 2 Датчик ГПК                              -> M[16]
+        # 2 - 3 Датчик ГПК                              -> M[17]
+        # 3 - Исправность датчиков ГПК (0 - исправны)   -> M[18]
+        
+        # 4 - готовность к пуску (1 - готов)            -> M[19]
+        # 5 - Переход в режим (10 - default)  
         self.data_to_PLC = [self.pressure_start, self.pressure_start, self.pressure_start, self.sensor_ready,
                             self.sensor_ready, self.regim_code]
 
