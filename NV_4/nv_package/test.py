@@ -8,7 +8,8 @@ from PyQt5.QtWidgets import QPushButton
 from graphs.graph_gpk import graph_gpk
 from graphs.graph_time import graph_time
 from graphs.graph_value import graph_value
-
+from connect_to_PLC import ConnectPLC
+from model_NV import ModelNV
 
 pg.setConfigOption('background', (33, 33, 33))
 pg.setConfigOption('foreground', (197, 198, 199))
@@ -104,7 +105,7 @@ l2.addItem(time)
 def update():
     try:
         # init value imitator
-        value_chain = [40, 40, 40, 1]
+        value_chain = [40, 40, 40, 0]
         gpk_0.update(value_chain[0])
         gpk_1.update(value_chain[1])
         gpk_2.update(value_chain[2])
@@ -116,6 +117,11 @@ def update():
         time.update(value_chain[3])
     except IndexError:
         print('starting, please wait a moment')
+
+c = ConnectPLC()
+model = ModelNV()
+print(model.get_data_to_PLC()[:4])
+c.data_transfer(model.get_data_to_PLC()[:4])
 
 
 # if(ser.isOpen()) or (ser.dummyMode()):

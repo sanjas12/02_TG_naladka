@@ -1,31 +1,24 @@
 import sys
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 import pyqtgraph as pg
-from graphs.graph_gpk import graph_gpk
-from graphs.graph_time import graph_time
 from graphs.graph_value import graph_value
 from PyQt5.QtWidgets import QApplication, QWidget
 from data_base import data_base
 from model_NV import ModelNV
 import time 
+from connect_to_PLC import ConnectPLC
 
 class ImitarorWindow(QWidget):
 
     def __init__(self):
-        # Fonts for text items
         
         self.data = None
         
+        # Fonts for text items
         font = QtGui.QFont()
         font.setPixelSize(40)
         
-        self.gpk_0 = graph_gpk(title='Первый датчик', pen='r')
-        self.gpk_1 = graph_gpk(title='Второй датчик', pen='b')
-        self.gpk_2 = graph_gpk(title='Третий датчик', pen='g')
-        self.gpk_value_0 = graph_value(color='r', font=font)
-        self.gpk_value_1 = graph_value(color='b', font=font)
-        self.gpk_value_2 = graph_value(color='g', font=font)
-        self.time = graph_time(font=font)
+        self.gpk = graph_gpk(title='Давление в ГПК(кг/см²). Медианна', pen='r')
         self.setup_ui()
 
     def setup_ui(self):
@@ -38,30 +31,15 @@ class ImitarorWindow(QWidget):
         Layout = pg.GraphicsLayout()
         view.setCentralItem(Layout)
         view.show()
-        view.setWindowTitle('Imitator')
+        view.setWindowTitle('SAZR')
         view.resize(1200//2, 700//2)
 
         # buttons style
         style = "background-color:rgb(29, 185, 84);color:rgb(0,0,0);font-size:14px;"
 
-        # Declare graphs
-        # Button 1
-        proxy = QtWidgets.QGraphicsProxyWidget()
-        save_button = QtWidgets.QPushButton('Start storage')
-        save_button.setStyleSheet(style)
-        save_button.clicked.connect(data_base.start)
-        proxy.setWidget(save_button)
-
-        # # Button 2
-        proxy2 = QtWidgets.QGraphicsProxyWidget()
-        end_save_button = QtWidgets.QPushButton('Stop storage')
-        end_save_button.setStyleSheet(style)
-        end_save_button.clicked.connect(data_base.stop)
-        proxy2.setWidget(end_save_button)
-
         ## Setting the graphs in the layout 
         # Title at top
-        text = """My Imitator"""
+        text = """SARZ"""
         Layout.addLabel(text, col=1, colspan=21)
         Layout.nextRow()
 

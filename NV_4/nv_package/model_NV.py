@@ -26,6 +26,7 @@ class ModelNV():
         self.ready_to_start = 1
         self.pressure_max = 70
         self.pressure_start = 40
+        self.pressure_target = 60
                        # 0 - local,      1-шур_11
         self.hosts = ["localhost", "192.168.30.111", "192.168.30.121", "192.168.30.211", "192.168.30.221"]
         self.time_d = 3
@@ -37,10 +38,12 @@ class ModelNV():
         
         # 4 - готовность к пуску (1 - готов)            -> M[19]
         # 5 - Переход в режим (10 - default)  
+        # 6 - заданное давление  
         self.data_to_PLC = [self.pressure_start, self.pressure_start, self.pressure_start, self.sensor_ready,
-                            self.sensor_ready, self.regim_code]
+                            self.sensor_ready, self.regim_code, self.pressure_target]
 
-        self.data_for_gui = [self.hosts, self.time_d, self.regim_name, self.regim_code, self.ready_to_start, self.pressure_max]
+        self.data_for_gui = [self.hosts, self.time_d, self.regim_name, self.regim_code, 
+                            self.ready_to_start, self.pressure_max]
 
     def get_data_for_gui(self):
         return self.data_for_gui
