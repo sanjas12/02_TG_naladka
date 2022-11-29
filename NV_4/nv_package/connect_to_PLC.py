@@ -33,26 +33,28 @@ class ConnectPLC():
         w = self.c.write_multiple_registers(regs_addr=self.addr_start_write, regs_value=data)
         time.sleep(1)
         # PLC Premium m[1] real (занимает 2 адреса) выдает как WORD (2 int) -> python принимает как list[2 int]  
-        prs_cur = self.c.read_input_registers(reg_addr=self.addr_start_read, reg_nb=2)
-        # prs_cur = bin(prs_cur[0])+ bin(prs_cur[1])
-        
-        # PLC(115.0) -> Python ([0, 17126])  
-        # PLC(110.0) -> Python ([0, 17116])  
+        try:
+            prs_cur = self.c.read_input_registers(reg_addr=self.addr_start_read, reg_nb=2)
+            # prs_cur = bin(prs_cur[0])+ bin(prs_cur[1])
+            
+            # PLC(115.0) -> Python ([0, 17126])  
+            # PLC(110.0) -> Python ([0, 17116])  
 
 
-        # Convert 2 ints to float
-        print(hex(prs_cur[0]))
-        print(hex(prs_cur[1]))
+            # Convert 2 ints to float
+            print(hex(prs_cur[0]))
+            print(hex(prs_cur[1]))
 
-        mypack = struct.pack('>ii', prs_cur[0], prs_cur[1])
-        print (mypack)
-        
-        mypack = struct.pack('<ii', prs_cur[0], prs_cur[1])
-        print (mypack)
+            mypack = struct.pack('>ii', prs_cur[0], prs_cur[1])
+            print (mypack)
+            
+            mypack = struct.pack('<ii', prs_cur[0], prs_cur[1])
+            print (mypack)
 
-        # print(struct.unpack('<f', mypack))
-        # print(struct.unpack('>f', mypack))
-
+            # print(struct.unpack('<f', mypack))
+            # print(struct.unpack('>f', mypack))
+        except TypeError:
+            print("не замущен Unity pro")
 
 
 

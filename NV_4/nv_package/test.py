@@ -19,8 +19,8 @@ view = pg.GraphicsView()
 Layout = pg.GraphicsLayout()
 view.setCentralItem(Layout)
 view.show()
-view.setWindowTitle('Imitator')
-view.resize(1200//2, 700//2)
+# view.setWinowTitle('Imitator')
+view.resize(900//2, 700//2)
 
 # declare object for serial Communication
 # ser = Communication()
@@ -96,8 +96,8 @@ l2.nextRow()
 l2.addItem(gpk_value_2)
 
 # Time
-l2 = Layout.addLayout(border=(83, 83, 83))
-l2.addItem(time)
+# l2 = Layout.addLayout(border=(83, 83, 83))
+# l2.addItem(time)
 
 
 # you have to put the position of the CSV stored in the value_chain list
