@@ -54,7 +54,7 @@ class ConnectPLC():
             # print(struct.unpack('<f', mypack))
             # print(struct.unpack('>f', mypack))
         except TypeError:
-            print("не замущен Unity pro")
+            print("не запущен Unity Pro")
 
 
 

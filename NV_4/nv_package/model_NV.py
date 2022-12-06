@@ -49,6 +49,7 @@ class ModelNV():
         return self.data_for_gui
     
     def get_data_to_PLC(self):
+        self.update_data_to_PLC()
         return self.data_to_PLC
         
     def update_data_to_PLC(self):

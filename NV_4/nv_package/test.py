@@ -3,8 +3,7 @@ from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 import pyqtgraph as pg
 # from communication import Communication
 from data_base import data_base
-from PyQt5.QtWidgets import QPushButton
-# from graphs.graph_gpk import graph_gpk
+# from PyQt5.QtWidgets import QPushButton
 from graphs.graph_gpk import graph_gpk
 from graphs.graph_time import graph_time
 from graphs.graph_value import graph_value
@@ -120,8 +119,7 @@ def update():
 
 c = ConnectPLC()
 model = ModelNV()
-print(model.get_data_to_PLC()[:4])
-c.data_transfer(model.get_data_to_PLC()[:4])
+# while:
 
 
 # if(ser.isOpen()) or (ser.dummyMode()):
@@ -129,6 +127,8 @@ if True:
     timer = pg.QtCore.QTimer()
     timer.timeout.connect(update)
     timer.start(1000)
+    print(model.get_data_to_PLC()[:4])
+    c.data_transfer(model.get_data_to_PLC()[:4])
 else:
     print("something is wrong with the update call")
 # Start Qt event loop unless running in interactive mode.

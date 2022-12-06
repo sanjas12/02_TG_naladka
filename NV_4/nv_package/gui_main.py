@@ -1,12 +1,12 @@
-import pandas as pd
+# import pandas as pd
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGroupBox, \
     QVBoxLayout, QGridLayout, QLabel, QFileDialog, QListWidget, QComboBox, QMainWindow
-import chardet
-import gzip
+# import chardet
+# import gzip
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
-from data_base import data_base
+# from data_base import data_base
 
 class MainWindow(QWidget):
 

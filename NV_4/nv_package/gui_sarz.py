@@ -2,6 +2,7 @@ import sys
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 import pyqtgraph as pg
 from graphs.graph_value import graph_value
+from graphs.graph_gpk import graph_gpk
 from PyQt5.QtWidgets import QApplication, QWidget
 from data_base import data_base
 from model_NV import ModelNV
@@ -47,10 +48,10 @@ class ImitarorWindow(QWidget):
         Layout.addLabel('Давление в ГПК(кг/см²).', angle=-90, rowspan=3)
         Layout.nextRow()
 
-        lb = Layout.addLayout(colspan=21)
-        lb.addItem(proxy)
-        lb.nextCol()
-        lb.addItem(proxy2)
+        # lb = Layout.addLayout(colspan=21)
+        # lb.addItem(proxy)
+        # lb.nextCol()
+        # lb.addItem(proxy2)
 
         Layout.nextRow()
 
