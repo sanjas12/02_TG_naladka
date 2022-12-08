@@ -114,6 +114,8 @@ def update():
         gpk_value_2.update(gpk_2.get_data())
         
         time.update(value_chain[3])
+
+        print(gpk_0.get_data(), gpk_1.get_data(), gpk_2.get_data())
     except IndexError:
         print('starting, please wait a moment')
 
@@ -127,8 +129,8 @@ if True:
     timer = pg.QtCore.QTimer()
     timer.timeout.connect(update)
     timer.start(1000)
-    print(model.get_data_to_PLC()[:4])
-    c.data_transfer(model.get_data_to_PLC()[:4])
+    data = model.get_data_to_PLC()[:4]
+    c.data_transfer(data)
 else:
     print("something is wrong with the update call")
 # Start Qt event loop unless running in interactive mode.
