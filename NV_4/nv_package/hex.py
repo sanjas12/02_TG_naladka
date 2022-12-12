@@ -1,13 +1,10 @@
 import struct
-
+import time
 
 prs_cur = [0, 17116]
 
-print(hex(prs_cur[0]))
-print(hex(prs_cur[1]))
+mypack_3 = struct.pack('<hh', *prs_cur)
 
-mypack = struct.pack('<ii', prs_cur[0], prs_cur[1])
+real_5 = struct.unpack('<f', mypack_3)
 
-
-print(mypack)
-print(hex(mypack))
+print(real_5[0])

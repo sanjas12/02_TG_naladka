@@ -19,7 +19,7 @@ Layout = pg.GraphicsLayout()
 view.setCentralItem(Layout)
 view.show()
 # view.setWinowTitle('Imitator')
-view.resize(900//2, 700//2)
+view.resize(800, 400)
 
 # declare object for serial Communication
 # ser = Communication()
@@ -52,33 +52,32 @@ proxy2.setWidget(end_save_button)
 gpk_0 = graph_gpk(title='Первый датчик', pen='r')
 gpk_1 = graph_gpk(title='Второй датчик', pen='b')
 gpk_2 = graph_gpk(title='Третий датчик', pen='g')
-gpk_value_0 = graph_value(color='r', font=font)
-gpk_value_1 = graph_value(color='b', font=font)
-gpk_value_2 = graph_value(color='g', font=font)
-time = graph_time(font=font)
-
+prs_cur_grath = graph_gpk(title='Медиана', pen='g', number=20)
+gpk_value_0 = graph_value(color='r', font=font, title='Первый датчик')
+gpk_value_1 = graph_value(color='b', font=font, title='Второй датчик')
+gpk_value_2 = graph_value(color='g', font=font, title='Третий датчик')
+prs_cur = graph_value(color='g', font=font, title='Медиана')
 
 ## Setting the graphs in the layout 
 # Title at top
 text = """My Imitator"""
-Layout.addLabel(text, col=1, colspan=21)
+# Layout.addLabel(text, col=1, colspan=21, font=font)
+Layout.addLabel(text, colspan=100, font=font)
 Layout.nextRow()
 
 # Put vertical label on left side
 Layout.addLabel('Давление в ГПК(кг/см²).', angle=-90, rowspan=3)
 Layout.nextRow()
 
-lb = Layout.addLayout(colspan=21)
-lb.addItem(proxy)
-lb.nextCol()
-lb.addItem(proxy2)
+# lb = Layout.addLayout(colspan=21)
+# lb.addItem(proxy)
+# lb.nextCol()
+# lb.addItem(proxy2)
 
-Layout.nextRow()
-
-l1 = Layout.addLayout(colspan=20, rowspan=2)
-# l11 = l1.addLayout(rowspan=2, border=(83, 83, 83))
+# Layout.nextRow()
 
 # First column
+l1 = Layout.addLayout(colspan=20, rowspan=2)
 l1.addItem(gpk_0)
 l1.nextRow()
 l1.addItem(gpk_1)
@@ -87,50 +86,63 @@ l1.addItem(gpk_2)
 
 # Second column
 l2 = Layout.addLayout(border=(83, 83, 83))
-# print(gpk_0.get_data)
 l2.addItem(gpk_value_0)
 l2.nextRow()
 l2.addItem(gpk_value_1)
 l2.nextRow()
 l2.addItem(gpk_value_2)
 
+# Third column
+l3 = Layout.addLayout(colspan=20, rowspan=2)
+l3.addItem(prs_cur_grath)
+l3.nextRow()
+
+# Fourth column
+l4 = Layout.addLayout()
+l4.addItem(prs_cur)
+l4.nextRow()
+
 # Time
 # l2 = Layout.addLayout(border=(83, 83, 83))
 # l2.addItem(time)
 
+model = ModelNV()
 
 # you have to put the position of the CSV stored in the value_chain list
 # that represent the date you want to visualize
 def update():
     try:
         # init value imitator
-        value_chain = [40, 40, 40, 0]
-        gpk_0.update(value_chain[0])
-        gpk_1.update(value_chain[1])
-        gpk_2.update(value_chain[2])
-        # print(gpk_0.get_data())       
-        gpk_value_0.update(gpk_0.get_data())
-        gpk_value_1.update(gpk_1.get_data())
-        gpk_value_2.update(gpk_2.get_data())
+        data = model.get_data_to_PLC()
+        pressure = data[:3]
+        data_to_PLC = data[:4]
+        for i in range(3):
+            data_to_PLC[i] = data_to_PLC[i] * 100
+        print(pressure, "to grath")
         
-        time.update(value_chain[3])
-
-        print(gpk_0.get_data(), gpk_1.get_data(), gpk_2.get_data())
+        c.write_to_PLC(data_to_PLC)
+        pr= c.read_PLC()
+        gpk_0.update(pressure[0])
+        gpk_1.update(pressure[1])
+        gpk_2.update(pressure[2])
+        prs_cur_grath.update(pr)
+        gpk_value_0.update(pressure[0])
+        gpk_value_1.update(pressure[1])
+        gpk_value_2.update(pressure[2])
+        prs_cur.update(pr)
+        
     except IndexError:
         print('starting, please wait a moment')
 
 c = ConnectPLC()
-model = ModelNV()
-# while:
-
 
 # if(ser.isOpen()) or (ser.dummyMode()):
+# if True:
 if True:
     timer = pg.QtCore.QTimer()
     timer.timeout.connect(update)
     timer.start(1000)
-    data = model.get_data_to_PLC()[:4]
-    c.data_transfer(data)
+
 else:
     print("something is wrong with the update call")
 # Start Qt event loop unless running in interactive mode.

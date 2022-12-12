@@ -1,139 +1,115 @@
 import sys
-from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
-import pyqtgraph as pg
-from graphs.graph_gpk import graph_gpk
-from graphs.graph_time import graph_time
 from graphs.graph_value import graph_value
-from PyQt5.QtWidgets import QApplication, QWidget
-from data_base import data_base
+import numpy as np
+import pyqtgraph as pg
+from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 from model_NV import ModelNV
-import time 
 
-class ImitarorWindow(QWidget):
-
+class BasePlot(object):
     def __init__(self):
-        super().__init__()
-
-        # Fonts for text items
-        font = QtGui.QFont()
-        font.setPixelSize(40)
-        
-        self.gpk_0 = graph_gpk(title='Первый датчик', pen='r')
-        self.gpk_1 = graph_gpk(title='Второй датчик', pen='b')
-        self.gpk_2 = graph_gpk(title='Третий датчик', pen='g')
-        self.gpk_value_0 = graph_value(color='r', font=font)
-        self.gpk_value_1 = graph_value(color='b', font=font)
-        self.gpk_value_2 = graph_value(color='g', font=font)
-        self.time = graph_time(font=font)
-        self.setup_ui()
-
-    def setup_ui(self):
-        pg.setConfigOption('background', (33, 33, 33))
-        pg.setConfigOption('foreground', (197, 198, 199))
-
-        # Interface variables
-        # app = QtWidgets.QApplication(sys.argv)
-        view = pg.GraphicsView()
-        Layout = pg.GraphicsLayout()
-        view.setCentralItem(Layout)
-        view.show()
-        view.setWindowTitle('Imitator')
-        view.resize(1200//2, 700//2)
-
-        # buttons style
-        style = "background-color:rgb(29, 185, 84);color:rgb(0,0,0);font-size:14px;"
-
-        # Declare graphs
-        # Button 1
-        proxy = QtWidgets.QGraphicsProxyWidget()
-        save_button = QtWidgets.QPushButton('Start storage')
-        save_button.setStyleSheet(style)
-        save_button.clicked.connect(data_base.start)
-        proxy.setWidget(save_button)
-
-        # # Button 2
-        proxy2 = QtWidgets.QGraphicsProxyWidget()
-        end_save_button = QtWidgets.QPushButton('Stop storage')
-        end_save_button.setStyleSheet(style)
-        end_save_button.clicked.connect(data_base.stop)
-        proxy2.setWidget(end_save_button)
-
-        ## Setting the graphs in the layout 
-        # Title at top
-        text = """My Imitator"""
-        Layout.addLabel(text, col=1, colspan=21)
-        Layout.nextRow()
-
-        # Put vertical label on left side
-        Layout.addLabel('Давление в ГПК(кг/см²).', angle=-90, rowspan=3)
-        Layout.nextRow()
-
-        lb = Layout.addLayout(colspan=21)
-        lb.addItem(proxy)
-        lb.nextCol()
-        lb.addItem(proxy2)
-
-        Layout.nextRow()
-
-        # First column
-        l1 = Layout.addLayout(colspan=20, rowspan=2)
-        l1.addItem(self.gpk_0)
-        l1.nextRow()
-        l1.addItem(self.gpk_1)
-        l1.nextRow()
-        l1.addItem(self.gpk_2)
-
-        # Second column
-        l2 = Layout.addLayout(border=(83, 83, 83))
-        l2.addItem(self.gpk_value_0)
-        l2.nextRow()
-        l2.addItem(self.gpk_value_1)
-        l2.nextRow()
-        l2.addItem(self.gpk_value_2)
-
-        # Time
-        l2 = Layout.addLayout(border=(83, 83, 83))
-        l2.addItem(self.time)
-
-    def update(self):
         try:
-            # init value imitator
-            value_chain = [40, 40, 40, 1]
-            
-            self.gpk_0.update(value_chain[0])
-            self.gpk_1.update(value_chain[1])
-            self.gpk_2.update(value_chain[2])
-            self.gpk_value_0.update(self.gpk_0.get_data())
-            self.gpk_value_1.update(self.gpk_1.get_data())
-            self.gpk_value_2.update(self.gpk_2.get_data())
-            
-            self.time.update(value_chain[3])
-        except IndexError:
-            print('starting, please wait a moment')
+            self.app = QtWidgets.QApplication(sys.argv)
+        except RuntimeError:
+            self.app = QtWidgets.QApplication.instance()
+        self.view = pg.GraphicsView()
+        self.layout = pg.GraphicsLayout(border=(100,100,100))
+       
+        # First column
+        # self.l1 = self.layout.addLayout()
+        self.l1 = self.layout.addLayout(colspan=20, rowspan=2)
+        
+        # Second column
+        self.l2 = self.layout.addLayout()
+        self.view.setCentralItem(self.layout)
+        self.view.setWindowTitle('Imitator')
+        self.view.resize(900//2, 700//2)
+        self.view.show()
 
-        if True:
-            timer = pg.QtCore.QTimer()
-            timer.timeout.connect(self.update)
-            timer.start(1000)
+        self.model = ModelNV()
+        
+        self.plot_list = []
+        self.value_list = []
 
-    def set_data(self, data):
-        self.data = data
-   
+        self.sensor_name = ('Первый датчик', 'Второй датчик', 'Третий датчик')
+        self.color_name = ('r', 'g', 'b')
+        self.number_point_to_grath = 10
+        self.y_Data = np.zeros(self.number_point_to_grath)
+
+
+        # self.text_to_value = pg.TextItem("Start" , anchor=(0.5, 0.5))
+        self.text_to_value = "Start"
+        self.font = QtGui.QFont()
+        self.font.setPixelSize(40)
+
+    def plot_init(self):
+        for c, name in zip(self.color_name, self.sensor_name):
+            
+            # create list graths
+            new_plot = self.l1.addPlot()
+            new_plot.plot(np.zeros(self.number_point_to_grath))
+            new_plot.setTitle(name)
+            self.plot_list.append(new_plot.listDataItems()[0])
+            self.l1.nextRow()
+            
+            # create list value
+            # # new_value = self.l2.addLabel(self.text_to_value, font=self.font)
+            # new_value = self.l2.addItem()
+            # # pg.TextItem("test", anchor=(0.5, 0.5), color=c)
+            # new_value.setFont(self.font)
+            # self.value_list.append(new_value)
+            # # self.value_list.append(new_value)
+            # self.l2.nextRow()
+
+            gpk_value = graph_value(color=c, font=self.font, name=name, title=name)
+            new_value = self.l2.addItem(gpk_value)
+            self.value_list.append(gpk_value)
+            self.l2.nextRow()
+
+    def update_data(self, data):
+        self.data_pressure = data
+    
+    def update(self):
+        data_pressure = self.model.get_data_to_PLC()[:3]
+        # self.update_data()
+        # self.data_pressure = data
+        print("data_pressure", data_pressure)
+        # for data, _line, _plot in zip(data_pressure, self.plot_list, self.value_list):
+        # print(data, _line, _plot)
+        line = self.plot_list[0]
+        # line = _line
+        line.informViewBoundsChanged()
+        # x_data = np.arange(len(line.yData))
+        self.y_Data = np.roll(self.y_Data, -1)
+        
+        self.y_Data[-1] = data_pressure[0]
+        # self.y_Data[-1] = data
+        
+        line.setData(self.y_Data)
+        line.xClean = line.yClean = None
+        line.xDisp = None
+        line.yDisp = None
+        line.updateItems()
+        line.sigPlotChanged.emit(line)
+
+        value = self.value_list[0]
+        # value = _plot
+        value.update(data_pressure[0])
+        # value.update(data)
+
+    def start(self):
+        # print('start', data)
+        self.plot_init()
+        timer = pg.QtCore.QTimer()
+        timer.timeout.connect(self.update)
+        timer.start(1000) 
+        if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
+            self.app.exec_()   
+
 def main():
-    app = QApplication(sys.argv)
+    from model_NV import ModelNV
     model = ModelNV()
-    ex = ImitarorWindow()
-    ex.show()
-    # if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
-    #     QtWidgets.QApplication.instance().exec_()
-    app.exec_()
-   
-    while True:
-        model.update_data_to_PLC()
-        new_data = model.get_data_to_PLC()
-        print(new_data)
-        ex.set_data(new_data)
-        time.sleep(1)
+    ex = BasePlot()
+    ex.start()
 
 
 if __name__ == '__main__':

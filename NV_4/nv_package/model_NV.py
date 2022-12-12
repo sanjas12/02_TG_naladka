@@ -1,4 +1,5 @@
 import random
+import time
 
 class ModelNV():
 
@@ -62,3 +63,14 @@ class ModelNV():
         self.data_to_PLC[2] = self.data_to_PLC[2] + 3
         if self.data_to_PLC[2] >= self.pressure_max:
             self.data_to_PLC[2] = self.pressure_start
+
+
+def main():
+    model = ModelNV()
+    while True:
+        # model.get_data_to_PLC()
+        print(model.get_data_to_PLC())
+        time.sleep(1)
+
+if __name__ == '__main__':
+    main()
