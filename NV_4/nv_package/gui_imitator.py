@@ -3,10 +3,11 @@ from graphs.graph_value import graph_value
 import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
-from model_NV import ModelNV
+from graphs.graph_gpk import graph_gpk
+from settings import *
 
 class BasePlot(object):
-    def __init__(self):
+    def __init__(self, model):
         try:
             self.app = QtWidgets.QApplication(sys.argv)
         except RuntimeError:
@@ -14,52 +15,47 @@ class BasePlot(object):
         self.view = pg.GraphicsView()
         self.layout = pg.GraphicsLayout(border=(100,100,100))
        
+        self.view.setCentralItem(self.layout)
+        self.view.setWindowTitle('Imitator')
+        self.view.resize(*RES_IMITATOR)
+        self.view.show()
+
         # First column
-        # self.l1 = self.layout.addLayout()
-        self.l1 = self.layout.addLayout(colspan=20, rowspan=2)
+        self.l1 = self.layout.addLayout()
         
         # Second column
         self.l2 = self.layout.addLayout()
-        self.view.setCentralItem(self.layout)
-        self.view.setWindowTitle('Imitator')
-        self.view.resize(900//2, 700//2)
-        self.view.show()
 
-        self.model = ModelNV()
+        self.model = model
         
         self.plot_list = []
         self.value_list = []
 
         self.sensor_name = ('Первый датчик', 'Второй датчик', 'Третий датчик')
         self.color_name = ('r', 'g', 'b')
-        self.number_point_to_grath = 10
+        self.number_point_to_grath = NUMBER_POINT_TO_GRATH
         self.y_Data = np.zeros(self.number_point_to_grath)
 
 
         # self.text_to_value = pg.TextItem("Start" , anchor=(0.5, 0.5))
         self.text_to_value = "Start"
         self.font = QtGui.QFont()
-        self.font.setPixelSize(40)
+        self.font.setPixelSize(FONT_SIZE)
 
     def plot_init(self):
         for c, name in zip(self.color_name, self.sensor_name):
             
             # create list graths
-            new_plot = self.l1.addPlot()
-            new_plot.plot(np.zeros(self.number_point_to_grath))
-            new_plot.setTitle(name)
-            self.plot_list.append(new_plot.listDataItems()[0])
+            gpk = graph_gpk(title=name, pen=c)
+            # new_plot = self.l1.addPlot()
+            # new_plot.plot(np.zeros(self.number_point_to_grath))
+            # new_plot.setTitle(name)
+            # self.plot_list.append(new_plot.listDataItems()[0])
+            self.l1.addItem(gpk)
+            self.plot_list.append(self.l1.listDataItems()[0])
             self.l1.nextRow()
             
             # create list value
-            # # new_value = self.l2.addLabel(self.text_to_value, font=self.font)
-            # new_value = self.l2.addItem()
-            # # pg.TextItem("test", anchor=(0.5, 0.5), color=c)
-            # new_value.setFont(self.font)
-            # self.value_list.append(new_value)
-            # # self.value_list.append(new_value)
-            # self.l2.nextRow()
-
             gpk_value = graph_value(color=c, font=self.font, name=name, title=name)
             new_value = self.l2.addItem(gpk_value)
             self.value_list.append(gpk_value)
@@ -101,14 +97,13 @@ class BasePlot(object):
         self.plot_init()
         timer = pg.QtCore.QTimer()
         timer.timeout.connect(self.update)
-        timer.start(1000) 
+        timer.start(TIME_IMITATOR) 
         if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
             self.app.exec_()   
 
 def main():
     from model_NV import ModelNV
-    model = ModelNV()
-    ex = BasePlot()
+    ex = BasePlot(ModelNV())
     ex.start()
 
 

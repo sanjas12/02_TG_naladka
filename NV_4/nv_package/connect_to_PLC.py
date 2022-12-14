@@ -3,6 +3,7 @@ from pyModbusTCP.client import ModbusClient
 from model_NV import ModelNV
 import time
 import random
+from settings import *
 
 class ConnectPLC():
 
@@ -15,7 +16,7 @@ class ConnectPLC():
         self.prs_cur = 0
         
         try:
-            self.c = ModbusClient(host=self.hosts[0], port=502)
+            self.c = ModbusClient(host=self.hosts[0], port=502, timeout=TIME_TO_CONNECT)
         except ValueError:
             print("Error with host or port params")
 
@@ -30,7 +31,7 @@ class ConnectPLC():
 
         try:
             w = self.c.write_multiple_registers(regs_addr=self.addr_start_write, regs_value=data)
-            print(data, 'to PLC')           
+            print(time.asctime(), data, 'to PLC')           
         except TypeError:
             print("не запущен Unity Pro")
 
@@ -56,7 +57,7 @@ def main():
         data = [random.randint(start, end), random.randint(start, end), random.randint(start, end)]
         c.write_to_PLC(data)
         c.read_PLC()
-        time.sleep(1)
+        time.sleep(0.5)
 
 if __name__ == '__main__':
     main()

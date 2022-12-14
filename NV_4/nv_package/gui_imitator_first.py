@@ -9,6 +9,7 @@ from graphs.graph_time import graph_time
 from graphs.graph_value import graph_value
 from connect_to_PLC import ConnectPLC
 from model_NV import ModelNV
+from settings import *
 
 pg.setConfigOption('background', (33, 33, 33))
 pg.setConfigOption('foreground', (197, 198, 199))
@@ -19,7 +20,7 @@ Layout = pg.GraphicsLayout()
 view.setCentralItem(Layout)
 view.show()
 # view.setWinowTitle('Imitator')
-view.resize(800, 400)
+view.resize(*RES_IMITATOR)
 
 # declare object for serial Communication
 # ser = Communication()
@@ -27,11 +28,10 @@ view.resize(800, 400)
 data_base = data_base()
 # Fonts for text items
 font = QtGui.QFont()
-font.setPixelSize(40)
+font.setPixelSize(FONT_SIZE)
 
 # buttons style
 style = "background-color:rgb(29, 185, 84);color:rgb(0,0,0);font-size:14px;"
-
 
 # Declare graphs
 # Button 1
@@ -52,11 +52,11 @@ proxy2.setWidget(end_save_button)
 gpk_0 = graph_gpk(title='Первый датчик', pen='r')
 gpk_1 = graph_gpk(title='Второй датчик', pen='b')
 gpk_2 = graph_gpk(title='Третий датчик', pen='g')
-prs_cur_grath = graph_gpk(title='Медиана', pen='g', number=20)
+prs_cur_grath = graph_gpk(title='Медиана', pen='g')
 gpk_value_0 = graph_value(color='r', font=font, title='Первый датчик')
 gpk_value_1 = graph_value(color='b', font=font, title='Второй датчик')
 gpk_value_2 = graph_value(color='g', font=font, title='Третий датчик')
-prs_cur = graph_value(color='g', font=font, title='Медиана')
+prs_cur = graph_value(color='g', font=font, title='Медиана из PLC')
 
 ## Setting the graphs in the layout 
 # Title at top
@@ -122,6 +122,7 @@ def update():
         
         c.write_to_PLC(data_to_PLC)
         pr= c.read_PLC()
+        
         gpk_0.update(pressure[0])
         gpk_1.update(pressure[1])
         gpk_2.update(pressure[2])
@@ -141,7 +142,7 @@ c = ConnectPLC()
 if True:
     timer = pg.QtCore.QTimer()
     timer.timeout.connect(update)
-    timer.start(1000)
+    timer.start(TIME_MAIN)
 
 else:
     print("something is wrong with the update call")

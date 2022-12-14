@@ -1,11 +1,12 @@
 import pyqtgraph as pg
 import numpy as np
 import random
+from settings import *
 
 class graph_gpk(pg.PlotItem):
      
     def __init__(self, pen, parent=None, name=None, labels=None, title='Давление в ГПК(кг/см²)',
-     viewBox=None, axisItems=None, number=40, enableMenu=True, **kargs):
+     viewBox=None, axisItems=None, number=NUMBER_POINT_TO_GRATH, enableMenu=True, **kargs):
         super().__init__(parent, name, labels, title, viewBox, axisItems, enableMenu, **kargs)
         
         self.addLegend()
