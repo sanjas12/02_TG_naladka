@@ -5,7 +5,7 @@ FONT_SIZE = 40
 
 NUMBER_POINT_TO_GRATH = 20
 
-TIME_MAIN = 500  # msec
-TIME_IMITATOR = 1000  # msec
-TIME_TO_CONNECT = 0.5  # sec
+TIME_MAIN = 1  # sec
+TIME_IMITATOR = 100  # msec
+TIME_TO_CONNECT = 0.1  # sec
 # TIME_MODEL = 1    # sec

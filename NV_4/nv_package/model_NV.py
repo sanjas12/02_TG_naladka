@@ -26,9 +26,9 @@ class ModelNV():
         self.regim_code = [9, 10, 11, 12, 14, 15, 16, 17, 20, 21, 22, 23, 24, 29]
         self.sensor_ready = 0
         self.ready_to_start = 1
-        self.pressure_start = 40
-        self.pressure_max = 70
-        self.pressure_target = 60
+        self.pressure_start = 4000
+        self.pressure_max = 7000
+        self.pressure_target = 6000
                        # 0 - local,      1-шур_11
         self.hosts = ["localhost", "192.168.30.111", "192.168.30.121", "192.168.30.211", "192.168.30.221"]
         self.time_d = 3
@@ -55,13 +55,13 @@ class ModelNV():
         return self.data_to_PLC
         
     def update_data_to_PLC(self):
-        self.data_to_PLC[0] = self.data_to_PLC[0] + 1
+        self.data_to_PLC[0] = self.data_to_PLC[0] + 100
         if self.data_to_PLC[0] >= self.pressure_max:
             self.data_to_PLC[0] = self.pressure_start
-        self.data_to_PLC[1] = self.data_to_PLC[1] + 2
+        self.data_to_PLC[1] = self.data_to_PLC[1] + 200
         if self.data_to_PLC[1] >= self.pressure_max:
             self.data_to_PLC[1] = self.pressure_start
-        self.data_to_PLC[2] = self.data_to_PLC[2] + 3
+        self.data_to_PLC[2] = self.data_to_PLC[2] + 300
         if self.data_to_PLC[2] >= self.pressure_max:
             self.data_to_PLC[2] = self.pressure_start
 

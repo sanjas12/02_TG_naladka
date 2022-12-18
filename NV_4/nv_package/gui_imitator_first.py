@@ -5,8 +5,7 @@ import pyqtgraph as pg
 from data_base import data_base
 # from PyQt5.QtWidgets import QPushButton
 from graphs.graph_gpk import graph_gpk
-from graphs.graph_time import graph_time
-from graphs.graph_value import graph_value
+from graphs.value_gpk import value_gpk
 from connect_to_PLC import ConnectPLC
 from model_NV import ModelNV
 from settings import *
@@ -53,10 +52,10 @@ gpk_0 = graph_gpk(title='Первый датчик', pen='r')
 gpk_1 = graph_gpk(title='Второй датчик', pen='b')
 gpk_2 = graph_gpk(title='Третий датчик', pen='g')
 prs_cur_grath = graph_gpk(title='Медиана', pen='g')
-gpk_value_0 = graph_value(color='r', font=font, title='Первый датчик')
-gpk_value_1 = graph_value(color='b', font=font, title='Второй датчик')
-gpk_value_2 = graph_value(color='g', font=font, title='Третий датчик')
-prs_cur = graph_value(color='g', font=font, title='Медиана из PLC')
+gpk_value_0 = value_gpk(color='r', font=font, title='Первый датчик')
+gpk_value_1 = value_gpk(color='b', font=font, title='Второй датчик')
+gpk_value_2 = value_gpk(color='g', font=font, title='Третий датчик')
+prs_cur = graph_gpk(color='g', font=font, title='Медиана из PLC')
 
 ## Setting the graphs in the layout 
 # Title at top
