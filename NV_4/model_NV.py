@@ -5,7 +5,7 @@ from settings import *
 class ModelNV():
 
     def __init__(self):
-        self.all_regim_name =   """
+        self.regim_description =   """
                                 9 - Технолог
                                 10 - Останов
                                 11 - Исходное
@@ -49,7 +49,7 @@ class ModelNV():
         # 4 - готовность к пуску (1 - готов)            -> M[19]
         # 5 - Переход в режим (10 - default)  
         # 6 - заданное давление  
-        # 43 - счетчик для Unity  
+        # 43 - счетчик для Unity                        -> M[58]
         self.data_to_PLC[0] = self.pressure_start
         self.data_to_PLC[1] = self.pressure_start
         self.data_to_PLC[2] = self.pressure_start
