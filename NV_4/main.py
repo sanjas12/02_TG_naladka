@@ -13,7 +13,7 @@ def main():
 
     while True:
         imi.start()
-        sarz.update()
+        sarz.update(c.mediana)
         data_plc = imi.get_data()
         sarz.start()
         c.write_to_PLC(data_plc)
