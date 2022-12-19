@@ -41,6 +41,11 @@ class ModelNV():
         # 4 - готовность к пуску (1 - готов)            -> M[19]
         # 5 - Переход в режим (10 - default)  
         # 6 - заданное давление  
+
+        self.data_to_PLC = [0 for _ in range(30)]
+
+        print(len(self.data_to_PLC))
+
         self.data_to_PLC = [self.pressure_start, self.pressure_start, self.pressure_start, self.sensor_ready,
                             self.sensor_ready, self.regim_code, self.pressure_target]
 

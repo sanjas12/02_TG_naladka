@@ -1,0 +1,1 @@
+ip for lap-top -> 192.168

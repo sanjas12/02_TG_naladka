@@ -4,26 +4,30 @@ from model_NV import ModelNV
 import time
 import random
 from settings import *
+import numpy as np
 
 class ConnectPLC():
 
     def __init__(self):
         self.model = ModelNV()
         self.addr_start_write = 15
-        
+
+        # qp - param
         # 1246 - prs.aim
         # 1248 - GPK[0].cur
         # 1250 - GPK[1].cur
         # 1252 - GPK[2].cur
         # 1254 - prs.cur
         self.addr_start_read = 1246
-        self.number_param = 5 
-                       # 0 - local,      1-шур_11
+        self.number_param_read = 5 
+        self.cabinet_name = ('local host', 'шур-11', 'шур-12', 'шур-21', 'шур-22')
+        self.cabinet_number = CABINET_NUMBER
+                       # 0 - local,      1-шур_11       2-шур_12          3-шур_21              4-шур_22
         self.hosts = ["localhost", "192.168.30.111", "192.168.30.121", "192.168.30.211", "192.168.30.221"]
         self.prs_cur = 0
         
         try:
-            self.c = ModbusClient(host=self.hosts[0], port=502, timeout=TIME_TO_CONNECT)
+            self.c = ModbusClient(host=self.hosts[self.cabinet_number], port=502, timeout=TIME_TO_CONNECT)
         except ValueError:
             print("Error with host or port params")
 
@@ -39,7 +43,7 @@ class ConnectPLC():
         try:
             w = self.c.write_multiple_registers(regs_addr=self.addr_start_write, regs_value=data)
             # print('to PLC',  time.asctime(), data, )           
-            print('to PLC ->', data)           
+            print(f'to PLC ({self.cabinet_name[self.cabinet_number]}) -> {data}')           
         except TypeError:
             print("не запущен Unity Pro")
 
@@ -48,7 +52,7 @@ class ConnectPLC():
             # PLC(115.0) -> Python ([0, 17126])  
             # PLC(110.0) -> Python ([0, 17116])  
                                                                                          # *2 - потомучто real занимает два  адреса)
-        qp_param = self.c.read_input_registers(reg_addr=self.addr_start_read, reg_nb=self.number_param * 2) 
+        qp_param = self.c.read_input_registers(reg_addr=self.addr_start_read, reg_nb=self.number_param_read * 2) 
 
         # print("qp_param", qp_param, len(qp_param))
 
@@ -74,10 +78,15 @@ def main():
     start = 6000
     end = 8000
     while True:
-        data = [random.randint(start, end), random.randint(start, end), random.randint(start, end)]
+        data = [random.randint(start, end) for _ in range(50)]
+        # print(data)
+        # data = [random.randint(start, end), random.randint(start, end), random.randint(start, end)]
         c.write_to_PLC(data)
         c.read_PLC()
-        print(c.mediana)
+        try:
+            print(c.mediana)
+        except:
+            print("Нет соединения")
         time.sleep(TIME_TO_CONNECT)
 
 if __name__ == '__main__':

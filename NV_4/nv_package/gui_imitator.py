@@ -10,11 +10,10 @@ from model_NV import ModelNV
 
 class Imitator(object):
     def __init__(self, model, connect):
-        # try:
-        # self.app = QtWidgets.QApplication(sys.argv)
-        self.app = QtWidgets.QApplication(sys.argv)
-        # except RuntimeError:
-        #     self.app = QtWidgets.QApplication.instance()
+        try:
+            self.app = QtWidgets.QApplication(sys.argv)
+        except RuntimeError:
+            self.app = QtWidgets.QApplication.instance()
         self.view = pg.GraphicsView()
         self.layout = pg.GraphicsLayout(border=(100,100,100))
        
@@ -34,7 +33,7 @@ class Imitator(object):
         # self.layout.addItem(te)
         # self.layout.nextRow()
 
-
+ 
         # First column
         self.l1 = self.layout.addLayout()
         
@@ -92,7 +91,6 @@ class Imitator(object):
         timer.timeout.connect(self.update)
         timer.start(TIME_IMITATOR) 
         if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
-            # self.app.exec_() 
             QtWidgets.QApplication.instance().exec_()  
 
 def main():
