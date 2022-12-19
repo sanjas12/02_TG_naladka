@@ -1,15 +1,15 @@
 import time
-from nv_package.gui_imitator import Imitator
-from nv_package.gui_sarz import Sarz
-from nv_package.model_NV import ModelNV
-from nv_package.connect_to_PLC import ConnectPLC
-from nv_package.settings import *
+from gui_imitator import Imitator
+from gui_sarz import Sarz
+from model_NV import ModelNV
+from connect_to_PLC import ConnectPLC
+from settings import *
 
 def main():
     model = ModelNV()
     c = ConnectPLC()
     imi = Imitator(model, c)
-    sarz = Sarz(model)
+    sarz = Sarz()
 
     while True:
         imi.start()
