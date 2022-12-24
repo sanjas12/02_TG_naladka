@@ -27,17 +27,18 @@ class ModelNV():
                                 22, 23, 24, 29)
         self.sensor_ready = 0
         self.ready_to_start = 1
-        self.pressure_start = 4000
-        self.pressure_max = 7000
-        self.pressure_target = 6000
+        self.pressure_start = 4300
+        self.pressure_max = 4800
+        self.pressure_target = 4500
                        # 0 - local,      1-шур_11
         self.hosts = ["localhost", "192.168.30.111", "192.168.30.121", "192.168.30.211", "192.168.30.221"]
         self.time_d = 3
         
+        self.velocity = 10
 
-        self.data_to_PLC = [0 for _ in range(50)]
+        self.data_to_PLC = [0 for _ in range(44)]
 
-        print(len(self.data_to_PLC))
+        # print(len(self.data_to_PLC))
 
         # self.data_to_PLC = [self.pressure_start, self.pressure_start, self.pressure_start, self.sensor_ready,
         #                     self.sensor_ready, self.regim_code, self.pressure_target]
@@ -45,16 +46,16 @@ class ModelNV():
         # 0 - 1 Датчик ГПК                              -> M[15]
         # 1 - 2 Датчик ГПК                              -> M[16]
         # 2 - 3 Датчик ГПК                              -> M[17]
-        # 3 - Исправность датчиков ГПК (0 - исправны)   -> M[18]
-        # 4 - готовность к пуску (1 - готов)            -> M[19]
-        # 5 - Переход в режим (10 - default)  
-        # 6 - заданное давление  
+        # 3 -                                           -> M[18]
+        # 4 -                                           -> M[19]
+        # 5 - Исправность датчиков ГПК (0 - исправны)   -> M[20]
+        # 6 - СК открыты. закрты                        -> M[21]
         # 43 - счетчик для Unity                        -> M[58]
         self.data_to_PLC[0] = self.pressure_start
         self.data_to_PLC[1] = self.pressure_start
         self.data_to_PLC[2] = self.pressure_start
         self.data_to_PLC[3] = self.sensor_ready
-        self.data_to_PLC[5] = self.regim_code
+        # self.data_to_PLC[6] = 1
         self.data_to_PLC[43] = 0
 
         self.data_for_gui = [self.hosts, self.time_d, self.regim_name, self.regim_code, 
@@ -68,13 +69,13 @@ class ModelNV():
         return self.data_to_PLC
         
     def update_data_to_PLC(self):
-        self.data_to_PLC[0] = self.data_to_PLC[0] + 100
+        self.data_to_PLC[0] = self.data_to_PLC[0] + 10//self.velocity
         if self.data_to_PLC[0] >= self.pressure_max:
             self.data_to_PLC[0] = self.pressure_start
-        self.data_to_PLC[1] = self.data_to_PLC[1] + 200
+        self.data_to_PLC[1] = self.data_to_PLC[1] + 40//self.velocity
         if self.data_to_PLC[1] >= self.pressure_max:
             self.data_to_PLC[1] = self.pressure_start
-        self.data_to_PLC[2] = self.data_to_PLC[2] + 300
+        self.data_to_PLC[2] = self.data_to_PLC[2] + 60//self.velocity
         if self.data_to_PLC[2] >= self.pressure_max:
             self.data_to_PLC[2] = self.pressure_start
         self.data_to_PLC[43] = self.data_to_PLC[43] + 10

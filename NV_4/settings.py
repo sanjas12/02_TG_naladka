@@ -15,4 +15,5 @@ TIME_TO_CONNECT = 0.5  # sec
 # 2 - шур_12 
 # 3 - шур_21 
 # 4 - шур_22
-CABINET_NUMBER = 1
+TG1_CABINET_NUMBER = 1
+TG2_CABINET_NUMBER = 3
