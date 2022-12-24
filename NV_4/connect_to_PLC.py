@@ -36,15 +36,10 @@ class ConnectPLC():
         self.data_to_PLC = self.model.get_data_to_PLC()
 
     def write_to_PLC(self, data):
-        # print(data)
-        # print(self.addr_start_write, type(data))
-        # try:
         w = self.c.write_multiple_registers(regs_addr=self.addr_start_write, regs_value=data)
         print(f'to PLC ({self.cabinet_name[self.cabinet_number]}) -> {data}')           
-        # except TypeError:
-            # print("не запущен Unity Pro")
 
-    def read_PLC(self):
+    def read_from_PLC(self):
         # PLC Premium m[1] real (занимает 2 адреса) выдает как WORD (2 int) -> python принимает как list[2 int]  
             # PLC(115.0) -> Python ([0, 17126])  
             # PLC(110.0) -> Python ([0, 17116])  
@@ -59,7 +54,7 @@ class ConnectPLC():
                 self.out.append(real_5)
             print('qp param <-',list(map(lambda x: round(x, 2), self.out)))
         except:
-            print('Нет соединения с UNity 7')
+            print('Нет соединения с UNity 7 для получения qp')
         return self.out
 
     @property
@@ -67,35 +62,26 @@ class ConnectPLC():
         return round(self.out[4], 2)
 
 def main():
-    c = ConnectPLC(1)
-    c1 = ConnectPLC(3)
-    start = 6000
+    #               шур-11          шур-21
+    connections = [ConnectPLC(1), ConnectPLC(3)]
+    dates = [[0 for _ in range(44)], [0 for _ in range(44)]]
     target = 4700
-    end = 8000
-    data = [0 for _ in range(44)]
-    data1 = [0 for _ in range(44)]
+
     while True:
-        # data = [random.randint(start, end) for _ in range(44)]
-        data[0], data[1], data[2] = [target for _ in range(3)]
-        data[43] += 2   # счетчик для NSI
-        data[6] = 1   # СК открыты\закрыты
-        if data[43] > 32000:
-            data[43] = 1
-    
-        data1[0], data1[1], data1[2] = [target for _ in range(3)]
-        data1[43] += 2   # счетчик для NSI
-        data1[6] = 1   # СК открыты\закрыты
-        if data1[43] > 32000:
-            data1[43] = 1
-    
-    
-        c.write_to_PLC(data)
-        c1.write_to_PLC(data)
-        # c.read_PLC()
-        try:
-            print(c.mediana)
-        except:
-            print("Нет соединения c Unity")
+        for c, data in zip(connections, dates): 
+            data[0], data[1], data[2] = [target for _ in range(3)]
+            data[43] += 2   # счетчик для NSI
+            data[6] = 1   # СК открыты\закрыты
+            if data[43] > 32000:
+                data[43] = 1
+        
+            c.write_to_PLC(data)
+            c.read_from_PLC()
+
+            try:
+                print(c.mediana)
+            except:
+                print("Нет соединения c Unity для получения prs.cur")
         time.sleep(TIME_TO_CONNECT)
 
 if __name__ == '__main__':
