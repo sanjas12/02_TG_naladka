@@ -16,7 +16,7 @@ import csv
 from tkinter import filedialog as fd
 import pandas as pd
 import os
-
+from tkinter import *
 
 # from memory_profiler import profile
 
