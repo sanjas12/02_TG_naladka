@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 Created on Tue Aug 18 11:25:26 2020
 
@@ -78,7 +78,7 @@ def stepper(event):
     fig = plt.figure(figsize=(6, 6))
     fig.canvas.set_window_title('Скачки/Шаги')
     if matplotlib.__version__ == '1.4.3':
-        ax = fig.add_subplot(211, )
+        ax = fig.add_subplot(211, ) 
     else:
         ax = fig.add_subplot(211, facecolor='#FFFFCC')
     line, = ax.plot(time_data[1::point_f], df[GSM_A_column][1::point_f],
@@ -116,7 +116,7 @@ def stepper(event):
         #        print(f'от курсора: {xmin}, {xmax}')
         print('от курсора:', xmin, xmax)
         indmin, indmax = np.searchsorted(time_data,
-                                         (float(xmin), float(xmax)))  # получение минимального и максимального
+                                        float(xmin), float(xmax))  # получение минимального и максимального
         print('min_max', indmin, indmax)
         # indmax = min(len(time_data) - 1, indmax)
         print(indmin, indmax)
@@ -256,10 +256,10 @@ def velosity(event):
             summa = 0
             while i < len(temp_time) - 1:
                 if (temp_time[i + 1] - temp_time[i]) != -990:
-                    summa = summa + (temp_time[i + 1] - temp_time[i]) / 1000
+                    summa = summa +temp_time[i + 1] - temp_time[i]/ 1000
                     time.append(summa)
                 else:
-                    summa = summa + (1 + (temp_time[i + 1] - temp_time[i]) / 1000)
+                    summa = summa +1 + (temp_time[i + 1] - temp_time[i]) / 1000
                     time.append(summa)
                 i = i + 1
             print('массив ВРЕМЯ cформирована')
@@ -275,7 +275,7 @@ def velosity(event):
         print(name_column_2, ' \t' * 2, len(GSM_B))
         print(name_column_4, ' \t' * 2, len(time))
         print('Кол-во строк во всех СSV:', number_row_in_all_csv_file)
-        # (0)    (1)     (2)     (3)
+        # (0)   1)    2)    3)
         return GSM_A, GSM_B, time, number_row_in_all_csv_file
 
     data_from_file = read_data_from_file(op, GSM_A_column, 'ГСМ-А.Текущее положение', GSM_B_column,
@@ -299,7 +299,7 @@ def velosity(event):
     # ax.xaxis.set_major_locator(ticker.MultipleLocator(30))
 
     # отрисовка легенды
-    fig.legend((line, line1), ('GSM-A', 'GSM-B',))
+    fig.legend((line, line1),('GSM-A', 'GSM-B',))
 
     # отрисовка 2 графика
     ax2 = fig.add_subplot(212, facecolor='#FFFFCC')
@@ -497,7 +497,7 @@ def one_side(event):
         #
         # # работа со списком чек-боксов отображающих графики 1
         # rax = plt.axes([0.0, 0.2, 0.1, 0.08])  # x,y - положение чекбокса ..... х1,y1 - размер окна
-        # check = CheckButtons(rax, ('1 канал тек', '2 канал тек', 'Ведущий 1 канал', 'Ведущий 2 канал'),
+        # check = CheckButtons(rax,'1 канал тек', '2 канал тек', 'Ведущий 1 канал', 'Ведущий 2 канал'),
         #                      (True, True, True, True))
         # check.on_clicked(func)
 
@@ -705,7 +705,7 @@ def shift_oz(event):
     def reading_data(namedirection):
 
         opened_csv_files = fd.askopenfiles(title=namedirection,
-                                           filetypes=[('CSV files', '*.csv'), ('GZ Files', '*.gz')],
+                                           filetypes=[('CSV files', '*.csv'), ('GZ Files', '*.gz')], 
                                            initialdir='')
 
         start_read = time.time()
