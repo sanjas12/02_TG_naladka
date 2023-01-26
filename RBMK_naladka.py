@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Tue Aug 18 11:25:26 2020
 
@@ -689,9 +688,9 @@ def shift_oz(event):
     log_name = 'log.txt'
     with open(log_name, 'a') as csv_out:
         csv_out.write('-' * 20 + '\n')
-        csv_out.write('Функция "Cмещение" из файла ' + os.path.basename(__file__) +
-                      ' запущена на: ' + os.getlogin() + ' в ' + time.strftime('%Y_%m_%d_%H:%M:%S')
-                      + '\n')
+        csv_out.write(f'{os.path.basename(__file__)} - {os.getlogin()} in \n')
+        # csv_out.write(f 'Функция "Cмещение" из файла  {os.path.basename(__file__)} запущена на: {os.getlogin()} в 
+        # {time.strftime('%Y_%m_%d_%H:%M:%S')}')
         csv_out.write('N:' + combo_iteration.get() + '\n')
 
     GSM_A_name_column = 'ГСМ-А.Текущее положение'  # ГСМ-А.Текущее положение
