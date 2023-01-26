@@ -907,27 +907,27 @@ def shift_oz(event):
         i = i + 1
 
     # функция записи в файл TXT для UNITY
-    def write_UNITY(out_file, tablenumber, OZ_otsechka):
-        with open(out_file, 'w', newline='') as csv_out:
+    def write_to_UNITY(out_file, tablenumber, OZ_otsechka):
+        with open(out_file, 'w', newline='') as unity_out:
             if out_file == 'gsm_tg1_a.txt':
-                csv_out.write('Ust_shift1A_def	%kw16000	ARRAY[0..340] OF REAL\t\t(')
+                unity_out.write('Ust_shift1A_def	%kw16000	ARRAY[0..340] OF REAL\t\t(')
             else:
-                csv_out.write('Ust_shift1B_def	%kw16682	ARRAY[0..340] OF REAL\t\t(')
+                unity_out.write('Ust_shift1B_def	%kw16682	ARRAY[0..340] OF REAL\t\t(')
             fi = 0
             for zz in range(len(tablenumber)):
                 if zz == 320:
-                    csv_out.write('[' + str(tablenumber[fi]) + ']:=' + OZ_otsechka[fi])
+                    unity_out.write('[' + str(tablenumber[fi]) + ']:=' + OZ_otsechka[fi])
                 else:
-                    csv_out.write('[' + str(tablenumber[fi]) + ']:=' + OZ_otsechka[fi] + ',')
+                    unity_out.write('[' + str(tablenumber[fi]) + ']:=' + OZ_otsechka[fi] + ',')
                 fi = fi + 1
-            csv_out.write(')\n')
+        unity_out.write(')\n')
 
     if number_TG == 1:
-        write_UNITY('gsm_tg1_a.txt', tablenumber, OZ_A_otsechka)
-        write_UNITY('gsm_tg1_b.txt', tablenumber, OZ_B_otsechka)
+        write_to_UNITY('gsm_tg1_a.txt', tablenumber, OZ_A_otsechka)
+        write_to_UNITY('gsm_tg1_b.txt', tablenumber, OZ_B_otsechka)
     else:
-        write_UNITY('gsm_tg2_a.txt', tablenumber, OZ_A_otsechka)
-        write_UNITY('gsm_tg2_b.txt', tablenumber, OZ_B_otsechka)
+        write_to_UNITY('gsm_tg2_a.txt', tablenumber, OZ_A_otsechka)
+        write_to_UNITY('gsm_tg2_b.txt', tablenumber, OZ_B_otsechka)
 
     time_all = time.time() - time_all
     time_all = float(time_all) + float(time_average) + float(time_read)
