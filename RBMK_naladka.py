@@ -716,7 +716,7 @@ def shift_oz(event):
         start_read = time.time()
 
         # Определение кодировки в файле
-        if opened_csv_files[0].name.find('gz'):
+        if opened_csv_files[0].name.find('gz') > -1:
             with gzip.open(opened_csv_files[0].name, 'rb') as f:
                 raw_data = f.read(20000)
                 encoding = chardet.detect(raw_data)['encoding']
@@ -727,9 +727,6 @@ def shift_oz(event):
         print('encoding:', encoding)
 
         # определение номера ТГ из названия файла
-        if opened_csv_files[0].name.index('ТГ'):
-            print('dsdsdsdsdsd', opened_csv_files[0].name.index('ТГ'))
-            
         number_tg = opened_csv_files[0].name[3]
 
         df = pd.concat(pd.read_csv(file.name, encoding=encoding, 
