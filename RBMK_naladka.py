@@ -3,6 +3,8 @@ Created on Tue Aug 18 11:25:26 2020
 
 @author: sanja_s
 """
+import gzip
+import chardet
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
@@ -16,6 +18,10 @@ from tkinter import filedialog as fd
 import pandas as pd
 import os
 from tkinter import *
+
+dir_out = 'DATA_out'
+if not os.path.exists(dir_out):
+    os.mkdir(dir_out)
 
 # from memory_profiler import profile
 
@@ -686,10 +692,11 @@ def one_channel(event):
 # @profile
 def shift_oz(event):
     log_name = 'log.txt'
-    with open(log_name, 'a') as csv_out:
+    with open(log_name, 'a', encoding='utf-8') as csv_out:
         csv_out.write('-' * 20 + '\n')
         time_now = time.strftime('%Y_%m_%d_%H:%M:%S')
-        csv_out.write(f'Функция "Cмещение" из файла {os.path.basename(__file__)} запущена на: {os.getlogin()} в {time_now} \n')
+        file_name = os.path.basename(__file__)
+        csv_out.write(f'Функция "Cмещение" из файла {file_name} запущена на: {os.getlogin()} в {time_now} \n')
         csv_out.write('N:' + combo_iteration.get() + '\n')
 
     GSM_A_name_column = 'ГСМ-А.Текущее положение'  # ГСМ-А.Текущее положение
@@ -703,40 +710,34 @@ def shift_oz(event):
     def reading_data(namedirection):
 
         opened_csv_files = fd.askopenfiles(title=namedirection,
-                                           filetypes=[('CSV files', '*.csv'), ('GZ Files', '*.gz')], 
+                                           filetypes=[('GZ Files', '*.gz'), ('CSV files', '*.csv')], 
                                            initialdir='')
 
         start_read = time.time()
 
-        # определение номера канала из названия файла
-        file_name = str(opened_csv_files)
-        # name_temp = name_ch = name_ch.split('/')
-        # if int(name_ch[len(name_ch)-1][3]) == 1:
-        #     name_ch = '1 канал'
-        # else:
-        #     name_ch = '2 канал'
-        #
-        #
-        # # определение номера ТГ из названия файла
-        # name_tg = int(name_temp[len(name_temp) - 1][2])
-
-        if file_name.find('ШУР') >= 0:
-            index_tg = file_name.find('ШУР')
-            name_ch = file_name[index_tg + 3]
-            name_tg = file_name[index_tg + 4]
+        # Определение кодировки в файле
+        if opened_csv_files[0].name.find('gz'):
+            with gzip.open(opened_csv_files[0].name, 'rb') as f:
+                raw_data = f.read(20000)
+                encoding = chardet.detect(raw_data)['encoding']
         else:
-            index_tg = file_name.find('ТГ')
-            name_ch = file_name[index_tg + 3]
-            name_tg = file_name[index_tg + 4]
+            with open(opened_csv_files[0].name, 'rb') as f:
+                raw_data = f.read(20000)
+                encoding = chardet.detect(raw_data)['encoding']
+        print('encoding:', encoding)
 
-        list_ = []
-        for file_ in opened_csv_files:
-            df = pd.read_csv(file_, header=0, delimiter=';', usecols=fields)
-            list_.append(df)
-        data_out = pd.concat(list_)
+        # определение номера ТГ из названия файла
+        if opened_csv_files[0].name.index('ТГ'):
+            print('dsdsdsdsdsd', opened_csv_files[0].name.index('ТГ'))
+            
+        number_tg = opened_csv_files[0].name[3]
+
+        df = pd.concat(pd.read_csv(file.name, encoding=encoding, 
+                        header=0, delimiter=';', usecols=fields) for file in opened_csv_files)
+
         time_read = '%.2f' % float(time.time() - start_read)
 
-        return data_out, time_read, name_tg
+        return df, time_read, number_tg
 
     data_up = reading_data('Открыть CSV файлы. Движение вверх')
     data_down = reading_data('Открыть CSV файлы. Движение вниз')
@@ -745,9 +746,9 @@ def shift_oz(event):
 
     time_read = float(data_up[1]) + float(data_down[1])
 
-    print('Загрузка данных: %.2f сек' % time_read)
-    with open('log.txt', 'a') as csv_out:
-        csv_out.write('Загрузка данных: %.2f cек\n' % time_read)
+    print(f'Время загрузки данных: {time_read:.2f} сек')
+    with open('log.txt', 'a', encoding='utf-8') as csv_out:
+        csv_out.write(f'Время загрузки данных: {time_read:.2f} сек \n')
 
     print('движение ВВЕРХ', data_up[0].shape)
     print('движение ВНИЗ', data_down[0].shape)
@@ -773,7 +774,6 @@ def shift_oz(event):
     start_program = time.time()
 
     data_up_a = movingaverage(np.array(data_up[0].iloc[:, 2]), iterat)
-    # print(data_up.head)
     data_up_b = movingaverage(np.array(data_up[0].iloc[:, 3]), iterat)
     data_up[0]['ОЗ ГСМ-А.Текущее положение. Усредненное'] = data_up_a[0]
     data_up[0]['ОЗ ГСМ-Б.Текущее положение. Усредненное'] = data_up_b[0]
@@ -785,10 +785,10 @@ def shift_oz(event):
 
     time_average = time.time() - start_program
 
-    print('Усреднение данных: %.2f cек' % time_average)
+    print(f'Усреднение данных: {time_average:.2f} cек')
 
-    with open('log.txt', 'a') as csv_out:
-        csv_out.write('Усреднение данных: %.2f cек\n' % time_average)
+    with open('log.txt', 'a', encoding='utf-8') as csv_out:
+        csv_out.write(f'Усреднение данных: {time_average:.2f} cек \n')
 
     time_all = time.time()
 
@@ -892,14 +892,15 @@ def shift_oz(event):
     OZ_B_otsechka = otsechka(OZ_B_final_up, OZ_B_final_down)
 
     # запись в файл CSV
-    out_file = 'out_merge_4.csv'
-    with open(out_file, 'w', newline='') as csv_out:
+    out_file = 'DATA_out\out_merge.csv'
+    with open(out_file, 'w', newline='', encoding='utf-8') as csv_out:
         w = csv.writer(csv_out, delimiter=';')
         w.writerow(('i', 'ОЗ ГСМ-А.Вверх', 'ОЗ ГСМ-А.Вниз', 'ОЗ ГСМ-А.Отсечка', 'ОЗ ГСМ-Б.Вниз',
                     'ОЗ ГСМ-Б.Вниз', 'ОЗ ГСМ-Б.Отсечка'))
+    
     i = 0
     for zz in range(len(tablenumber)):
-        with open(out_file, 'a', newline='') as csv_out:
+        with open(out_file, 'a', newline='', encoding='utf-8') as csv_out:
             w = csv.writer(csv_out, delimiter=';')
             w.writerow((tablenumber[i], OZ_A_final_up[i], OZ_A_final_down[i], OZ_A_otsechka[i],
                         OZ_B_final_up[i], OZ_B_final_down[i], OZ_B_otsechka[i]))
@@ -907,8 +908,8 @@ def shift_oz(event):
 
     # функция записи в файл TXT для UNITY
     def write_to_UNITY(out_file, tablenumber, OZ_otsechka):
-        with open(out_file, 'w', newline='') as unity_out:
-            if out_file == 'gsm_tg1_a.txt':
+        with open(out_file, 'w', newline='', encoding='utf-8') as unity_out:
+            if out_file.find('tg1'):
                 unity_out.write('Ust_shift1A_def	%kw16000	ARRAY[0..340] OF REAL\t\t(')
             else:
                 unity_out.write('Ust_shift1B_def	%kw16682	ARRAY[0..340] OF REAL\t\t(')
@@ -919,22 +920,21 @@ def shift_oz(event):
                 else:
                     unity_out.write('[' + str(tablenumber[fi]) + ']:=' + OZ_otsechka[fi] + ',')
                 fi = fi + 1
-        unity_out.write(')\n')
+            unity_out.write('\n')
 
     if number_TG == 1:
-        write_to_UNITY('gsm_tg1_a.txt', tablenumber, OZ_A_otsechka)
-        write_to_UNITY('gsm_tg1_b.txt', tablenumber, OZ_B_otsechka)
+        write_to_UNITY('DATA_out\gsm_tg1_a.txt', tablenumber, OZ_A_otsechka)
+        write_to_UNITY('DATA_out\gsm_tg1_b.txt', tablenumber, OZ_B_otsechka)
     else:
-        write_to_UNITY('gsm_tg2_a.txt', tablenumber, OZ_A_otsechka)
-        write_to_UNITY('gsm_tg2_b.txt', tablenumber, OZ_B_otsechka)
+        write_to_UNITY('DATA_out\gsm_tg2_a.txt', tablenumber, OZ_A_otsechka)
+        write_to_UNITY('DATA_out\gsm_tg2_b.txt', tablenumber, OZ_B_otsechka)
 
     time_all = time.time() - time_all
     time_all = float(time_all) + float(time_average) + float(time_read)
 
-    print('Общее время Смещения: %.2f cек' % time_all)
-
-    with open(log_name, 'a', newline='') as csv_out:
-        csv_out.write('Общее время Смещения: %.2f cек\n' % time_all)
+    print(f'Общее время Смещения: {time_all:.2f} cек')
+    with open(log_name, 'a', newline='', encoding='utf-8') as csv_out:
+        csv_out.write(f'Общее время Смещения: {time_all:.2f} cек \n')
         csv_out.write('-' * 20 + '\n')
 
     plt.show()
@@ -1004,5 +1004,4 @@ if __name__ == '__main__':
 
 
 #todo
-# 1. добавить архивные файлы
 # 2. кольские не читает отсечки
