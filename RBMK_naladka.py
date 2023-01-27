@@ -727,7 +727,7 @@ def shift_oz(event):
         print('encoding:', encoding)
 
         # определение номера ТГ из названия файла
-        if number_tg = opened_csv_files[0].name.find('ТГ'):
+        if opened_csv_files[0].name.find('ТГ') > -1:
             number_tg = opened_csv_files[0].name[2]
         else:
             number_tg = opened_csv_files[0].name[3]
