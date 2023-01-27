@@ -727,7 +727,10 @@ def shift_oz(event):
         print('encoding:', encoding)
 
         # определение номера ТГ из названия файла
-        number_tg = opened_csv_files[0].name[3]
+        if number_tg = opened_csv_files[0].name.find('ТГ'):
+            number_tg = opened_csv_files[0].name[2]
+        else:
+            number_tg = opened_csv_files[0].name[3]
 
         df = pd.concat(pd.read_csv(file.name, encoding=encoding, 
                         header=0, delimiter=';', usecols=fields) for file in opened_csv_files)
