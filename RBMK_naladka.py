@@ -706,34 +706,69 @@ def shift_oz(event):
 
     fields = [GSM_A_name_column, OZ_A_name_column, GSM_B_name_column, OZ_B_name_column]
 
+    fields_kol = ['ГСМ. Текущее положение', 'ОЗ. Текущее положение']
+
     # функция чтения данных из csv
     def reading_data(namedirection):
 
         opened_csv_files = fd.askopenfiles(title=namedirection,
-                                           filetypes=[('GZ Files', '*.gz'), ('CSV files', '*.csv')], 
+                                           filetypes=[('GZ Files', '*.gz'), ('CSV files', '*.csv')],
                                            initialdir='')
 
         start_read = time.time()
 
-        # Определение кодировки в файле
+        # Определение кодировки файла и типа архива(csv или gz)
         if opened_csv_files[0].name.find('gz') > -1:
+            is_file_csv = False
+            print('files -> gz')
             with gzip.open(opened_csv_files[0].name, 'rb') as f:
                 raw_data = f.read(20000)
                 encoding = chardet.detect(raw_data)['encoding']
         else:
+            is_file_csv = True
+            print('files -> csv')
             with open(opened_csv_files[0].name, 'rb') as f:
                 raw_data = f.read(20000)
                 encoding = chardet.detect(raw_data)['encoding']
         print('encoding:', encoding)
 
-        # определение номера ТГ из названия файла
+        #  Старые Колские архивы имеют первую строчку -> "Count=65536"
+        with open(opened_csv_files[0].name, 'r', encoding=encoding) as f:
+            if f.readline().startswith('Count'):
+                type_file_kol = True
+                print('Архивы -> Кольские старые')
+            else:
+                print('Архивы -> Новые')
+
+        # и разделителя
+        if is_file_csv:
+            with open(opened_csv_files[0].name, 'r', encoding=encoding) as f:
+                if f.readlines(100).count(';'):
+                    delimiter = ';'
+                else:
+                    delimiter = '\t'
+        else:
+            with gzip.open(opened_csv_files[0].name, 'r') as f:
+                if f.readlines(100).count(';'):
+                    delimiter = ';'
+                else:
+                    delimiter = '\t'
+        if type_file_kol:
+            delimiter = ';'
+        print('delimiter:', repr(delimiter))
+
+        # опредедение номера трубины
         if opened_csv_files[0].name.find('ТГ') > -1:
             number_tg = opened_csv_files[0].name[2]
         else:
             number_tg = opened_csv_files[0].name[3]
 
-        df = pd.concat(pd.read_csv(file.name, encoding=encoding, 
-                        header=0, delimiter=';', usecols=fields) for file in opened_csv_files)
+        if type_file_kol:
+            df = pd.concat(pd.read_csv(file.name, encoding=encoding, delimiter=delimiter,
+                                       header=0, usecols=fields_kol,  skiprows=1) for file in opened_csv_files)
+        else:
+            df = pd.concat(pd.read_csv(file.name, encoding=encoding, delimiter=delimiter,
+                                       header=0, usecols=fields) for file in opened_csv_files)
 
         time_read = '%.2f' % float(time.time() - start_read)
 
@@ -761,12 +796,12 @@ def shift_oz(event):
 
     def movingaverage(series, n):  # series,  n - кол-во усреднений
         out = []
-        for zz in range(len(series)):
+        for _ in range(len(series)):
             b = len(series) - n + 1
-            if zz < n // 2:
-                out.append(np.average(series[zz:n + zz]))
-            elif n // 2 <= zz <= b:
-                out.append(np.average(series[zz - n // 2:zz + n // 2 + 1]))
+            if _ < n // 2:
+                out.append(np.average(series[_:n + _]))
+            elif n // 2 <= _ <= b:
+                out.append(np.average(series[_ - n // 2:_ + n // 2 + 1]))
             else:
                 out.append(np.average(series[-n:]))
         return out, len(out)
