@@ -5,8 +5,6 @@ Created on Tue Aug 18 11:25:26 2020
 """
 import gzip
 import logging
-import platform
-import sys
 import chardet
 import numpy as np
 import matplotlib.pyplot as plt
