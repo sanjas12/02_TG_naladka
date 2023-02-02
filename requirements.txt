@@ -3,3 +3,4 @@ numpy
 pandas
 PyQt5
 chardet
+py-cpuinfo
