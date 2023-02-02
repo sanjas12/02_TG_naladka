@@ -4,6 +4,7 @@ Created on Tue Aug 18 11:25:26 2020
 @author: sanja_s
 """
 import gzip
+import logging
 import platform
 import sys
 import chardet
@@ -20,10 +21,16 @@ from tkinter import filedialog as fd
 import pandas as pd
 import os
 from tkinter import *
+from config.config import *
+from cpuinfo import get_cpu_info
 
-dir_out = 'DATA_out'
-if not os.path.exists(dir_out):
-    os.mkdir(dir_out)
+logging.basicConfig(filename=LOG_FILE, encoding='utf-8', level=logging.INFO,
+                    format=FORMAT)
+
+cpu_info = get_cpu_info()
+
+logging.info(f"Python: {cpu_info['python_version']}")
+logging.info(f"CPU: {cpu_info['brand_raw']}")
 
 # from memory_profiler import profile
 
