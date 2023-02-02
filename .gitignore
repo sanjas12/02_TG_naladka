@@ -51,4 +51,5 @@ __pycache__
 .venv*
 
 #### Project ####
-DATA*
+DATA_out
+logs*
