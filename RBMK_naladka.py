@@ -699,7 +699,277 @@ def one_channel(event):
 
 # Смещение
 # @profile
+def shift_oz(event):
+    logging.info(f'Функция "Cмещение" c Number avarages: {combo_iteration.get()}')
 
+    GSM_A_name_column = 'ГСМ-А.Текущее положение'  # ГСМ-А.Текущее положение
+    GSM_B_name_column = 'ГСМ-Б.Текущее положение'  # ГСМ-Б.Текущее положение
+    OZ_A_name_column = 'ОЗ ГСМ-А.Текущее положение'  # ОЗ ГСМ-А.Текущее положение
+    OZ_B_name_column = 'ОЗ ГСМ-Б.Текущее положение'  # ОЗ ГСМ-Б.Текущее положение
+
+    fields = [GSM_A_name_column, OZ_A_name_column, GSM_B_name_column, OZ_B_name_column]
+
+    fields_kol = ['ГСМ. Текущее положение', 'ОЗ. Текущее положение']
+
+    # функция чтения данных из csv
+    def reading_data(namedirection, log_record=True):
+
+        opened_csv_files = fd.askopenfiles(title=namedirection,
+                                           filetypes=[('GZ Files', '*.gz'), ('CSV files', '*.csv')],
+                                           initialdir='')
+
+        start_read = time.time()
+
+        # Определение кодировки файла и типа архива(csv или gz) 
+        if opened_csv_files[0].name.find('gz') > -1:
+            is_file_csv = False
+            with gzip.open(opened_csv_files[0].name, 'rb') as f:
+                raw_data = f.read(20000)
+                encoding = chardet.detect(raw_data)['encoding']
+        #  Старые Колские архивы имеют первую строчку -> "Count=65536"
+                if raw_data.decode(encoding)[:100].startswith('Count'):
+                    type_file_kol = True
+                else:
+                    type_file_kol = False
+        else:
+            is_file_csv = True
+            with open(opened_csv_files[0].name, 'rb') as f:
+                raw_data = f.read(20000)
+                encoding = chardet.detect(raw_data)['encoding']
+        #  Старые Колские архивы имеют первую строчку -> "Count=65536"
+                if raw_data[:100].startswith('Count'):
+                    type_file_kol = True
+                else:
+                    type_file_kol = False
+
+        # разделител
+        if is_file_csv:
+            with open(opened_csv_files[0].name, 'r', encoding=encoding) as f:
+                if f.readlines(100).count(';'):
+                    delimiter = ';'
+                else:
+                    delimiter = '\t'
+        else:
+            with gzip.open(opened_csv_files[0].name, 'r') as f:
+                if f.read(100).decode(encoding).count(';'):
+                    delimiter = ';'
+                else:
+                    delimiter = '\t'
+        
+        if log_record:
+            logging.info('Type files:csv') if is_file_csv else logging.info('Type files:gz')
+            logging.info('Архивы -> Кольские старые') if type_file_kol else logging.info('Архивы -> Новые')
+            logging.info(f'encoding:{encoding}')
+            logging.info(f'delimiter:{repr(delimiter)}')
+
+
+        # опредедение номера трубины
+        if opened_csv_files[0].name.find('ТГ') > -1:
+            number_tg = opened_csv_files[0].name[2]
+        else:
+            number_tg = opened_csv_files[0].name[3]
+
+        if type_file_kol:
+            df = pd.concat(pd.read_csv(file.name, encoding=encoding, delimiter=delimiter,
+                                       header=0, usecols=fields_kol,  skiprows=1) for file in opened_csv_files)
+        else:
+            df = pd.concat(pd.read_csv(file.name, encoding=encoding, delimiter=delimiter,
+                                       header=0, usecols=fields) for file in opened_csv_files)
+
+        time_read = '%.2f' % float(time.time() - start_read)
+
+        return df, time_read, number_tg
+
+    data_up = reading_data('Открыть CSV файлы. Движение вверх')
+    data_down = reading_data('Открыть CSV файлы. Движение вниз', False)
+
+    number_TG = data_up[2]
+
+    time_read = float(data_up[1]) + float(data_down[1])
+
+    # print(f'Время загрузки данных: {time_read:.2f} сек')
+    logging.info(f'Время загрузки данных: {time_read:.2f} сек')
+    logging.info(f'движение ВВЕРХ {data_up[0].shape}')
+    logging.info(f'движение ВНИЗ {data_down[0].shape}')
+
+    # создание списка tablenumber из значений GSM от 0 до 320
+    tablenumber = [n4 for n4 in range(321)]
+
+    # скользящее среднее
+    def movingaverage(series, n):  # series,  n - кол-во усреднений
+        out = []
+        for _ in range(len(series)):
+            b = len(series) - n + 1
+            if _ < n // 2:
+                out.append(np.average(series[_:n + _]))
+            elif n // 2 <= _ <= b:
+                out.append(np.average(series[_ - n // 2:_ + n // 2 + 1]))
+            else:
+                out.append(np.average(series[-n:]))
+        return out, len(out)
+
+    iterat = int(combo_iteration.get())
+    
+    start_program = time.time()
+
+    data_up_a = movingaverage(np.array(data_up[0].iloc[:, 2]), iterat)
+    data_up_b = movingaverage(np.array(data_up[0].iloc[:, 3]), iterat)
+    data_up[0]['ОЗ ГСМ-А.Текущее положение. Усредненное'] = data_up_a[0]
+    data_up[0]['ОЗ ГСМ-Б.Текущее положение. Усредненное'] = data_up_b[0]
+
+    data_down_a = movingaverage(np.array(data_down[0].iloc[:, 2]), iterat)
+    data_down_b = movingaverage(np.array(data_down[0].iloc[:, 3]), iterat)
+    data_down[0]['ОЗ ГСМ-А.Текущее положение. Усредненное'] = data_down_a[0]
+    data_down[0]['ОЗ ГСМ-Б.Текущее положение. Усредненное'] = data_down_b[0]
+
+    time_average = time.time() - start_program
+
+    logging.info(f'Усреднение данных: {time_average:.2f} cек')
+
+    time_all = time.time()
+
+    # функция рисования графиков движение (ВВЕРХ-ВНИЗ)
+    def draw(name, GSM_up, OZ_up, OZ_up_filtr, GSM_down, OZ_down, OZ_down_filtr):
+        fig, ax = plt.subplots()
+        point_f = 100
+        point = point_f // 2
+        if name == 'Движение ГСМ-А. n=' or name == 'Движение ГСМ-Б. n=':
+            line, = ax.plot(GSM_up[::point], OZ_up[::point], lw=2, color='b', label="ГСМ-А.Оригин")  # ГСМ-А
+            line1, = ax.plot(GSM_up[::point_f], OZ_up_filtr[::point_f], lw=2, color='r', label="GSM-B")  # ГСМ-Б
+            line2, = ax.plot(GSM_down[::point], OZ_down[::point], lw=2, color='g', label="GSM-B")  # ГСМ-Б
+            line3, = ax.plot(GSM_down[::point_f], OZ_down_filtr[::point_f], lw=2, color='r', label="GSM-B")  # ГСМ-Б
+        else:
+            line, = ax.plot(GSM_up, OZ_up_filtr, 'ro', markersize=2, color='b', label="Вверх")  # ГСМ-А
+            line1, = ax.plot(GSM_up, OZ_down_filtr, 'ro', markersize=2, color='g', label="Вниз")  # ГСМ-Б
+        fig.suptitle(name + str(iterat), fontsize='large')
+        ax.set_xlabel('ГСМ, мм')
+        ax.set_ylabel('ОЗ, мм')
+        ax.grid(linestyle='--', linewidth=0.5, alpha=.85)
+
+        if name == 'Движение ГСМ-А. n=':
+            ax.legend((line, line1, line2, line3), ('Вверх.Оригин.', 'Вниз.Оригин.', 'Вверх.Фильтр',
+                                                    'Вниз.Фильтр'))
+        elif name == 'Движение ГСМ-Б. n=':
+            ax.legend((line, line1, line2, line3), ('Вверх.Оригин.', 'Вниз.Оригин.', 'Вверх.Фильтр',
+                                                    'Вниз.Фильтр'))
+        else:
+            ax.legend((line, line1), ('Вверх.', 'Вниз.'))
+
+    draw1 = draw('Движение ГСМ-А. n=', data_up[0].iloc[:, 0], data_up[0].iloc[:, 2],
+                 data_up[0].iloc[:, 4], data_down[0].iloc[:, 0],
+                 data_down[0].iloc[:, 2], data_down[0].iloc[:, 4])
+    draw2 = draw('Движение ГСМ-Б. n=', data_up[0].iloc[:, 1], data_up[0].iloc[:, 3],
+                 data_up[0].iloc[:, 5], data_down[0].iloc[:, 1], data_down[0].iloc[:, 3],
+                 data_down[0].iloc[:, 5])
+
+    # функция создания смещений при движении вверх
+    def find_shift_up(GSM_in, OZ_in):
+        print('-+' * 15)
+        z = 0
+        n = 0
+        OZ_out = []
+        for yy in range(len(GSM_in)):
+            if float(GSM_in[z]) >= tablenumber[n]:
+                OZ_out.append(float(OZ_in[z]))
+                n = n + 1
+            if n == 321:
+                break
+            z = z + 1
+        if len(tablenumber) == len(OZ_out):
+            print('списки совпадают')
+        else:
+            OZ_out.append(OZ_out[n - 1])
+            print('список дополнен')
+        print('up', len(tablenumber), len(OZ_out))
+        return OZ_out
+
+    # функция создания смещений при движении вниз
+    def find_shift_down(GSM_in, OZ_in):
+        print('-+' * 15)
+        z = 0
+        n = 320
+        OZ_out = []
+        for yy in range(len(GSM_in)):
+            if float(GSM_in[z]) <= tablenumber[n]:
+                OZ_out.append(float(OZ_in[z]))
+                n = n - 1
+            if n == 0:
+                break
+            z = z + 1
+        if len(tablenumber) == len(OZ_out):
+            print('списки совпадают')
+        else:
+            OZ_out.append(OZ_out[n - 1])
+            print('список дополнен')
+        OZ_out.reverse()
+        print('down', len(tablenumber), len(OZ_out))
+        return OZ_out
+
+    OZ_A_final_up = find_shift_up(np.array(data_up[0].iloc[:, 0]), np.array(data_up[0].iloc[:, 4]))
+    OZ_B_final_up = find_shift_up(np.array(data_up[0].iloc[:, 1]), np.array(data_up[0].iloc[:, 5]))
+    OZ_A_final_down = find_shift_down(np.array(data_down[0].iloc[:, 0]), np.array(data_down[0].iloc[:, 4]))
+    OZ_B_final_down = find_shift_down(np.array(data_down[0].iloc[:, 1]), np.array(data_down[0].iloc[:, 5]))
+
+    draw3 = draw('Отсечка. ГСМ-А. n=', tablenumber, tablenumber, OZ_A_final_up,
+                 tablenumber, tablenumber, OZ_A_final_down)
+    draw4 = draw('Отсечка. ГСМ-Б. n=', tablenumber, tablenumber, OZ_B_final_up,
+                 tablenumber, tablenumber, OZ_B_final_down)
+
+    # функция создания УСТАВОК для Unity (ОТСЕЧКИ)
+    def otsechka(OZ_up_in, OZ_down_in):
+        OZ_otsechka = []
+        i = 0
+        for zz in range(len(OZ_up_in)):
+            OZ_otsechka.append('%.3f' % ((OZ_up_in[i] + OZ_down_in[i]) / 2))
+            i = i + 1
+        return OZ_otsechka
+
+    OZ_A_otsechka = otsechka(OZ_A_final_up, OZ_A_final_down)
+    OZ_B_otsechka = otsechka(OZ_B_final_up, OZ_B_final_down)
+
+    # запись в файл CSV
+    with open(OUT_FILE, 'w', newline='', encoding='utf-8') as csv_out:
+        w = csv.writer(csv_out, delimiter=';')
+        w.writerow(('i', 'ОЗ ГСМ-А.Вверх', 'ОЗ ГСМ-А.Вниз', 'ОЗ ГСМ-А.Отсечка', 'ОЗ ГСМ-Б.Вниз',
+                    'ОЗ ГСМ-Б.Вниз', 'ОЗ ГСМ-Б.Отсечка'))
+    
+    i = 0
+    for zz in range(len(tablenumber)):
+        with open(OUT_FILE, 'a', newline='', encoding='utf-8') as csv_out:
+            w = csv.writer(csv_out, delimiter=';')
+            w.writerow((tablenumber[i], OZ_A_final_up[i], OZ_A_final_down[i], OZ_A_otsechka[i],
+                        OZ_B_final_up[i], OZ_B_final_down[i], OZ_B_otsechka[i]))
+        i = i + 1
+
+    # функция записи в файл TXT для UNITY
+    def write_to_UNITY(out_file, tablenumber, OZ_otsechka):
+        with open(out_file, 'w', newline='', encoding='utf-8') as unity_out:
+            if out_file.find('tg1'):
+                unity_out.write('Ust_shift1A_def	%kw16000	ARRAY[0..340] OF REAL\t\t(')
+            else:
+                unity_out.write('Ust_shift1B_def	%kw16682	ARRAY[0..340] OF REAL\t\t(')
+            fi = 0
+            for zz in range(len(tablenumber)):
+                if zz == 320:
+                    unity_out.write('[' + str(tablenumber[fi]) + ']:=' + OZ_otsechka[fi])
+                else:
+                    unity_out.write('[' + str(tablenumber[fi]) + ']:=' + OZ_otsechka[fi] + ',')
+                fi = fi + 1
+            unity_out.write('\n')
+
+    if number_TG == 1:
+        write_to_UNITY('DATA_out\gsm_tg1_a.txt', tablenumber, OZ_A_otsechka)
+        write_to_UNITY('DATA_out\gsm_tg1_b.txt', tablenumber, OZ_B_otsechka)
+    else:
+        write_to_UNITY('DATA_out\gsm_tg2_a.txt', tablenumber, OZ_A_otsechka)
+        write_to_UNITY('DATA_out\gsm_tg2_b.txt', tablenumber, OZ_B_otsechka)
+
+    time_all = time.time() - time_all
+    time_all = float(time_all) + float(time_average) + float(time_read)
+
+    logging.info(f'Общее время Смещения: {time_all:.2f} cек')
+
+    plt.show()
 
 # Закрытия окна GUI
 def quit():
