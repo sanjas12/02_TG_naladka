@@ -755,6 +755,9 @@ def shift_oz(event):
                 else:
                     delimiter = '\t'
         
+        if type_file_kol:
+            delimiter = ';'
+        
         if log_record:
             logging.info('Type files:csv') if is_file_csv else logging.info('Type files:gz')
             logging.info('Архивы -> Кольские старые') if type_file_kol else logging.info('Архивы -> Новые')
