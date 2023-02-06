@@ -27,6 +27,7 @@ logging.basicConfig(filename=LOG_FILE, encoding='utf-8', level=logging.INFO,
 
 cpu_info = get_cpu_info()
 
+logging.info(f"----START----")
 logging.info(f"Python: {cpu_info['python_version']}")
 logging.info(f"CPU: {cpu_info['brand_raw']}")
 
@@ -971,6 +972,7 @@ def shift_oz(event):
 
 # Закрытия окна GUI
 def quit():
+    logging.info(f"----FINISH----")
     root.quit()  # stops mainloop
     root.destroy()  # this is necessary on Windows to prevent
 
