@@ -18,11 +18,16 @@ import csv
 from tkinter import filedialog as fd
 import pandas as pd
 import os
+import sys
 from tkinter import *
 from config.config import *
 from cpuinfo import get_cpu_info
 
-logging.basicConfig(filename=LOG_FILE, encoding='utf-8', level=logging.INFO,
+if sys.version_info[1]>=9:
+    logging.basicConfig(filename=LOG_FILE, encoding='utf-8', level=logging.INFO,
+                    format=FORMAT)
+else:
+    logging.basicConfig(filename=LOG_FILE, level=logging.INFO,
                     format=FORMAT)
 
 cpu_info = get_cpu_info()
