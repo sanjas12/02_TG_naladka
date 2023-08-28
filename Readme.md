@@ -29,6 +29,6 @@ TODO
 3. перейти на новый вывод сообщений f
 4. добавить логирование ()
 
-
-
+help:
+python -m pip  install -r requirements.txt -f d:\\temp\\python_Library\
 
