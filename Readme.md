@@ -30,5 +30,5 @@ TODO
 4. добавить логирование ()
 
 help:
-python -m pip  install -r requirements.txt -f d:\\temp\\python_Library\
+python -m pip  install -r requirements.txt --no-index -f d:\\temp\\python_Library
 
