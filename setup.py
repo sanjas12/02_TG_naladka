@@ -8,14 +8,12 @@ build_exe_options = {
 }
 
 # base="Win32GUI" should be used only for Windows GUI app
-base = "Win32GUI" if sys.platform == "win32" else None
+base = "Win32GUI" if sys.platform == "win32" else None4
 
 setup(
     name="TG-Naladka",
-    version="0.1.0",
+    version="0.1",
     description="My TG-Naladka",
-    author="sanja",
     options={"build_exe": build_exe_options},
     executables=[Executable("main.py", base=base)],
-    # executables=[Executable("main.py", base=base)],
 )
