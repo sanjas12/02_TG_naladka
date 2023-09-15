@@ -6,10 +6,11 @@ from cx_Freeze import setup, Executable
 build_exe_options = {
     "excludes": ["tkinter", "unittest"],
     "zip_include_packages": ["encodings", "PySide6"],
+    # "optimize": 2,
 }
 
 # base="Win32GUI" should be used only for Windows GUI app
-base = "Win32GUI" if sys.platform == "win32" else None4
+base = "Win32GUI" if sys.platform == "win32" else None
 
 setup(
     name="TG-Naladka",
