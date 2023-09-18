@@ -2,6 +2,17 @@
 import sys
 from cx_Freeze import setup, Executable
 
+
+file = "setup.py"
+
+with open(file, 'r+') as f:
+    version = f.readline().split('.')
+    version[-1] = str(int(version[-1]) + 1)
+    version = '.'.join(version)
+    f.seek(0)
+    f.write(version)
+
+
 # Dependencies are automatically detected, but it might need fine tuning.
 build_exe_options = {
     "excludes": ["tkinter", "unittest"],
