@@ -1,4 +1,4 @@
-#0.0.1.13
+#0.0.1.15
 import sys
 from cx_Freeze import setup, Executable
 
@@ -25,6 +25,7 @@ build_exe_options = {
                 # "asyncio", "curses", "distutils", "html", "multiprocessing",
                 "sqlite3", "test", "urlib"],
     "optimize": 0,      # c 2 exe не запускается
+    "zip_include_packages": ["PyQt5", "matplotlib"],
     # "include_files" : files
 }
 
