@@ -1,4 +1,4 @@
-#0.0.1.0
+#0.0.1.1
 import sys
 from cx_Freeze import setup, Executable
 
@@ -13,11 +13,15 @@ with open(file, 'r+') as f:
     f.write(version)
 
 
+files = [("install.cmd")]
+
+
 # Dependencies are automatically detected, but it might need fine tuning.
 build_exe_options = {
     "excludes": ["tkinter", "unittest"],
     "zip_include_packages": ["encodings", "PySide6"],
     # "optimize": 2,
+    "include_files" : files
 }
 
 # base="Win32GUI" should be used only for Windows GUI app
