@@ -19,7 +19,6 @@ with open(file, 'r+') as f:
 # Dependencies are automatically detected, but it might need fine tuning.
 build_exe_options = {
     "excludes": ["tkinter", "unittest"],
-    "zip_include_packages": ["encodings", "PySide6"],
     "optimize": 0,      # c 2 exe не запускается
     # "include_files" : files
 }
