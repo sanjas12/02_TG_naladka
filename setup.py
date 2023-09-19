@@ -1,4 +1,4 @@
-#0.0.1.12
+#0.0.1.13
 import sys
 from cx_Freeze import setup, Executable
 
@@ -36,5 +36,5 @@ setup(
     version="0.0.1.0",
     description="My TG-Naladka",
     options={"build_exe": build_exe_options},
-    executables=[Executable("main.py", base=base)],
+    executables=[Executable("main.py", target_name="TG-Naladka",  base=base)],
 )
