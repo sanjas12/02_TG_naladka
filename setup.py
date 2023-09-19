@@ -1,4 +1,4 @@
-#0.0.1.2
+#0.0.1.12
 import sys
 from cx_Freeze import setup, Executable
 
@@ -18,7 +18,12 @@ with open(file, 'r+') as f:
 
 # Dependencies are automatically detected, but it might need fine tuning.
 build_exe_options = {
-    "excludes": ["tkinter", "unittest"],
+    "excludes": ["tkinter", "unittest", "http",
+                "PyQT5.QtopenGL4",
+                "pydoc_data", "email",
+                "concurent", "xml",
+                # "asyncio", "curses", "distutils", "html", "multiprocessing",
+                "sqlite3", "test", "urlib"],
     "optimize": 0,      # c 2 exe не запускается
     # "include_files" : files
 }
