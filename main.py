@@ -11,6 +11,15 @@ from itertools import islice
 import logging
 from config.config import *
 
+
+if sys.version_info[1]>=9:
+    logging.basicConfig(filename=LOG_FILE, encoding='utf-8', level=logging.INFO,
+                    format=FORMAT)
+else:
+    logging.basicConfig(handlers=[logging.FileHandler(filename=LOG_FILE, 
+                                                 encoding='utf-8', mode='a')],
+                        format=FORMAT, level=logging.INFO)
+
 class MainWindow(QWidget):
 
     def __init__(self):
