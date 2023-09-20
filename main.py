@@ -9,8 +9,6 @@ import ctypes
 import time
 from itertools import islice
 import logging
-from config.config import *
-
 
 class MainWindow(QWidget):
 
