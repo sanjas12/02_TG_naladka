@@ -1,11 +1,11 @@
-#0.0.1.15
+#0.0.1.16
 import sys
 from cx_Freeze import setup, Executable
 
 
 file = "setup.py"
 
-with open(file, 'r+') as f:
+with open(file, 'r+', encoding='utf-8') as f:
     version = f.readline().split('.')
     version[-1] = str(int(version[-1]) + 1)
     version = '.'.join(version)
