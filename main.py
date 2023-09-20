@@ -8,7 +8,7 @@ import gzip
 import ctypes
 import time
 from itertools import islice
-
+import logging
 
 class MainWindow(QWidget):
 
