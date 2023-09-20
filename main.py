@@ -10,6 +10,7 @@ import time
 from itertools import islice
 import logging
 from config.config import *
+from cpuinfo import get_cpu_info
 
 
 if sys.version_info[1]>=9:
@@ -351,6 +352,7 @@ class MainWindow(QWidget):
 
 
 def main():
+    cpu_info = get_cpu_info()
     app = QApplication(sys.argv)
     ex = MainWindow()
     ex.show()
