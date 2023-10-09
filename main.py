@@ -331,13 +331,13 @@ class MainWindow(QWidget):
     def plot_grath(self):
         # print(self.combobox_dot.currentText())
         print(self.files[0])
-        grath = WindowGrath(self.df, self.field_y, self.field_y2,
+        self.grath = WindowGrath(self.df, self.field_y, self.field_y2,
                             step=self.combobox_dot.currentText(),
                             filename=self.files[0])
-        user32 = ctypes.windll.user32
-        screensize = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
-        grath.resize(screensize[0] - 10, screensize[1] - 150)
-        grath.exec_()
+        self.user32 = ctypes.windll.user32
+        self.screensize = self.user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
+        self.grath.resize(self.screensize[0] - 10, self.screensize[1] - 150)
+        self.grath.show()
 
 
 def main():
