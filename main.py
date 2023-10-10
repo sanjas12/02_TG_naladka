@@ -11,6 +11,7 @@ from itertools import islice
 
 
 class MainWindow(QWidget):
+    cycle_plc = 0.01
 
     def __init__(self):
         super().__init__()
@@ -306,15 +307,10 @@ class MainWindow(QWidget):
 
             # добавляем колонку time если ее нет
             if self.time_c not in self.df:
+                self.df[self.time_c] = [_ * __class__.cycle_plc for _ in self.df.index]
                 print('Time added.')
-                time_data = []
-                summa = 0
-                for z in range(len(self.df.index)):
-                    time_data.append(float('%.2f' % summa))
-                    summa = summa + 0.01
-                self.df[self.time_c] = time_data
             else:
-                print("колонка time уже есть")
+                print("Time exist")
 
         else:
             print('No data for grath')
@@ -325,8 +321,6 @@ class MainWindow(QWidget):
         # при загрузки некоторых файлов в конце добавляется неименнованный параметр
 
     def plot_grath(self):
-        # print(self.combobox_dot.currentText())
-        print(self.files[0])
         self.grath = WindowGrath(self.df, self.field_y, self.field_y2,
                             step=self.combobox_dot.currentText(),
                             filename=self.files[0])
