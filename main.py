@@ -45,7 +45,7 @@ class MainWindow(QWidget):
         self.axe_y = QListWidget()
         vertical_lay_2.addWidget(self.axe_y, 1, 0)
         button_add_to_y = QPushButton('Add to Y')
-        button_add_to_y.clicked.connect(self.add_to_y, 2, 0)
+        button_add_to_y.clicked.connect(self.add_to_y)
         vertical_lay_2.addWidget(button_add_to_y)
         button_remove_y = QPushButton('Remove from Y')
         button_remove_y.clicked.connect(self.remove_y)
