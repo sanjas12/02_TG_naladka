@@ -22,6 +22,7 @@ class MainWindow(QWidget):
         self.field_y2 = []
         self.time_c = 'time, c'
         self.setup_ui()
+        self.df = None
 
     def setup_ui(self):
         # self.setGeometry(10, 10, self.width, self.height)
@@ -250,7 +251,6 @@ class MainWindow(QWidget):
         # self.axe_x.clear()
 
     def load_data(self):
-        print('Time load data:', time.asctime())
         if self.axe_x.count() > 0:
             self.field_x = []
             for _ in range(self.axe_x.count()):
@@ -277,8 +277,7 @@ class MainWindow(QWidget):
 
         # Основная загрузка данных (из множества CSV файлов)
         # if self.axe_x.count() > 0 and self.axe_y.count() > 0 and self.axe_y2.count() > 0:
-        if True:
-
+        if self.df:
             self.df = pd.concat(pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
                                             usecols=self.field_y+self.field_y2, decimal=self.decimal) for file in self.files)
 
@@ -306,22 +305,23 @@ class MainWindow(QWidget):
                     pass
                     # print(_, ' - нет такого')
 
-            # print(self.df.info())
-        else:
-            # print('No data.Ось Y')
-            pass
+            # добавляем колонку time если ее нет
+            if self.time_c not in self.df:
+                print('Time added.')
+                time_data = []
+                summa = 0
+                for z in range(len(self.df.index)):
+                    time_data.append(float('%.2f' % summa))
+                    summa = summa + 0.01
+                self.df[self.time_c] = time_data
+            else:
+                print("колонка time уже есть")
 
-        # добавляем колонку time если ее нет
-        if self.time_c not in self.df:
-            print('Time added.')
-            time_data = []
-            summa = 0
-            for z in range(len(self.df.index)):
-                time_data.append(float('%.2f' % summa))
-                summa = summa + 0.01
-            self.df[self.time_c] = time_data
+            # print(self.df.info())
+
         else:
-            print("колонка time уже есть")
+            print('No data for grath')
+
 
         print('-' * 30)
 
