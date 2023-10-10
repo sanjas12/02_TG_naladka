@@ -131,10 +131,7 @@ class MainWindow(QWidget):
         self.axe_y.clear()
         self.axe_y2.clear()
         self.axe_x.clear()
-        self.field_x = []
-        self.field_y = []
-        self.field_y2 = []
-
+        
         self.files, _filter = QFileDialog.getOpenFileNames(self, 'Выбор данных: ', '',
                                                            "GZ Files (*.gz) ;; CSV Files (*.csv) ;; txt (*.txt)")
         try:
@@ -207,9 +204,8 @@ class MainWindow(QWidget):
 
         except IndexError as e:
             print('не выбраны данные')
-
-    # определение расширения
-    def filename_extension(self):
+   
+    def filename_extension(self):       # определение расширения
         """
         true -> file is 'csv;
         false -> file is 'gz;
