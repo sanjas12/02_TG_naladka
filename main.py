@@ -186,26 +186,26 @@ class MainWindow(QWidget):
                         self.decimal = ','
                 print('decimal:', self.decimal)
 
+            # Считывание названия всех колонок
+            self.name_column = pd.read_csv(self.files[0], encoding=self.encoding, delimiter=self.delimiter, nrows=0)
+            
+            # удаляем лишние колонки
+            self.name_column = self.name_column.loc[:, ~self.name_column.columns.str.contains('^Unnamed')]
+            
+            # заполняем колонку ось columns (Выбирай параметр)
+            for i, _ in enumerate(self.name_column):
+                self.columns.insertItem(i, _)
+
+            # по умолчанию на ось columns (Выбирай параметр) добавляем 'time'
+            # и тут же ее перемещяем на ось Х
+            self.columns.addItem('time, c')
+            self.columns.setCurrentRow(self.columns.count() - 1)
+            self.axe_x.addItem(self.columns.takeItem(self.columns.currentRow()))
+            self.columns.setCurrentRow(0)
+            self.axe_x.setCurrentRow(0)
+
         except IndexError as e:
             print('не выбраны данные')
-
-        # Считывание названия всех колонок
-        self.name_column = pd.read_csv(self.files[0], encoding=self.encoding, delimiter=self.delimiter, nrows=0)
-        
-        # удаляем лишние колонки
-        self.name_column = self.name_column.loc[:, ~self.name_column.columns.str.contains('^Unnamed')]
-        
-        # заполняем колонку ось columns (Выбирай параметр)
-        for i, _ in enumerate(self.name_column):
-            self.columns.insertItem(i, _)
-
-        # по умолчанию на ось columns (Выбирай параметр) добавляем 'time'
-        # и тут же ее перемещяем на ось Х
-        self.columns.addItem('time, c')
-        self.columns.setCurrentRow(self.columns.count() - 1)
-        self.axe_x.addItem(self.columns.takeItem(self.columns.currentRow()))
-        self.columns.setCurrentRow(0)
-        self.axe_x.setCurrentRow(0)
 
     # определение расширения
     def filename_extension(self):
