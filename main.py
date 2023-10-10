@@ -16,7 +16,7 @@ class MainWindow(QWidget):
         super().__init__()
         self.width = 640
         self.height = 400
-        self.files = 0
+        self.files = None
         self.field_x = []
         self.field_y = []
         self.field_y2 = []
@@ -228,6 +228,7 @@ class MainWindow(QWidget):
     def remove_x(self):
         self.columns.addItem(self.axe_x.takeItem(self.axe_x.currentRow()))
         self.columns.setCurrentRow(0)
+        self.field_x = []
 
     def add_to_y(self):
         self.axe_y.addItem(self.columns.takeItem(self.columns.currentRow()))
@@ -235,7 +236,8 @@ class MainWindow(QWidget):
 
     def remove_y(self):
         self.columns.addItem(self.axe_y.takeItem(self.axe_y.currentRow()))
-        self.columns.setCurrentRow(0)
+        self.columns.setCurrentRow(0)                
+        self.field_y = []
 
     def add_to_y2(self):
         self.axe_y2.addItem(self.columns.takeItem(self.columns.currentRow()))
@@ -244,6 +246,7 @@ class MainWindow(QWidget):
     def remove_y2(self):
         self.columns.addItem(self.axe_y2.takeItem(self.axe_y2.currentRow()))
         self.columns.setCurrentRow(0)
+        self.field_y2 = []
 
     def clear_y(self):
         self.axe_y.clear()
@@ -251,6 +254,7 @@ class MainWindow(QWidget):
         # self.axe_x.clear()
 
     def load_data(self):
+        self.df = None
         if self.axe_x.count() > 0:
             self.field_x = []
             for _ in range(self.axe_x.count()):
@@ -276,8 +280,7 @@ class MainWindow(QWidget):
             print('Ось Y2:', 'нет данных')
 
         # Основная загрузка данных (из множества CSV файлов)
-        # if self.axe_x.count() > 0 and self.axe_y.count() > 0 and self.axe_y2.count() > 0:
-        if self.df:
+        if self.files:
             self.df = pd.concat(pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
                                             usecols=self.field_y+self.field_y2, decimal=self.decimal) for file in self.files)
 
@@ -317,11 +320,8 @@ class MainWindow(QWidget):
             else:
                 print("колонка time уже есть")
 
-            # print(self.df.info())
-
         else:
             print('No data for grath')
-
 
         print('-' * 30)
 
