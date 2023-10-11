@@ -6,8 +6,6 @@ from grath import WindowGrath
 import chardet
 import gzip
 import ctypes
-import time
-from itertools import islice
 
 
 class MainWindow(QWidget):
