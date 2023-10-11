@@ -29,20 +29,20 @@ class MainWindow(QWidget):
         # self.setGeometry(10, 10, self.width, self.height)
         self.setWindowTitle(__file__)
 
-        # колонка Выбирай параметр:
+        # Список сигналов:
         inner_layout_1 = QVBoxLayout()
-        inner_layout_1.addWidget(QLabel('Выбирай параметр:'))
+        inner_layout_1.addWidget(QLabel('Список сигналов:'))
         self.columns = QListWidget()
         inner_layout_1.addWidget(self.columns)
-        button_open = QPushButton('Open')
-        button_open.clicked.connect(self.open_files)
-        inner_layout_1.addWidget(button_open)
+        button_open_files = QPushButton('Open files')
+        button_open_files.clicked.connect(self.open_files)
+        inner_layout_1.addWidget(button_open_files)
         self.horizontalGroupBox = QGroupBox()
         self.horizontalGroupBox.setLayout(inner_layout_1)
 
-        # колонка Ось Y
+        # Основная ось:
         vertical_lay_2 = QGridLayout()
-        vertical_lay_2.addWidget(QLabel('Ось Y:'), 0, 0)
+        vertical_lay_2.addWidget(QLabel('Основная ось:'), 0, 0)
         self.axe_y = QListWidget()
         vertical_lay_2.addWidget(self.axe_y, 1, 0)
         button_add_to_y = QPushButton('Add to Y')
@@ -54,7 +54,21 @@ class MainWindow(QWidget):
         self.horizontalGroupBox_2 = QGroupBox()
         self.horizontalGroupBox_2.setLayout(vertical_lay_2)
 
-        # колонка Ось X
+        # Вспомогательная ось:
+        vertical_lay_4 = QGridLayout()
+        vertical_lay_4.addWidget(QLabel('Вспомогательная ось:'), 0, 0)
+        self.axe_y2 = QListWidget()
+        vertical_lay_4.addWidget(self.axe_y2, 1, 0)
+        button_add_to_y2 = QPushButton('Add to Y2')
+        button_add_to_y2.clicked.connect(self.add_to_y2)
+        vertical_lay_4.addWidget(button_add_to_y2, 2, 0)
+        button_remove_y2 = QPushButton('Remove from Y2')
+        button_remove_y2.clicked.connect(self.remove_y2)
+        vertical_lay_4.addWidget(button_remove_y2, 3, 0)
+        self.horizontalGroupBox_4 = QGroupBox()
+        self.horizontalGroupBox_4.setLayout(vertical_lay_4)
+
+        # Ось X
         vertical_lay_3 = QGridLayout()
         vertical_lay_3.addWidget(QLabel('Ось X:'), 0, 0)
         self.axe_x = QListWidget()
@@ -67,21 +81,7 @@ class MainWindow(QWidget):
         vertical_lay_3.addWidget(button_remove_x, 3, 0)
         self.horizontalGroupBox_3 = QGroupBox()
         self.horizontalGroupBox_3.setLayout(vertical_lay_3)
-
-        # колонка Ось Y2
-        vertical_lay_4 = QGridLayout()
-        vertical_lay_4.addWidget(QLabel('Ось Y2:'), 0, 0)
-        self.axe_y2 = QListWidget()
-        vertical_lay_4.addWidget(self.axe_y2, 1, 0)
-        button_add_to_y2 = QPushButton('Add to Y2')
-        button_add_to_y2.clicked.connect(self.add_to_y2)
-        vertical_lay_4.addWidget(button_add_to_y2, 2, 0)
-        button_remove_y2 = QPushButton('Remove from Y2')
-        button_remove_y2.clicked.connect(self.remove_y2)
-        vertical_lay_4.addWidget(button_remove_y2, 3, 0)
-        self.horizontalGroupBox_4 = QGroupBox()
-        self.horizontalGroupBox_4.setLayout(vertical_lay_4)
-
+        
         self.first_huge_lay = QHBoxLayout()
         self.first_huge_lay.addWidget(self.horizontalGroupBox)
         self.first_huge_lay.addWidget(self.horizontalGroupBox_2)
