@@ -136,7 +136,7 @@ class MainWindow(QWidget):
         self.files, _filter = QFileDialog.getOpenFileNames(self, 'Выбор данных: ', '',
                                                            "GZ Files (*.gz) ;; CSV Files (*.csv) ;; txt (*.txt)")
         try:
-            if self.filename_extension():
+            if self.files[0].endswith('.csv'):
 
                 # Определение кодировки в csv файле
                 with open(self.files[0], 'rb') as f:
@@ -206,18 +206,6 @@ class MainWindow(QWidget):
         except IndexError as e:
             print('не выбраны данные')
    
-    def filename_extension(self):       # определение расширения
-        """
-        true -> file is 'csv;
-        false -> file is 'gz;
-        :rtype: object
-        """
-        extension = self.files[0][-3:]
-        if extension == 'csv':
-            return True
-        else:
-            return False
-
     def add_to_x(self):
         self.axe_x.addItem(self.columns.takeItem(self.columns.currentRow()))
         self.axe_x.setCurrentRow(0)
