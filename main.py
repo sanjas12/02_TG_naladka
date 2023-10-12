@@ -285,7 +285,7 @@ class MainWindow(QWidget):
 
             # добавляем колонку time если ее нет
             if self.time_c not in self.df:
-                self.df[self.time_c] = [_ * __class__.cycle_plc for _ in self.df.index]
+                self.df[self.time_c] = [_ * __class__.cycle_plc for _ in range(len(self.df.index))]
                 print('Time added.')
             else:
                 print("Time exist")
