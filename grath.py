@@ -20,6 +20,7 @@ class WindowGrath(QDialog):
         step -> должен быть int \n
         filename -> должен быть str \n
         """
+        super().__init__()
         print(data.info())
         self.filename = filename
         self.data = data
@@ -45,7 +46,7 @@ class WindowGrath(QDialog):
         self.ui()
 
     def ui(self):
-        super().__init__()
+        
         self.setWindowTitle('Графики')
 
         self.horizontalGroupBox = QGroupBox()

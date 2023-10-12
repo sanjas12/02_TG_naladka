@@ -11,6 +11,7 @@ from itertools import islice
 import logging
 from config.config import *
 from cpuinfo import get_cpu_info
+from typing import List
 
 
 if sys.version_info[1]>=9:
@@ -22,40 +23,42 @@ else:
                         format=FORMAT, level=logging.INFO)
 
 class MainWindow(QWidget):
+    cycle_plc = 0.01
 
     def __init__(self):
         super().__init__()
         self.width = 640
         self.height = 400
-        self.files = 0
+        self.files = None
         self.field_x = []
         self.field_y = []
         self.field_y2 = []
         self.time_c = 'time, c'
         self.setup_ui()
+        self.df = None
 
     def setup_ui(self):
         # self.setGeometry(10, 10, self.width, self.height)
         self.setWindowTitle(__file__)
 
-        # колонка Выбирай параметр:
+        # Список сигналов:
         inner_layout_1 = QVBoxLayout()
-        inner_layout_1.addWidget(QLabel('Выбирай параметр:'))
+        inner_layout_1.addWidget(QLabel('Список сигналов:'))
         self.columns = QListWidget()
         inner_layout_1.addWidget(self.columns)
-        button_open = QPushButton('Open')
-        button_open.clicked.connect(self.open_files)
-        inner_layout_1.addWidget(button_open)
+        button_open_files = QPushButton('Open files')
+        button_open_files.clicked.connect(self.open_files)
+        inner_layout_1.addWidget(button_open_files)
         self.horizontalGroupBox = QGroupBox()
         self.horizontalGroupBox.setLayout(inner_layout_1)
 
-        # колонка Ось Y
+        # Основная ось:
         vertical_lay_2 = QGridLayout()
-        vertical_lay_2.addWidget(QLabel('Ось Y:'), 0, 0)
+        vertical_lay_2.addWidget(QLabel('Основная ось:'), 0, 0)
         self.axe_y = QListWidget()
         vertical_lay_2.addWidget(self.axe_y, 1, 0)
         button_add_to_y = QPushButton('Add to Y')
-        button_add_to_y.clicked.connect(self.add_to_y, 2, 0)
+        button_add_to_y.clicked.connect(self.add_to_y)
         vertical_lay_2.addWidget(button_add_to_y)
         button_remove_y = QPushButton('Remove from Y')
         button_remove_y.clicked.connect(self.remove_y)
@@ -63,7 +66,21 @@ class MainWindow(QWidget):
         self.horizontalGroupBox_2 = QGroupBox()
         self.horizontalGroupBox_2.setLayout(vertical_lay_2)
 
-        # колонка Ось X
+        # Вспомогательная ось:
+        vertical_lay_4 = QGridLayout()
+        vertical_lay_4.addWidget(QLabel('Вспомогательная ось:'), 0, 0)
+        self.axe_y2 = QListWidget()
+        vertical_lay_4.addWidget(self.axe_y2, 1, 0)
+        button_add_to_y2 = QPushButton('Add to Y2')
+        button_add_to_y2.clicked.connect(self.add_to_y2)
+        vertical_lay_4.addWidget(button_add_to_y2, 2, 0)
+        button_remove_y2 = QPushButton('Remove from Y2')
+        button_remove_y2.clicked.connect(self.remove_y2)
+        vertical_lay_4.addWidget(button_remove_y2, 3, 0)
+        self.horizontalGroupBox_4 = QGroupBox()
+        self.horizontalGroupBox_4.setLayout(vertical_lay_4)
+
+        # Ось X
         vertical_lay_3 = QGridLayout()
         vertical_lay_3.addWidget(QLabel('Ось X:'), 0, 0)
         self.axe_x = QListWidget()
@@ -76,21 +93,7 @@ class MainWindow(QWidget):
         vertical_lay_3.addWidget(button_remove_x, 3, 0)
         self.horizontalGroupBox_3 = QGroupBox()
         self.horizontalGroupBox_3.setLayout(vertical_lay_3)
-
-        # колонка Ось Y2
-        vertical_lay_4 = QGridLayout()
-        vertical_lay_4.addWidget(QLabel('Ось Y2:'), 0, 0)
-        self.axe_y2 = QListWidget()
-        vertical_lay_4.addWidget(self.axe_y2, 1, 0)
-        button_add_to_y2 = QPushButton('Add to Y2')
-        button_add_to_y2.clicked.connect(self.add_to_y2)
-        vertical_lay_4.addWidget(button_add_to_y2, 2, 0)
-        button_remove_y2 = QPushButton('Remove from Y2')
-        button_remove_y2.clicked.connect(self.remove_y2)
-        vertical_lay_4.addWidget(button_remove_y2, 3, 0)
-        self.horizontalGroupBox_4 = QGroupBox()
-        self.horizontalGroupBox_4.setLayout(vertical_lay_4)
-
+        
         self.first_huge_lay = QHBoxLayout()
         self.first_huge_lay.addWidget(self.horizontalGroupBox)
         self.first_huge_lay.addWidget(self.horizontalGroupBox_2)
@@ -104,10 +107,6 @@ class MainWindow(QWidget):
         second_vertical_lay.addWidget(QLabel('Количество данных:'), 0, 0)
         self.number_point = QLabel()
         second_vertical_lay.addWidget(self.number_point, 0, 1)
-
-        button_load_data = QPushButton('Загрузить данные')
-        button_load_data.clicked.connect(self.load_data)
-        second_vertical_lay.addWidget(button_load_data, 0, 2)
 
         second_vertical_lay.addWidget(QLabel('Количество отображаемых данных:'), 3, 0)
         self.number_point_grath = QLabel()
@@ -133,18 +132,23 @@ class MainWindow(QWidget):
 
         self.show()
 
-    def open_files(self):
-        self.number_point.setText('0')
-        
+    def open_files(self)-> List[str]:
+        self.files, _filter = QFileDialog.getOpenFileNames(self, 'Выбор данных: ', '',
+                                                           "GZ Files (*.gz) ;; CSV Files (*.csv) ;; txt (*.txt)")
+
+        if self.files: 
+            print(*self.files, sep='\n')
+            self.parser(self.files[0])
+            self.insert_signals_to_column(self.files[0])
+    
+    def insert_signals_to_column(self, file):
         # очищаем колонки
         self.columns.clear()
         self.axe_y.clear()
         self.axe_y2.clear()
         self.axe_x.clear()
-        self.field_x = []
-        self.field_y = []
-        self.field_y2 = []
 
+<<<<<<< HEAD
         self.files, _filter = QFileDialog.getOpenFileNames(self, 'Выбор данных: ', '',
                                                            "GZ Files (*.gz) ;; CSV Files (*.csv) ;; txt (*.txt)")
         try:
@@ -200,6 +204,12 @@ class MainWindow(QWidget):
             # Считывание названия всех колонок
             self.name_column = pd.read_csv(self.files[0], encoding=self.encoding, delimiter=self.delimiter, nrows=0)
 
+=======
+        if self.files:
+            # Считывание названия всех колонок
+            self.name_column = pd.read_csv(self.files[0], encoding=self.encoding, delimiter=self.delimiter, nrows=0)
+            
+>>>>>>> develop
             # удаляем лишние колонки
             self.name_column = self.name_column.loc[:, ~self.name_column.columns.str.contains('^Unnamed')]
             
@@ -214,6 +224,7 @@ class MainWindow(QWidget):
             self.axe_x.addItem(self.columns.takeItem(self.columns.currentRow()))
             self.columns.setCurrentRow(0)
             self.axe_x.setCurrentRow(0)
+<<<<<<< HEAD
         except IndexError as e:
             # print('не выбраны данные')
             pass
@@ -224,13 +235,51 @@ class MainWindow(QWidget):
         true -> file is 'csv;
         false -> file is 'gz;
         :rtype: object
-        """
-        extension = self.files[0][-3:]
-        if extension == 'csv':
-            return True
-        else:
-            return False
+=======
 
+    def parser(self, file)  -> None:
+        """ 
+        Detect encoding, delimiter, decimal in opened files
+>>>>>>> develop
+        """
+        if file.endswith('.csv'):
+            # Определение кодировки в csv файле
+            with open(file, 'rb') as f:
+                raw_data = f.read(20000)
+                self.encoding = chardet.detect(raw_data)['encoding']
+            # и разделителя в csv файле
+            with open(file, 'r', encoding=self.encoding) as f:
+                if f.readline(100).count(';'):
+                    self.delimiter = ';'
+                else:
+                    self.delimiter = '\t'
+            # и decimal в csv файле
+            with open(file, 'r', encoding=self.encoding) as f:
+                s = str(f.readlines()[2])
+                if s.count('.') > s.count(','):
+                    self.decimal = '.'
+                else:
+                    self.decimal = ','
+        else:
+            # Определение кодировки в gz
+            with gzip.open(file, 'rb') as f:
+                raw_data = f.read(20000)
+                self.encoding = chardet.detect(raw_data)['encoding']
+            # и разделителя gz
+            with gzip.open(file, 'rb') as f:
+                if f.readline(100).decode(self.encoding).count(';'):
+                    self.delimiter = ';'
+                else:
+                    self.delimiter = '\t'
+            # и decimal qz
+            with gzip.open(file, 'r') as f:
+                data = f.readlines()[2].decode(self.encoding)
+                if data.count('.') > data.count(','):
+                    self.decimal = '.'
+                else:
+                    self.decimal = ','
+        print(f"encoding: {self.encoding} delimiter: {repr(self.delimiter)} decimal: {self.decimal}")
+   
     def add_to_x(self):
         self.axe_x.addItem(self.columns.takeItem(self.columns.currentRow()))
         self.axe_x.setCurrentRow(0)
@@ -238,6 +287,7 @@ class MainWindow(QWidget):
     def remove_x(self):
         self.columns.addItem(self.axe_x.takeItem(self.axe_x.currentRow()))
         self.columns.setCurrentRow(0)
+        self.field_x = []
 
     def add_to_y(self):
         self.axe_y.addItem(self.columns.takeItem(self.columns.currentRow()))
@@ -245,7 +295,8 @@ class MainWindow(QWidget):
 
     def remove_y(self):
         self.columns.addItem(self.axe_y.takeItem(self.axe_y.currentRow()))
-        self.columns.setCurrentRow(0)
+        self.columns.setCurrentRow(0)                
+        self.field_y = []
 
     def add_to_y2(self):
         self.axe_y2.addItem(self.columns.takeItem(self.columns.currentRow()))
@@ -254,6 +305,7 @@ class MainWindow(QWidget):
     def remove_y2(self):
         self.columns.addItem(self.axe_y2.takeItem(self.axe_y2.currentRow()))
         self.columns.setCurrentRow(0)
+        self.field_y2 = []
 
     def clear_y(self):
         self.axe_y.clear()
@@ -261,7 +313,7 @@ class MainWindow(QWidget):
         # self.axe_x.clear()
 
     def load_data(self):
-        print('Time load data:', time.asctime())
+        self.df = None
         if self.axe_x.count() > 0:
             self.field_x = []
             for _ in range(self.axe_x.count()):
@@ -287,9 +339,7 @@ class MainWindow(QWidget):
             print('Ось Y2:', 'нет данных')
 
         # Основная загрузка данных (из множества CSV файлов)
-        # if self.axe_x.count() > 0 and self.axe_y.count() > 0 and self.axe_y2.count() > 0:
-        if True:
-
+        if self.files:
             self.df = pd.concat(pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
                                             usecols=self.field_y+self.field_y2, decimal=self.decimal) for file in self.files)
 
@@ -317,22 +367,15 @@ class MainWindow(QWidget):
                     pass
                     # print(_, ' - нет такого')
 
-            # print(self.df.info())
-        else:
-            # print('No data.Ось Y')
-            pass
+            # добавляем колонку time если ее нет
+            if self.time_c not in self.df:
+                self.df[self.time_c] = [_ * __class__.cycle_plc for _ in self.df.index]
+                print('Time added.')
+            else:
+                print("Time exist")
 
-        # добавляем колонку time если ее нет
-        if self.time_c not in self.df:
-            print('Time added.')
-            time_data = []
-            summa = 0
-            for z in range(len(self.df.index)):
-                time_data.append(float('%.2f' % summa))
-                summa = summa + 0.01
-            self.df[self.time_c] = time_data
         else:
-            print("колонка time уже есть")
+            print('No data for grath')
 
         print('-' * 30)
 
@@ -340,15 +383,17 @@ class MainWindow(QWidget):
         # при загрузки некоторых файлов в конце добавляется неименнованный параметр
 
     def plot_grath(self):
-        # print(self.combobox_dot.currentText())
-        print(self.files[0])
-        grath = WindowGrath(self.df, self.field_y, self.field_y2,
-                            step=self.combobox_dot.currentText(),
-                            filename=self.files[0])
-        user32 = ctypes.windll.user32
-        screensize = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
-        grath.resize(screensize[0] - 10, screensize[1] - 150)
-        grath.exec_()
+        self.load_data()
+        if self.files and (self.field_y or self.field_y2):
+            self.grath = WindowGrath(self.df, self.field_y, self.field_y2,
+                                step=self.combobox_dot.currentText(),
+                                filename=self.files[0])
+            self.user32 = ctypes.windll.user32
+            self.screensize = self.user32.GetSystemMetrics(0), self.user32.GetSystemMetrics(1)
+            self.grath.resize(self.screensize[0] - 10, self.screensize[1] - 150)
+            self.grath.show()
+        else:
+            print("No data to grath")
 
 
 def main():
