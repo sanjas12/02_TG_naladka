@@ -95,10 +95,6 @@ class MainWindow(QWidget):
         self.number_point = QLabel()
         second_vertical_lay.addWidget(self.number_point, 0, 1)
 
-        button_load_data = QPushButton('Загрузить данные')
-        button_load_data.clicked.connect(self.load_data)
-        second_vertical_lay.addWidget(button_load_data, 0, 2)
-
         second_vertical_lay.addWidget(QLabel('Количество отображаемых данных:'), 3, 0)
         self.number_point_grath = QLabel()
         second_vertical_lay.addWidget(self.number_point_grath, 3, 1)
@@ -303,13 +299,17 @@ class MainWindow(QWidget):
         # при загрузки некоторых файлов в конце добавляется неименнованный параметр
 
     def plot_grath(self):
-        self.grath = WindowGrath(self.df, self.field_y, self.field_y2,
-                            step=self.combobox_dot.currentText(),
-                            filename=self.files[0])
-        self.user32 = ctypes.windll.user32
-        self.screensize = self.user32.GetSystemMetrics(0), self.user32.GetSystemMetrics(1)
-        self.grath.resize(self.screensize[0] - 10, self.screensize[1] - 150)
-        self.grath.show()
+        self.load_data()
+        if self.files and (self.field_y or self.field_y2):
+            self.grath = WindowGrath(self.df, self.field_y, self.field_y2,
+                                step=self.combobox_dot.currentText(),
+                                filename=self.files[0])
+            self.user32 = ctypes.windll.user32
+            self.screensize = self.user32.GetSystemMetrics(0), self.user32.GetSystemMetrics(1)
+            self.grath.resize(self.screensize[0] - 10, self.screensize[1] - 150)
+            self.grath.show()
+        else:
+            print("No data to grath")
 
 
 def main():
