@@ -130,7 +130,7 @@ class MainWindow(QWidget):
         if self.files: 
             print(*self.files, sep='\n')
             self.parser(self.files[0])
-            self.insert_signal_to_column(self.files[0])
+            self.insert_signals_to_column(self.files[0])
     
     def insert_signals_to_column(self, file):
         # очищаем колонки
