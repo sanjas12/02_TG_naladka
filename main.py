@@ -133,8 +133,14 @@ class MainWindow(QWidget):
         self.show()
 
     def open_files(self)-> List[str]:
-        self.files, _filter = QFileDialog.getOpenFileNames(self, 'Выбор данных: ', '',
+
+        try:
+            self.files, _filter = QFileDialog.getOpenFileNames(self, 'Выбор данных: ', '',
                                                            "GZ Files (*.gz) ;; CSV Files (*.csv) ;; txt (*.txt)")
+        except:
+            logging.exception("Open files")
+            raise
+
 
         if self.files: 
             logging.info('\n'.join(map(str, self.files)))
