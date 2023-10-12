@@ -137,7 +137,7 @@ class MainWindow(QWidget):
                                                            "GZ Files (*.gz) ;; CSV Files (*.csv) ;; txt (*.txt)")
 
         if self.files: 
-            print(*self.files, sep='\n')
+            logging.info('\n'.join(map(str, self.files)))
             self.parser(self.files[0])
             self.insert_signals_to_column(self.files[0])
     
@@ -207,7 +207,7 @@ class MainWindow(QWidget):
                     self.decimal = '.'
                 else:
                     self.decimal = ','
-        print(f"encoding: {self.encoding} delimiter: {repr(self.delimiter)} decimal: {self.decimal}")
+        logging.info(f" encoding: {self.encoding} delimiter: {repr(self.delimiter)} decimal: {self.decimal}")
    
     def add_to_x(self):
         self.axe_x.addItem(self.columns.takeItem(self.columns.currentRow()))
@@ -306,8 +306,6 @@ class MainWindow(QWidget):
         else:
             print('No data for grath')
 
-        print('-' * 30)
-
         # TODO
         # при загрузки некоторых файлов в конце добавляется неименнованный параметр
 
@@ -326,6 +324,7 @@ class MainWindow(QWidget):
 
 
 def main():
+    logging.info(f" Start {__file__}")
     cpu_info = get_cpu_info()
     app = QApplication(sys.argv)
     ex = MainWindow()
@@ -333,7 +332,7 @@ def main():
     try:
         sys.exit(app.exec())
     except:
-        print("Пока")
+        logging.info(f" Finish {__file__}")
 
 
 if __name__ == '__main__':
