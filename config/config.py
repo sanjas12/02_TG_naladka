@@ -6,7 +6,7 @@ CONFIG_DIR = Path(BASE_DIR, "config")
 
 LOGS_DIR = Path(BASE_DIR, "logs")
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
-LOG_FILE = Path(LOGS_DIR, 'log.log')
+MAIN_LOG_FILE = Path(LOGS_DIR, 'main.log')
 
 OUT_DIR = Path(BASE_DIR, "DATA_out")
 OUT_DIR.mkdir(parents=True, exist_ok=True)

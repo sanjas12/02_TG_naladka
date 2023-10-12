@@ -15,10 +15,10 @@ from typing import List
 
 
 if sys.version_info[1]>=9:
-    logging.basicConfig(filename=LOG_FILE, encoding='utf-8', level=logging.INFO,
+    logging.basicConfig(filename=MAIN_LOG_FILE, encoding='utf-8', level=logging.INFO,
                     format=FORMAT)
 else:
-    logging.basicConfig(handlers=[logging.FileHandler(filename=LOG_FILE, 
+    logging.basicConfig(handlers=[logging.FileHandler(filename=MAIN_LOG_FILE, 
                                                  encoding='utf-8', mode='a')],
                         format=FORMAT, level=logging.INFO)
 
