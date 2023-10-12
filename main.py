@@ -148,68 +148,10 @@ class MainWindow(QWidget):
         self.axe_y2.clear()
         self.axe_x.clear()
 
-<<<<<<< HEAD
-        self.files, _filter = QFileDialog.getOpenFileNames(self, 'Выбор данных: ', '',
-                                                           "GZ Files (*.gz) ;; CSV Files (*.csv) ;; txt (*.txt)")
-        try:
-            if self.filename_extension():
-
-                # Определение кодировки в csv файле
-                with open(self.files[0], 'rb') as f:
-                    raw_data = f.read(20000)
-                    self.encoding = chardet.detect(raw_data)['encoding']
-                print('encoding:', self.encoding)
-
-                # и разделителя в csv файле
-                with open(self.files[0], 'r', encoding=self.encoding) as f:
-                    if f.readline(100).count(';'):
-                        self.delimiter = ';'
-                    else:
-                        self.delimiter = '\t'
-                print('delimiter:', repr(self.delimiter))
-
-                # и decimal в csv файле
-                with open(self.files[0], 'r', encoding=self.encoding) as f:
-                    s = str(f.readlines()[2])
-                    if s.count('.') > s.count(','):
-                        self.decimal = '.'
-                    else:
-                        self.decimal = ','
-                print('decimal:', self.decimal)
-
-            else:
-                # Определение кодировки в gz
-                with gzip.open(self.files[0], 'rb') as f:
-                    raw_data = f.read(20000)
-                    self.encoding = chardet.detect(raw_data)['encoding']
-                    print('encoding:', self.encoding)
-
-                # и разделителя gz
-                with gzip.open(self.files[0], 'r') as f:
-                    if f.readline(100).decode(self.encoding).count(';'):
-                        self.delimiter = ';'
-                    else:
-                        self.delimiter = '\t'
-                    print('delimiter:', repr(self.delimiter))
-
-                # и decimal qz
-                with gzip.open(self.files[0], 'r') as f:
-                    data = f.readlines()[2].decode(self.encoding)
-                    if data.count('.') > data.count(','):
-                        self.decimal = '.'
-                    else:
-                        self.decimal = ','
-                print('decimal:', self.decimal)
-
-            # Считывание названия всех колонок
-            self.name_column = pd.read_csv(self.files[0], encoding=self.encoding, delimiter=self.delimiter, nrows=0)
-
-=======
         if self.files:
             # Считывание названия всех колонок
             self.name_column = pd.read_csv(self.files[0], encoding=self.encoding, delimiter=self.delimiter, nrows=0)
             
->>>>>>> develop
             # удаляем лишние колонки
             self.name_column = self.name_column.loc[:, ~self.name_column.columns.str.contains('^Unnamed')]
             
@@ -224,23 +166,10 @@ class MainWindow(QWidget):
             self.axe_x.addItem(self.columns.takeItem(self.columns.currentRow()))
             self.columns.setCurrentRow(0)
             self.axe_x.setCurrentRow(0)
-<<<<<<< HEAD
-        except IndexError as e:
-            # print('не выбраны данные')
-            pass
-
-    # определение расширения
-    def filename_extension(self):
-        """
-        true -> file is 'csv;
-        false -> file is 'gz;
-        :rtype: object
-=======
 
     def parser(self, file)  -> None:
         """ 
         Detect encoding, delimiter, decimal in opened files
->>>>>>> develop
         """
         if file.endswith('.csv'):
             # Определение кодировки в csv файле
