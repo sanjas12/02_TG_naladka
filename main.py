@@ -133,6 +133,9 @@ class MainWindow(QWidget):
         
         self.files, _filter = QFileDialog.getOpenFileNames(self, 'Выбор данных: ', '',
                                                            "GZ Files (*.gz) ;; CSV Files (*.csv) ;; txt (*.txt)")
+
+        print(*self.files, sep='\n')
+
         try:
             if self.files[0].endswith('.csv'):
 
