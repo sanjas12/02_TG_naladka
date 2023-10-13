@@ -1,4 +1,4 @@
-#0.0.1.16
+#0.0.1.17
 import sys
 from cx_Freeze import setup, Executable
 
@@ -34,7 +34,7 @@ base = "Win32GUI" if sys.platform == "win32" else None
 
 setup(
     name="TG-Naladka",
-    version="0.0.1.0",
+    version=version.strip('#'),
     description="My TG-Naladka",
     options={"build_exe": build_exe_options},
     executables=[Executable("main.py", target_name="TG-Naladka",  base=base)],
