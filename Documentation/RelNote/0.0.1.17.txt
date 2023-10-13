@@ -1,0 +1,20 @@
+TG-Naladka v0.0.1.17 Release Notes
+==========================
+
+Fixes since v0.0.1.16
+------------------
+* Tweaks
+
+  - Add ".pylint" Для корректной работы pylint в части import PYQT5 в VS CODE
+
+* Documentation updates
+
+  - Readme.md -> Prerequisites. Add link to C++ library, для запуска EXE 
+
+* Bugfixes
+
+  - Refactor main.py 
+
+* Tweaks
+
+  - 
