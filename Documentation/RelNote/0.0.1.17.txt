@@ -1,0 +1,17 @@
+TG-Naladka v0.0.1.17 Release Notes
+==========================
+
+Fixes since v0.0.1.16
+------------------
+
+* Documentation updates
+
+  - 
+
+* Bugfixes
+
+  - 
+
+* Tweaks
+
+  - 
