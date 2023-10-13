@@ -1,5 +1,6 @@
 ## Prerequisites ()
 >=Python 3.8.10
+https://learn.microsoft.com/en-US/cpp/windows/latest-supported-vc-redist?view=msvc-170#visual-studio-2015-2017-2019-and-2022   - for exe
 
      ******************************************************
 main.py - текущая версия программы (GUI-QT5) выбора любых данный из файлов (csv, gz, txt)
