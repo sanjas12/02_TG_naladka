@@ -1,12 +1,12 @@
 import pandas as pd
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGroupBox, \
-    QVBoxLayout, QGridLayout, QLabel, QFileDialog, QListWidget, QComboBox, QMainWindow
-from grath import WindowGrath
 import chardet
 import gzip
 import ctypes
 from typing import List
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGroupBox, \
+    QVBoxLayout, QGridLayout, QLabel, QFileDialog, QListWidget, QComboBox, QMainWindow
+from grath import WindowGrath
 
 
 class MainWindow(QWidget):
@@ -20,6 +20,7 @@ class MainWindow(QWidget):
         self.field_x = []
         self.field_y = []
         self.field_y2 = []
+        self.field_name = ("Ось Y", "Ось Y2", "Ось X")
         self.time_c = 'time, c'
         self.setup_ui()
         self.df = None
@@ -228,39 +229,28 @@ class MainWindow(QWidget):
         self.axe_y2.clear()
         # self.axe_x.clear()
 
+    def load_field_name(self, axe, field_name, num):
+        if axe.count() > 0:
+            field_name = []
+            for _ in range(axe.count()):
+                field_name.append(axe.item(_).text())
+            print(self.field_name[num], field_name)
+        else:
+            print(f"Для {self.field_name[num]} не выбраны сигналы")
+        return field_name
+
     def load_data(self):
         self.df = None
-        if self.axe_x.count() > 0:
-            self.field_x = []
-            for _ in range(self.axe_x.count()):
-                self.field_x.append(self.axe_x.item(_).text())
-            print('Ось Х:', self.field_x)
-        else:
-            print('Ось X:', 'нет данных')
-
-        if self.axe_y.count() > 0:
-            self.field_y = []
-            for _ in range(self.axe_y.count()):
-                self.field_y.append(self.axe_y.item(_).text())
-            print('Ось Y:', self.field_y)
-        else:
-            print('Ось Y:', 'нет данных')
-
-        if self.axe_y2.count() > 0:
-            self.field_y2 = []
-            for _ in range(self.axe_y2.count()):
-                self.field_y2.append(self.axe_y2.item(_).text())
-            print('Ось Y2:', self.field_y2)
-        else:
-            print('Ось Y2:', 'нет данных')
-
+        self.field_y = self.load_field_name(self.axe_y, self.field_y, 0) 
+        self.field_y2 = self.load_field_name(self.axe_y2, self.field_y2, 1) 
+        self.field_x = self.load_field_name(self.axe_x, self.field_x, 2) 
+        
         # Основная загрузка данных (из множества CSV файлов)
-        if self.files:
+        if self.field_y or self.field_y2:
             self.df = pd.concat(pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
                                             usecols=self.field_y+self.field_y2, decimal=self.decimal) for file in self.files)
 
             self.number_point.setText(str(len(self.df.index)))
-
             # для токов и мощностей учет отрицательных значений
             name_column = ['Электрическая мощность двигателя ЭМП ОЗ ГСМ-А, десятки Вт',
                            'Электрическая мощность двигателя ЭМП ОЗ ГСМ-Б, десятки Вт',
@@ -295,9 +285,6 @@ class MainWindow(QWidget):
 
         print('-' * 30)
 
-        # TODO
-        # при загрузки некоторых файлов в конце добавляется неименнованный параметр
-
     def plot_grath(self):
         self.load_data()
         if self.files and (self.field_y or self.field_y2):
@@ -308,8 +295,6 @@ class MainWindow(QWidget):
             self.screensize = self.user32.GetSystemMetrics(0), self.user32.GetSystemMetrics(1)
             self.grath.resize(self.screensize[0] - 10, self.screensize[1] - 150)
             self.grath.show()
-        else:
-            print("No data to grath")
 
 
 def main():
