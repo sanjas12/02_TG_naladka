@@ -22,11 +22,10 @@ class MainWindow(QWidget):
         self.field_y2 = []
         self.field_name = ("Ось Y", "Ось Y2", "Ось X")
         self.time_c = 'time, c'
-        self.setup_ui()
         self.df = None
+        self.setup_ui()
 
     def setup_ui(self):
-        # self.setGeometry(10, 10, self.width, self.height)
         self.setWindowTitle(__file__)
 
         # Список сигналов:
@@ -125,10 +124,19 @@ class MainWindow(QWidget):
                                                            "GZ Files (*.gz) ;; CSV Files (*.csv) ;; txt (*.txt)")
 
         if self.files: 
+            self.clear_columns()
             print(*self.files, sep='\n')
             self.parser(self.files[0])
             self.insert_signals_to_column(self.files[0])
     
+    def clear_columns(self) -> None:
+        """
+        Clear three QListWidgets (Основная Ось, Вспомогательная, Ось X)
+        """
+        self.axe_x.clear()
+        self.axe_y.clear()
+        self.axe_y2.clear()
+
     def insert_signals_to_column(self, file):
         # очищаем колонки
         self.columns.clear()
@@ -218,11 +226,6 @@ class MainWindow(QWidget):
         self.columns.setCurrentRow(0)
         self.field_y2 = []
 
-    def clear_y(self):
-        self.axe_y.clear()
-        self.axe_y2.clear()
-        # self.axe_x.clear()
-
     def load_field_name(self, axe, field_name, num):
         if axe.count() > 0:
             field_name = []
@@ -235,6 +238,7 @@ class MainWindow(QWidget):
 
     def load_data(self):
         self.df = None
+        self.field_x, self.field_y, self.field_y2 = [], [], []
         self.field_y = self.load_field_name(self.axe_y, self.field_y, 0) 
         self.field_y2 = self.load_field_name(self.axe_y2, self.field_y2, 1) 
         self.field_x = self.load_field_name(self.axe_x, self.field_x, 2) 
