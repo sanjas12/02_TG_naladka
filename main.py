@@ -20,7 +20,7 @@ class MainWindow(QWidget):
         self.field_x = []
         self.field_y = []
         self.field_y2 = []
-        self.field_name = ("Ось Y", "Ось Y2", "Ось X")
+        self.field_name = ("Основная Ось", "Вспомогательная Ось", "Ось X (Времени)")
         self.time_c = 'time, c'
         self.df = None
         self.setup_ui()
@@ -29,139 +29,131 @@ class MainWindow(QWidget):
         self.setWindowTitle(__file__)
 
         # Список сигналов:
-        inner_layout_1 = QVBoxLayout()
-        inner_layout_1.addWidget(QLabel('Список сигналов:'))
-        self.columns = QListWidget()
-        inner_layout_1.addWidget(self.columns)
+        self.qlist_signals = QListWidget()
         button_open_files = QPushButton('Open files')
         button_open_files.clicked.connect(self.open_files)
-        inner_layout_1.addWidget(button_open_files)
-        self.horizontalGroupBox = QGroupBox()
-        self.horizontalGroupBox.setLayout(inner_layout_1)
+        
+        signals_layout = QVBoxLayout()
+        signals_layout.addWidget(self.qlist_signals)
+        signals_layout.addWidget(button_open_files)
+        
+        self.gb_signals = QGroupBox("Список сигналов")
+        self.gb_signals.setLayout(signals_layout)
 
         # Основная ось:
-        vertical_lay_2 = QGridLayout()
-        vertical_lay_2.addWidget(QLabel('Основная ось:'), 0, 0)
-        self.axe_y = QListWidget()
-        vertical_lay_2.addWidget(self.axe_y, 1, 0)
-        button_add_to_y = QPushButton('Add to Y')
-        button_add_to_y.clicked.connect(self.add_to_y)
-        vertical_lay_2.addWidget(button_add_to_y)
-        button_remove_y = QPushButton('Remove from Y')
-        button_remove_y.clicked.connect(self.remove_y)
-        vertical_lay_2.addWidget(button_remove_y, 3, 0)
-        self.horizontalGroupBox_2 = QGroupBox()
-        self.horizontalGroupBox_2.setLayout(vertical_lay_2)
+        self.qlist_base_axe = QListWidget()
+        btn_base_axe_add = QPushButton('Add to Y')
+        btn_base_axe_add.clicked.connect(lambda: self.add_to_qlist(self.qlist_base_axe))
+        btn_base_axe_remove = QPushButton('Remove from Y')
+        btn_base_axe_remove.clicked.connect(lambda: self.remove_qlist(self.qlist_base_axe))
+        
+        base_axe_layout = QVBoxLayout()
+        base_axe_layout.addWidget(self.qlist_base_axe)
+        base_axe_layout.addWidget(btn_base_axe_add)
+        base_axe_layout.addWidget(btn_base_axe_remove)
+        
+        self.gb_base_axe = QGroupBox("Основная Ось")
+        self.gb_base_axe.setLayout(base_axe_layout)
 
         # Вспомогательная ось:
-        vertical_lay_4 = QGridLayout()
-        vertical_lay_4.addWidget(QLabel('Вспомогательная ось:'), 0, 0)
-        self.axe_y2 = QListWidget()
-        vertical_lay_4.addWidget(self.axe_y2, 1, 0)
-        button_add_to_y2 = QPushButton('Add to Y2')
-        button_add_to_y2.clicked.connect(self.add_to_y2)
-        vertical_lay_4.addWidget(button_add_to_y2, 2, 0)
-        button_remove_y2 = QPushButton('Remove from Y2')
-        button_remove_y2.clicked.connect(self.remove_y2)
-        vertical_lay_4.addWidget(button_remove_y2, 3, 0)
-        self.horizontalGroupBox_4 = QGroupBox()
-        self.horizontalGroupBox_4.setLayout(vertical_lay_4)
+        self.qlist_secondary_axe = QListWidget()
+        btn_secondary_axe_add = QPushButton('Add to Y2')
+        btn_secondary_axe_add.clicked.connect(lambda: self.add_to_qlist(self.qlist_secondary_axe))
+        btn_secondary_axe_remove = QPushButton('Remove from Y2')
+        btn_secondary_axe_remove.clicked.connect(lambda: self.remove_qlist(self.qlist_secondary_axe))
+        
+        secondary_axe_layout = QVBoxLayout()
+        secondary_axe_layout.addWidget(self.qlist_secondary_axe)
+        secondary_axe_layout.addWidget(btn_secondary_axe_add)
+        secondary_axe_layout.addWidget(btn_secondary_axe_remove)
+        
+        self.gb_secondary_axe = QGroupBox("Вспомогательная Ось")
+        self.gb_secondary_axe.setLayout(secondary_axe_layout)
 
         # Ось X
-        vertical_lay_3 = QGridLayout()
-        vertical_lay_3.addWidget(QLabel('Ось X:'), 0, 0)
-        self.axe_x = QListWidget()
-        vertical_lay_3.addWidget(self.axe_x, 1, 0)
-        button_add_to_x = QPushButton('Add to X')
-        button_add_to_x.clicked.connect(self.add_to_x)
-        vertical_lay_3.addWidget(button_add_to_x, 2, 0)
-        button_remove_x = QPushButton('Remove from X')
-        button_remove_x.clicked.connect(self.remove_x)
-        vertical_lay_3.addWidget(button_remove_x, 3, 0)
-        self.horizontalGroupBox_3 = QGroupBox()
-        self.horizontalGroupBox_3.setLayout(vertical_lay_3)
+        self.qlist_x_axe = QListWidget()
+        btn_x_axe_add = QPushButton('Add to X')
+        btn_x_axe_add.clicked.connect(lambda: self.add_to_qlist(self.qlist_x_axe))
+        btn_x_axe_remove = QPushButton('Remove from X')
+        btn_x_axe_remove.clicked.connect(lambda: self.remove_qlist(self.qlist_x_axe))
         
+        layout_x_axe = QVBoxLayout()
+        layout_x_axe.addWidget(self.qlist_x_axe)
+        layout_x_axe.addWidget(btn_x_axe_add)
+        layout_x_axe.addWidget(btn_x_axe_remove)
+        
+        self.gb_x_axe = QGroupBox("Ось X")
+        self.gb_x_axe.setLayout(layout_x_axe)
+        
+        # верхний слой
         self.first_huge_lay = QHBoxLayout()
-        self.first_huge_lay.addWidget(self.horizontalGroupBox)
-        self.first_huge_lay.addWidget(self.horizontalGroupBox_2)
-        self.first_huge_lay.addWidget(self.horizontalGroupBox_4)
-        self.first_huge_lay.addWidget(self.horizontalGroupBox_3)
+        self.first_huge_lay.addWidget(self.gb_signals)
+        self.first_huge_lay.addWidget(self.gb_base_axe)
+        self.first_huge_lay.addWidget(self.gb_secondary_axe)
+        self.first_huge_lay.addWidget(self.gb_x_axe)
 
         self.first_huge_GroupBox = QGroupBox()
         self.first_huge_GroupBox.setLayout(self.first_huge_lay)
 
-        second_vertical_lay = QGridLayout()
-        second_vertical_lay.addWidget(QLabel('Количество данных:'), 0, 0)
+        # нижний слой 
         self.number_point = QLabel()
-        second_vertical_lay.addWidget(self.number_point, 0, 1)
-
-        second_vertical_lay.addWidget(QLabel('Количество отображаемых данных:'), 3, 0)
         self.number_point_grath = QLabel()
-        second_vertical_lay.addWidget(self.number_point_grath, 3, 1)
-
         list_dot = ['1', '10', '100', '1000', '10000']
         self.combobox_dot = QComboBox()
         self.combobox_dot.addItems(list_dot)
         self.combobox_dot.setCurrentIndex(1)
-        second_vertical_lay.addWidget(self.combobox_dot, 2, 0)
-
         button_grath = QPushButton('Построить графики')
         button_grath.clicked.connect(self.plot_grath)
-        second_vertical_lay.addWidget(button_grath, 2, 1)
 
-        self.horizontal_2_GroupBox = QGroupBox()
-        self.horizontal_2_GroupBox.setLayout(second_vertical_lay)
-
-        windowLayout = QVBoxLayout()
-        windowLayout.addWidget(self.first_huge_GroupBox)
-        windowLayout.addWidget(self.horizontal_2_GroupBox)
-        self.setLayout(windowLayout)
-
-        self.show()
-
+        second_vertical_lay = QGridLayout()
+        second_vertical_lay.addWidget(QLabel('Количество данных:'), 0, 0)
+        second_vertical_lay.addWidget(self.number_point, 0, 1)
+        second_vertical_lay.addWidget(self.combobox_dot, 1, 0)
+        second_vertical_lay.addWidget(button_grath, 1, 1)
+        second_vertical_lay.addWidget(QLabel('Количество отображаемых данных:'), 2, 0)
+        second_vertical_lay.addWidget(self.number_point_grath, 2, 1)
+        
+        self.second_huge_GroupBox = QGroupBox()
+        self.second_huge_GroupBox.setLayout(second_vertical_lay)
+        
+        # main_layout
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(self.first_huge_GroupBox)
+        main_layout.addWidget(self.second_huge_GroupBox)
+        self.setLayout(main_layout)
+        
     def open_files(self)-> List[str]:
         self.files, _filter = QFileDialog.getOpenFileNames(self, 'Выбор данных: ', '',
                                                            "GZ Files (*.gz) ;; CSV Files (*.csv) ;; txt (*.txt)")
 
         if self.files: 
-            self.clear_columns()
+            self.clear_qlists()
             print(*self.files, sep='\n')
             self.parser(self.files[0])
-            self.insert_signals_to_column(self.files[0])
+            self.insert_signals_to_column()
     
-    def clear_columns(self) -> None:
-        """
-        Clear three QListWidgets (Основная Ось, Вспомогательная, Ось X)
-        """
-        self.axe_x.clear()
-        self.axe_y.clear()
-        self.axe_y2.clear()
-
-    def insert_signals_to_column(self, file):
-        # очищаем колонки
-        self.columns.clear()
-        self.axe_y.clear()
-        self.axe_y2.clear()
-        self.axe_x.clear()
+    def insert_signals_to_column(self) -> None:
+        self.qlist_signals.clear()
+        self.clear_qlists()
 
         if self.files and self.encoding:
-            # Считывание названия всех колонок
-            self.name_column = pd.read_csv(self.files[0], encoding=self.encoding, delimiter=self.delimiter, nrows=0)
+            # Считывание названия всех сингалов из одного файла
+            df_name_signals = pd.read_csv(self.files[0], encoding=self.encoding, delimiter=self.delimiter, nrows=0)
             
             # удаляем лишние колонки
-            self.name_column = self.name_column.loc[:, ~self.name_column.columns.str.contains('^Unnamed')]
+            df_name_signals = df_name_signals.loc[:, ~df_name_signals.columns.str.contains('^Unnamed')]
             
             # заполняем колонку ось columns (Выбирай параметр)
-            for i, _ in enumerate(self.name_column):
-                self.columns.insertItem(i, _)
+            for i, signal in enumerate(df_name_signals):
+                self.qlist_signals.insertItem(i, signal)
 
             # по умолчанию на ось columns (Выбирай параметр) добавляем 'time'
             # и тут же ее перемещяем на ось Х
-            self.columns.addItem('time, c')
-            self.columns.setCurrentRow(self.columns.count() - 1)
-            self.axe_x.addItem(self.columns.takeItem(self.columns.currentRow()))
-            self.columns.setCurrentRow(0)
-            self.axe_x.setCurrentRow(0)
+            self.qlist_signals.addItem('time, c')
+            self.qlist_signals.setCurrentRow(self.qlist_signals.count() - 1)
+            self.qlist_x_axe.addItem(self.qlist_signals.takeItem(self.qlist_signals.currentRow()))
+            self.qlist_signals.setCurrentRow(0)
+            self.qlist_x_axe.setCurrentRow(0)
 
     def parser(self, file: str)  -> None:
         """ 
@@ -199,34 +191,26 @@ class MainWindow(QWidget):
         else:
             print(f"Не удалось определить кодировку, попробуйте разархивировать файл")
 
-    def add_to_x(self):
-        self.axe_x.addItem(self.columns.takeItem(self.columns.currentRow()))
-        self.axe_x.setCurrentRow(0)
+    def add_to_qlist(self, qlist: QListWidget) -> None:
+        add_signal = self.qlist_signals.takeItem(self.qlist_signals.currentRow())
+        qlist.addItem(add_signal)
+        qlist.setCurrentRow(0)
 
-    def remove_x(self):
-        self.columns.addItem(self.axe_x.takeItem(self.axe_x.currentRow()))
-        self.columns.setCurrentRow(0)
-        self.field_x = []
+    def remove_qlist(self, qlist: QListWidget) -> None:
+        remove_signal = qlist.takeItem(qlist.currentRow())
+        self.qlist_signals.addItem(remove_signal)
+        self.qlist_signals.setCurrentRow(0)                
 
-    def add_to_y(self):
-        self.axe_y.addItem(self.columns.takeItem(self.columns.currentRow()))
-        self.axe_y.setCurrentRow(0)
+    def clear_qlists(self) -> None:
+        """
+        Clear three QListWidgets (Основная Ось, Вспомогательная, Ось X)
+        """
+        self.qlist_base_axe.clear()
+        self.qlist_secondary_axe.clear()
+        self.qlist_x_axe.clear()
 
-    def remove_y(self):
-        self.columns.addItem(self.axe_y.takeItem(self.axe_y.currentRow()))
-        self.columns.setCurrentRow(0)                
-        self.field_y = []
 
-    def add_to_y2(self):
-        self.axe_y2.addItem(self.columns.takeItem(self.columns.currentRow()))
-        self.axe_y2.setCurrentRow(0)
-
-    def remove_y2(self):
-        self.columns.addItem(self.axe_y2.takeItem(self.axe_y2.currentRow()))
-        self.columns.setCurrentRow(0)
-        self.field_y2 = []
-
-    def load_field_name(self, axe, field_name, num):
+    def load_field_name(self, axe: QListWidget, field_name, num):
         if axe.count() > 0:
             field_name = []
             for _ in range(axe.count()):
@@ -239,9 +223,9 @@ class MainWindow(QWidget):
     def load_data(self):
         self.df = None
         self.field_x, self.field_y, self.field_y2 = [], [], []
-        self.field_y = self.load_field_name(self.axe_y, self.field_y, 0) 
-        self.field_y2 = self.load_field_name(self.axe_y2, self.field_y2, 1) 
-        self.field_x = self.load_field_name(self.axe_x, self.field_x, 2) 
+        self.field_y = self.load_field_name(self.qlist_base_axe, self.field_y, 0) 
+        self.field_y2 = self.load_field_name(self.qlist_secondary_axe, self.field_y2, 1) 
+        self.field_x = self.load_field_name(self.qlist_x_axe, self.field_x, 2) 
         
         # Основная загрузка данных (из множества CSV файлов)
         if self.field_y or self.field_y2:
@@ -250,21 +234,21 @@ class MainWindow(QWidget):
 
             self.number_point.setText(str(len(self.df.index)))
             # для токов и мощностей учет отрицательных значений
-            name_column = ['Электрическая мощность двигателя ЭМП ОЗ ГСМ-А, десятки Вт',
+            df_name_signals = ['Электрическая мощность двигателя ЭМП ОЗ ГСМ-А, десятки Вт',
                            'Электрическая мощность двигателя ЭМП ОЗ ГСМ-Б, десятки Вт',
                            'Ток момента двигателя ЭМП ОЗ ГСМ-А, десятки мА',
                            'Ток момента двигателя ЭМП ОЗ ГСМ-Б, десятки мА',
                            'Ток статора ЭМП ОЗ ГСМ-А, десятки мА',
                            'Ток статора ЭМП ОЗ ГСМ-Б, десятки мА']
             for _ in self.field_y:
-                if _ in name_column:
+                if _ in df_name_signals:
                     self.df[_] = self.df[_].where(lambda x: x < 50000, lambda x: x - 65536)
                     print(_, ' - есть такой')
                 else:
                     pass
                     # print(_, ' - нет такого')
             for _ in self.field_y2:
-                if _ in name_column:
+                if _ in df_name_signals:
                     self.df[_] = self.df[_].where(lambda x: x < 50000, lambda x: x - 65536)
                     print(_, ' - есть такой')
                 else:
