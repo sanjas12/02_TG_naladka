@@ -122,7 +122,7 @@ class MainWindow(QWidget):
         main_layout.addWidget(self.second_huge_GroupBox)
         self.setLayout(main_layout)
         
-    def open_files(self)-> List[str]:
+    def open_files(self) -> None:
         self.files, _filter = QFileDialog.getOpenFileNames(self, 'Выбор данных: ', '',
                                                            "GZ Files (*.gz) ;; CSV Files (*.csv) ;; txt (*.txt)")
 
@@ -155,7 +155,7 @@ class MainWindow(QWidget):
             self.qlist_signals.setCurrentRow(0)
             self.qlist_x_axe.setCurrentRow(0)
 
-    def parser(self, file: str)  -> None:
+    def parser(self, file: str) -> None:
         """ 
         Detect encoding, delimiter, decimal in opened files
         """
@@ -209,18 +209,17 @@ class MainWindow(QWidget):
         self.qlist_secondary_axe.clear()
         self.qlist_x_axe.clear()
 
-
-    def load_field_name(self, axe: QListWidget, field_name, num):
-        if axe.count() > 0:
+    def load_field_name(self, qlist_axe: QListWidget, field_name: str, num: int):
+        if qlist_axe.count() > 0:
             field_name = []
-            for _ in range(axe.count()):
-                field_name.append(axe.item(_).text())
+            for _ in range(qlist_axe.count()):
+                field_name.append(qlist_axe.item(_).text())
             print(self.field_name[num], field_name)
         else:
             print(f"Для {self.field_name[num]} не выбраны сигналы")
         return field_name
 
-    def load_data(self):
+    def load_data(self) -> None:
         self.df = None
         self.field_x, self.field_y, self.field_y2 = [], [], []
         self.field_y = self.load_field_name(self.qlist_base_axe, self.field_y, 0) 
@@ -267,7 +266,7 @@ class MainWindow(QWidget):
 
         print('-' * 30)
 
-    def plot_grath(self):
+    def plot_grath(self) -> None:
         self.load_data()
         if self.files and (self.field_y or self.field_y2):
             self.grath = WindowGrath(self.df, self.field_y, self.field_y2,
