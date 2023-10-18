@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGr
 from grath import WindowGrath
 
 
-class MainWindow(QWidget):
+class MainWindow(QMainWindow):
     cycle_plc = 0.01
 
     def __init__(self):
@@ -120,7 +120,10 @@ class MainWindow(QWidget):
         main_layout = QVBoxLayout()
         main_layout.addWidget(self.first_huge_GroupBox)
         main_layout.addWidget(self.second_huge_GroupBox)
-        self.setLayout(main_layout)
+
+        wid = QWidget(self)
+        self.setCentralWidget(wid)
+        wid.setLayout(main_layout)
         
     def open_files(self) -> None:
         self.files, _filter = QFileDialog.getOpenFileNames(self, 'Выбор данных: ', '',
