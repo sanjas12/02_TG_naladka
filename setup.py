@@ -1,4 +1,4 @@
-#0.0.1.17
+#0.0.1.18
 import sys
 # import os
 from cx_Freeze import setup, Executable
@@ -32,13 +32,14 @@ build_exe_options = {
     # "include_files" : files
 }
 
-# base="Win32GUI" should be used only for Windows GUI app
-base = "Win32GUI" if sys.platform == "win32" else None
+# base="Win32GUI" should be used only for Windows GUI app. If comment this line, will appear console
+# base = "Win32GUI" if sys.platform == "win32" else None
 
 setup(
     name="TG-Naladka",
     version=version.strip('#'),
     description="My TG-Naladka",
     options={"build_exe": build_exe_options},
-    executables=[Executable("main.py", target_name="TG-Naladka",  base=base)],
+    # executables=[Executable("main.py", target_name="TG-Naladka",  base=base)],
+    executables=[Executable("main.py", target_name="TG-Naladka")],
 )
