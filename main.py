@@ -136,7 +136,7 @@ class MainWindow(QWidget):
         self.axe_y2.clear()
         self.axe_x.clear()
 
-        if self.files:
+        if self.files and self.encoding:
             # Считывание названия всех колонок
             self.name_column = pd.read_csv(self.files[0], encoding=self.encoding, delimiter=self.delimiter, nrows=0)
             
@@ -155,48 +155,42 @@ class MainWindow(QWidget):
             self.columns.setCurrentRow(0)
             self.axe_x.setCurrentRow(0)
 
-    def parser(self, file)  -> None:
+    def parser(self, file: str)  -> None:
         """ 
         Detect encoding, delimiter, decimal in opened files
         """
-        if file.endswith('.csv'):
-            # Определение кодировки в csv файле
+        if file.endswith('.gz'): # определение типа файла
+            with gzip.open(file, 'rb') as f:
+                raw_data = f.read(20000)
+                second_row = f.readlines()[2] # вторая строка
+        else:
             with open(file, 'rb') as f:
                 raw_data = f.read(20000)
-                self.encoding = chardet.detect(raw_data)['encoding']
-            # и разделителя в csv файле
-            with open(file, 'r', encoding=self.encoding) as f:
-                if f.readline(100).count(';'):
-                    self.delimiter = ';'
-                else:
-                    self.delimiter = '\t'
-            # и decimal в csv файле
-            with open(file, 'r', encoding=self.encoding) as f:
-                s = str(f.readlines()[2])
-                if s.count('.') > s.count(','):
-                    self.decimal = '.'
-                else:
-                    self.decimal = ','
+                second_row = f.readlines()[2]
+
+        # Кодировка
+        self.chardet= chardet.detect(raw_data)
+        self.encoding = chardet.detect(raw_data).get('encoding')
+
+        if self.encoding:
+            # Разделитель
+            str_data = raw_data[:200].decode(self.encoding)
+            if str_data.count(';'):
+                self.delimiter = ';'
+            else:
+                self.delimiter = '\t'
+
+            # Decimal 
+            data = second_row.decode(self.encoding) 
+            if data.count('.') > data.count(','):
+                self.decimal = '.'
+            else:
+                self.decimal = ','
+
+            print(f"encoding: {self.encoding} delimiter: {repr(self.delimiter)} decimal: {self.decimal}")
         else:
-            # Определение кодировки в gz
-            with gzip.open(file, 'rb') as f:
-                raw_data = f.read(20000)
-                self.encoding = chardet.detect(raw_data)['encoding']
-            # и разделителя gz
-            with gzip.open(file, 'rb') as f:
-                if f.readline(100).decode(self.encoding).count(';'):
-                    self.delimiter = ';'
-                else:
-                    self.delimiter = '\t'
-            # и decimal qz
-            with gzip.open(file, 'r') as f:
-                data = f.readlines()[2].decode(self.encoding)
-                if data.count('.') > data.count(','):
-                    self.decimal = '.'
-                else:
-                    self.decimal = ','
-        print(f"encoding: {self.encoding} delimiter: {repr(self.delimiter)} decimal: {self.decimal}")
-   
+            print(f"Не удалось определить кодировку, попробуйте разархивировать файл")
+
     def add_to_x(self):
         self.axe_x.addItem(self.columns.takeItem(self.columns.currentRow()))
         self.axe_x.setCurrentRow(0)
