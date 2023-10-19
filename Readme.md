@@ -30,8 +30,12 @@ Help -> Run->Edit Configurations -> Emulate terminal in output console* (для 
 TODO
 1. Узнать сколько памяти использует программа (memory_profiler и psutil)
 2. перейти на timeit
-3. перейти на новый вывод сообщений f
-4. добавить логирование ()
+3. добавить логирование ()
+4. Matplotlib заменить на PyQtGrath
+5. Сделать аналогичную версию на С++
+6. Сделать серверную службу
+7. Сделать десктопную версию
+8. Сделать мобильную версию
 
 help:
 python -m pip  install -r requirements.txt --no-index -f d:\\temp\\python_Library

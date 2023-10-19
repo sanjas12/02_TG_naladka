@@ -2,7 +2,6 @@ import pandas as pd
 import sys
 import chardet
 import gzip
-import ctypes
 from typing import List
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGroupBox, \
     QVBoxLayout, QGridLayout, QLabel, QFileDialog, QListWidget, QComboBox, QMainWindow
@@ -96,8 +95,8 @@ class MainWindow(QMainWindow):
         self.first_huge_GroupBox.setLayout(self.first_huge_lay)
 
         # нижний слой 
-        self.number_point = QLabel()
-        self.number_point_grath = QLabel()
+        self.number_raw_point = QLabel()
+        self.number_plot_point = QLabel()
         list_dot = ['1', '10', '100', '1000', '10000']
         self.combobox_dot = QComboBox()
         self.combobox_dot.addItems(list_dot)
@@ -106,12 +105,15 @@ class MainWindow(QMainWindow):
         button_grath.clicked.connect(self.plot_grath)
 
         second_vertical_lay = QGridLayout()
-        second_vertical_lay.addWidget(QLabel('Количество данных:'), 0, 0)
-        second_vertical_lay.addWidget(self.number_point, 0, 1)
-        second_vertical_lay.addWidget(self.combobox_dot, 1, 0)
-        second_vertical_lay.addWidget(button_grath, 1, 1)
+        second_vertical_lay.addWidget(QLabel('Количество исходных данных:'), 0, 0)
+        second_vertical_lay.addWidget(QLabel('Выборка, каждые:'), 1, 0)
         second_vertical_lay.addWidget(QLabel('Количество отображаемых данных:'), 2, 0)
-        second_vertical_lay.addWidget(self.number_point_grath, 2, 1)
+        second_vertical_lay.addWidget(self.number_raw_point, 0, 1)
+        second_vertical_lay.addWidget(self.combobox_dot, 1, 1)
+        second_vertical_lay.addWidget(self.number_plot_point, 2, 1)
+        second_vertical_lay.addWidget(QLabel(), 2, 3)
+        second_vertical_lay.addWidget(QLabel(), 2, 4)
+        second_vertical_lay.addWidget(button_grath, 2, 5)
         
         self.second_huge_GroupBox = QGroupBox()
         self.second_huge_GroupBox.setLayout(second_vertical_lay)
@@ -234,7 +236,7 @@ class MainWindow(QMainWindow):
             self.df = pd.concat(pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
                                             usecols=self.field_y+self.field_y2, decimal=self.decimal) for file in self.files)
 
-            self.number_point.setText(str(len(self.df.index)))
+            self.number_raw_point.setText(str(len(self.df.index)))
             # для токов и мощностей учет отрицательных значений
             df_name_signals = ['Электрическая мощность двигателя ЭМП ОЗ ГСМ-А, десятки Вт',
                            'Электрическая мощность двигателя ЭМП ОЗ ГСМ-Б, десятки Вт',
@@ -272,12 +274,10 @@ class MainWindow(QMainWindow):
     def plot_grath(self) -> None:
         self.load_data()
         if self.files and (self.field_y or self.field_y2):
+            self.number_plot_point.setText(str(int(len(self.df.index)/int(self.combobox_dot.currentText()))))
             self.grath = WindowGrath(self.df, self.field_y, self.field_y2,
                                 step=self.combobox_dot.currentText(),
                                 filename=self.files[0])
-            self.user32 = ctypes.windll.user32
-            self.screensize = self.user32.GetSystemMetrics(0), self.user32.GetSystemMetrics(1)
-            self.grath.resize(self.screensize[0] - 10, self.screensize[1] - 150)
             self.grath.show()
 
 
