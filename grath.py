@@ -78,7 +78,7 @@ class WindowGrath(QMainWindow):
         self.gb_2.setLayout(vbox_2)
 
         main = QHBoxLayout()
-        main.addWidget(self.gb_1)
+        # main.addWidget(self.gb_1)
         main.addWidget(self.gb_2)
 
         wid = QWidget()
@@ -143,17 +143,22 @@ class WindowGrath(QMainWindow):
         elif self.filename.find('ШУР') >= 0:
             index_tg = self.filename.find('ШУР')
             self.figure.suptitle(f'ТГ:{self.filename[index_tg + 3]}, '
-                                 f'канал:{self.filename[index_tg + 4]}')
+                                 f'канал:{self.filename[index_tg + 4]} '
+                                 f'Кол-во данных: {str(len(self.data))}'
+                                 )
             # для проекта РК
         elif self.filename.find('ШСП') >= 0:
             index_tg = self.filename.find('ШСП')
             self.figure.suptitle(f'ШСП:{self.filename[index_tg + 3]}, '
-                                 f'канал:{self.filename[index_tg + 4]}')
+                                 f'канал:{self.filename[index_tg + 4]} '
+                                 f'Кол-во данных: {str(len(self.data))}'
+                                 )
         else:
             index_tg = self.filename.find('ТГ')
-            # print(index_tg, type(index_tg), self.filename[index_tg+2])
             self.figure.suptitle(f'ТГ:{self.filename[index_tg+2]}, '
-                                 f'канал:{self.filename[index_tg+3]}')
+                                 f'канал:{self.filename[index_tg+3]} '
+                                 f'Кол-во данных: {str(len(self.data))}'
+                                 )
 
 def main():
     df = pd.DataFrame()
