@@ -1,0 +1,14 @@
+TG-Naladka v0.0.1.19 Release Notes
+==========================
+
+Fixes since v0.0.1.18
+------------------
+
+* Bugfixes
+
+  - Refactor setup_ui and other method in MainWindow  
+  - Switch from QWidget to QMainWindow in MainWindow(main.py)
+
+* Tweaks
+
+  - Add clear_columns method in MainWindow
