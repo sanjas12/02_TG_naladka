@@ -33,6 +33,9 @@ TODO
 3. добавить логирование ()
 4. Matplotlib заменить на PyQtGrath
 5. Сделать аналогичную версию на С++
+6. Сделать серверную службу
+7. Сделать десктопную версию
+8. Сделать мобильную версию
 
 help:
 python -m pip  install -r requirements.txt --no-index -f d:\\temp\\python_Library
