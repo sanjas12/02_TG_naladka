@@ -279,9 +279,6 @@ class MainWindow(QMainWindow):
             self.grath = WindowGrath(self.df, self.field_y, self.field_y2,
                                 step=self.combobox_dot.currentText(),
                                 filename=self.files[0])
-            self.user32 = ctypes.windll.user32
-            self.screensize = self.user32.GetSystemMetrics(0), self.user32.GetSystemMetrics(1)
-            self.grath.resize(self.screensize[0] - 10, self.screensize[1] - 150)
             self.grath.show()
 
 
