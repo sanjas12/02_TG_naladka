@@ -1,0 +1,12 @@
+TG-Naladka v0.0.1.20 Release Notes
+==========================
+
+Fixes since v0.0.1.19
+------------------
+
+* Bugfixes
+
+  - Refactor WindowGrath(grath.py)  
+  - Remove fix size for Graphics 
+
+* Tweaks
