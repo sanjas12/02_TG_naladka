@@ -233,7 +233,7 @@ class MainWindow(QMainWindow):
         self.field_x = self.load_field_name(self.qlist_x_axe, self.field_x, 2) 
         
         # Основная загрузка данных (из множества CSV файлов)
-        if self.field_y or self.field_y2:
+        if self.files:
             self.df = pd.concat(pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
                                             usecols=self.field_y+self.field_y2, decimal=self.decimal) for file in self.files)
 
@@ -268,7 +268,7 @@ class MainWindow(QMainWindow):
                 print("Time exist in DataFrame")
 
         else:
-            text = "Не открыты файлы архивов или не выбраны сигналы для отображения"
+            text = "Не открыты файлы архивов"
             self.dialog_box(text)
 
         print('-' * 30)
@@ -278,12 +278,15 @@ class MainWindow(QMainWindow):
 
     def plot_grath(self) -> None:
         self.load_data()
-        if self.files and (self.field_y or self.field_y2):
+        if self.field_y or self.field_y2:
             self.number_plot_point.setText(str(int(len(self.df.index)/int(self.combobox_dot.currentText()))))
             self.grath = WindowGrath(self.df, self.field_y, self.field_y2,
                                 step=self.combobox_dot.currentText(),
                                 filename=self.files[0])
             self.grath.show()
+        else:
+            text = "Не выбраны сигналы для отображения"
+            self.dialog_box(text)
 
 
 def main():
