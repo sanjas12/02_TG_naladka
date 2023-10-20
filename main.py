@@ -194,7 +194,8 @@ class MainWindow(QMainWindow):
 
             print(f"encoding: {self.encoding} delimiter: {repr(self.delimiter)} decimal: {self.decimal}")
         else:
-            print(f"Не удалось определить кодировку, попробуйте разархивировать файл")
+            text = "Не удалось определить кодировку, попробуйте разархивировать файл если был выбран архив gz"
+            self.dialog_box(text)
 
     def add_to_qlist(self, qlist: QListWidget) -> None:
         add_signal = self.qlist_signals.takeItem(self.qlist_signals.currentRow())
