@@ -84,7 +84,7 @@ class MainWindow(QMainWindow):
         self.gb_x_axe = QGroupBox("Ось X")
         self.gb_x_axe.setLayout(layout_x_axe)
         
-        # верхний слой
+        # первый слой
         self.first_huge_lay = QHBoxLayout()
         self.first_huge_lay.addWidget(self.gb_signals)
         self.first_huge_lay.addWidget(self.gb_base_axe)
@@ -94,7 +94,18 @@ class MainWindow(QMainWindow):
         self.first_huge_GroupBox = QGroupBox()
         self.first_huge_GroupBox.setLayout(self.first_huge_lay)
 
-        # нижний слой 
+        # второй слой 
+        self.ql_ = QLabel("Исходные файлы:")
+        self.ql_info = QLabel()
+
+        self.second_lay = QHBoxLayout()
+        self.second_lay.addWidget(self.ql_)
+        self.second_lay.addWidget(self.ql_info)
+
+        self.second_huge_GroupBox = QGroupBox()
+        self.second_huge_GroupBox.setLayout(self.second_lay)
+
+        # третий слой 
         self.number_raw_point = QLabel()
         self.number_plot_point = QLabel()
         list_dot = ['1', '10', '100', '1000', '10000']
@@ -115,13 +126,14 @@ class MainWindow(QMainWindow):
         second_vertical_lay.addWidget(QLabel(), 2, 4)
         second_vertical_lay.addWidget(button_grath, 2, 5)
         
-        self.second_huge_GroupBox = QGroupBox()
-        self.second_huge_GroupBox.setLayout(second_vertical_lay)
+        self.third_huge_GroupBox = QGroupBox()
+        self.third_huge_GroupBox.setLayout(second_vertical_lay)
         
         # main_layout
         main_layout = QVBoxLayout()
         main_layout.addWidget(self.first_huge_GroupBox)
         main_layout.addWidget(self.second_huge_GroupBox)
+        main_layout.addWidget(self.third_huge_GroupBox)
 
         wid = QWidget(self)
         self.setCentralWidget(wid)
@@ -191,7 +203,8 @@ class MainWindow(QMainWindow):
                 self.decimal = '.'
             else:
                 self.decimal = ','
-
+        
+            self.ql_info.setText(f"Исходные файлы: encoding: {self.encoding} delimiter: {repr(self.delimiter)} decimal: {self.decimal}")
             print(f"encoding: {self.encoding} delimiter: {repr(self.delimiter)} decimal: {self.decimal}")
         else:
             text = "Не удалось определить кодировку, попробуйте разархивировать файл если был выбран архив gz"
