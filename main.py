@@ -4,7 +4,7 @@ import chardet
 import gzip
 from typing import List
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGroupBox, \
-    QVBoxLayout, QGridLayout, QLabel, QFileDialog, QListWidget, QComboBox, QMainWindow
+    QVBoxLayout, QGridLayout, QLabel, QFileDialog, QListWidget, QComboBox, QMainWindow, QMessageBox
 from grath import WindowGrath
 
 
@@ -223,7 +223,8 @@ class MainWindow(QMainWindow):
         else:
             print(f"Для {self.field_name[num]} не выбраны сигналы")
         return field_name
-
+    
+    # FIXME
     def load_data(self) -> None:
         self.df = None
         self.field_x, self.field_y, self.field_y2 = [], [], []
@@ -264,12 +265,16 @@ class MainWindow(QMainWindow):
                 self.df[self.time_c] = [_ * __class__.cycle_plc for _ in range(len(self.df.index))]
                 print('Time added.')
             else:
-                print("Time exist")
+                print("Time exist in DataFrame")
 
         else:
-            print('No data for grath')
+            text = "Не открыты файлы архивов или не выбраны сигналы для отображения"
+            self.dialog_box(text)
 
         print('-' * 30)
+
+    def dialog_box(self, text: str) -> None:
+        dlg = QMessageBox.information(self, 'My_info', text, QMessageBox.StandardButton.Ok)
 
     def plot_grath(self) -> None:
         self.load_data()
