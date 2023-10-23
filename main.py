@@ -168,10 +168,12 @@ class MainWindow(QMainWindow):
             all_signals = all_signals.loc[:, ~all_signals.columns.str.contains('^Unnamed')]
 
             # заполняем колонку ось columns (Выбирай параметр)
-            for _, signal in enumerate(all_signals):
+
+            all_signal = {i:v for i, v in enumerate(all_signals)}
+            for i, signal in all_signals.items():
                 row_position = self.tb_signals.rowCount()
-                self.tb_signals.insertRow(row_position)
-                self.tb_signals.setItem(row_position, 0, QTableWidgetItem(signal))
+                # self.tb_signals.insertRow(row_position)
+                self.tb_signals.setItem(i, 0, QTableWidgetItem(signal))
 
             row_position = self.tb_signals.rowCount()
             self.tb_signals.insertRow(row_position)
