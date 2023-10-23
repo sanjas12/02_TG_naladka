@@ -15,7 +15,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.width = 640
         self.height = 400
-        self.files = None
+        self.files, self.extension = None, None
         self.field_x = []
         self.field_y = []
         self.field_y2 = []
@@ -140,28 +140,25 @@ class MainWindow(QMainWindow):
         wid.setLayout(main_layout)
         
     def open_files(self) -> None:
-        self.files, _filter = QFileDialog.getOpenFileNames(self, 'Выбор данных: ', '',
+        self.files, self.extension = QFileDialog.getOpenFileNames(self, 'Выбор данных: ', '',
                                                            "GZ Files (*.gz) ;; CSV Files (*.csv) ;; txt (*.txt)")
-
-        if self.files: 
-            self.clear_qlists()
+        if self.extension: 
             print(*self.files, sep='\n')
-            self.parser(self.files[0])
-            self.insert_signals_to_column()
+            self.clear_qlists()
+            self.parser()
+            self.insert_signals_to_qlists()
     
-    def insert_signals_to_column(self) -> None:
-        self.qlist_signals.clear()
-        self.clear_qlists()
+    def insert_signals_to_qlists(self) -> None:
 
         if self.files and self.encoding:
             # Считывание названия всех сингалов из одного файла
-            df_name_signals = pd.read_csv(self.files[0], encoding=self.encoding, delimiter=self.delimiter, nrows=0)
+            all_signals = pd.read_csv(self.files[0], encoding=self.encoding, delimiter=self.delimiter, nrows=0)
             
             # удаляем лишние колонки
-            df_name_signals = df_name_signals.loc[:, ~df_name_signals.columns.str.contains('^Unnamed')]
+            all_signals = all_signals.loc[:, ~all_signals.columns.str.contains('^Unnamed')]
             
             # заполняем колонку ось columns (Выбирай параметр)
-            for i, signal in enumerate(df_name_signals):
+            for i, signal in enumerate(all_signals):
                 self.qlist_signals.insertItem(i, signal)
 
             # по умолчанию на ось columns (Выбирай параметр) добавляем 'time'
@@ -172,42 +169,42 @@ class MainWindow(QMainWindow):
             self.qlist_signals.setCurrentRow(0)
             self.qlist_x_axe.setCurrentRow(0)
 
-    def parser(self, file: str) -> None:
+    def parser(self) -> None:
         """ 
         Detect encoding, delimiter, decimal in opened files
+        only in first file
         """
-        if file.endswith('.gz'): # определение типа файла
-            with gzip.open(file, 'rb') as f:
-                raw_data = f.read(20000)
-                second_row = f.readlines()[2] # вторая строка
+        if self.extension.endswith('(*.gz)'): # если файлы архивы
+            with gzip.open(self.files[0], 'rb') as f:
+                data_raw = f.read(20000)
+                second_row_raw = f.readlines()[2] # вторая строка быстрых
         else:
-            with open(file, 'rb') as f:
-                raw_data = f.read(20000)
-                second_row = f.readlines()[2]
+            with open(self.files[0], 'rb') as f:
+                data_raw = f.read(20000)
+                second_row_raw = f.readlines()[2]
 
         # Кодировка
-        self.chardet= chardet.detect(raw_data)
-        self.encoding = chardet.detect(raw_data).get('encoding')
+        self.encoding = chardet.detect(data_raw).get('encoding')
 
         if self.encoding:
             # Разделитель
-            str_data = raw_data[:200].decode(self.encoding)
-            if str_data.count(';'):
+            data_str = data_raw[:200].decode(self.encoding)
+            if data_str.count(';'):
                 self.delimiter = ';'
             else:
                 self.delimiter = '\t'
 
             # Decimal 
-            data = second_row.decode(self.encoding) 
-            if data.count('.') > data.count(','):
+            second_row_str = second_row_raw.decode(self.encoding) 
+            if second_row_str.count('.') > second_row_str.count(','):
                 self.decimal = '.'
             else:
                 self.decimal = ','
-        
+
             self.ql_info.setText(f"Исходные файлы: encoding: {self.encoding} delimiter: {repr(self.delimiter)} decimal: {self.decimal}")
             print(f"encoding: {self.encoding} delimiter: {repr(self.delimiter)} decimal: {self.decimal}")
         else:
-            text = "Не удалось определить кодировку, попробуйте разархивировать файл если был выбран архив gz"
+            text = f"Не удалось определить кодировку, попробуйте разархивировать файл {self.files[0]}"
             self.dialog_box(text)
 
     def add_to_qlist(self, qlist: QListWidget) -> None:
@@ -222,8 +219,9 @@ class MainWindow(QMainWindow):
 
     def clear_qlists(self) -> None:
         """
-        Clear three QListWidgets (Основная Ось, Вспомогательная, Ось X)
+        Clear All QListWidgets (Список сигналов, Основная Ось, Вспомогательная, Ось X)
         """
+        self.qlist_signals.clear()
         self.qlist_base_axe.clear()
         self.qlist_secondary_axe.clear()
         self.qlist_x_axe.clear()
@@ -237,7 +235,7 @@ class MainWindow(QMainWindow):
         else:
             print(f"Для {self.field_name[num]} не выбраны сигналы")
         return field_name
-    
+
     # FIXME
     def load_data(self) -> None:
         self.df = None
@@ -253,21 +251,21 @@ class MainWindow(QMainWindow):
 
             self.number_raw_point.setText(str(len(self.df.index)))
             # для токов и мощностей учет отрицательных значений
-            df_name_signals = ['Электрическая мощность двигателя ЭМП ОЗ ГСМ-А, десятки Вт',
+            all_signals = ['Электрическая мощность двигателя ЭМП ОЗ ГСМ-А, десятки Вт',
                            'Электрическая мощность двигателя ЭМП ОЗ ГСМ-Б, десятки Вт',
                            'Ток момента двигателя ЭМП ОЗ ГСМ-А, десятки мА',
                            'Ток момента двигателя ЭМП ОЗ ГСМ-Б, десятки мА',
                            'Ток статора ЭМП ОЗ ГСМ-А, десятки мА',
                            'Ток статора ЭМП ОЗ ГСМ-Б, десятки мА']
             for _ in self.field_y:
-                if _ in df_name_signals:
+                if _ in all_signals:
                     self.df[_] = self.df[_].where(lambda x: x < 50000, lambda x: x - 65536)
                     print(_, ' - есть такой')
                 else:
                     pass
                     # print(_, ' - нет такого')
             for _ in self.field_y2:
-                if _ in df_name_signals:
+                if _ in all_signals:
                     self.df[_] = self.df[_].where(lambda x: x < 50000, lambda x: x - 65536)
                     print(_, ' - есть такой')
                 else:
