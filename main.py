@@ -4,7 +4,8 @@ import chardet
 import gzip
 from typing import List
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGroupBox, \
-    QVBoxLayout, QGridLayout, QLabel, QFileDialog, QListWidget, QComboBox, QMainWindow, QMessageBox
+    QVBoxLayout, QGridLayout, QLabel, QFileDialog, QListWidget, QComboBox, QMainWindow, \
+    QMessageBox, QTableWidget, QTableWidgetItem, QHeaderView
 from grath import WindowGrath
 
 
@@ -28,12 +29,12 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(__file__)
 
         # Список сигналов:
-        self.qlist_signals = QListWidget()
+        self.tb_signals = QTableWidget()
         button_open_files = QPushButton('Open files')
         button_open_files.clicked.connect(self.open_files)
         
         signals_layout = QVBoxLayout()
-        signals_layout.addWidget(self.qlist_signals)
+        signals_layout.addWidget(self.tb_signals)
         signals_layout.addWidget(button_open_files)
         
         self.gb_signals = QGroupBox("Список сигналов")
@@ -161,18 +162,25 @@ class MainWindow(QMainWindow):
             
             # удаляем лишние колонки
             all_signals = all_signals.loc[:, ~all_signals.columns.str.contains('^Unnamed')]
+
+            self.tb_signals.setRowCount(len(all_signals.columns))
+            self.tb_signals.setColumnCount(1)
             
             # заполняем колонку ось columns (Выбирай параметр)
             for i, signal in enumerate(all_signals):
-                self.qlist_signals.insertItem(i, signal)
+                self.tb_signals.setItem(i, 0, QTableWidgetItem(signal))
+
+            self.tb_signals.horizontalHeader().setStretchLastSection(True)
+            # self.tb_signals.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
 
             # по умолчанию на ось columns (Выбирай параметр) добавляем 'time'
             # и тут же ее перемещяем на ось Х
-            self.qlist_signals.addItem('time, c')
-            self.qlist_signals.setCurrentRow(self.qlist_signals.count() - 1)
-            self.qlist_x_axe.addItem(self.qlist_signals.takeItem(self.qlist_signals.currentRow()))
-            self.qlist_signals.setCurrentRow(0)
-            self.qlist_x_axe.setCurrentRow(0)
+            # self.signals.addItem('time, c')
+            # self.signals.setCurrentRow(self.qlist_signals.count() - 1)
+            # self.qlist_x_axe.addItem(self.qlist_signals.takeItem(self.qlist_signals.currentRow()))
+            # self.signals.setCurrentRow(0)
+            # self.qlist_x_axe.setCurrentRow(0)
 
     def parser(self) -> None:
         """ 
@@ -226,7 +234,7 @@ class MainWindow(QMainWindow):
         """
         Clear All QListWidgets (Список сигналов, Основная Ось, Вспомогательная, Ось X)
         """
-        self.qlist_signals.clear()
+        self.tb_signals.clear()
         self.qlist_base_axe.clear()
         self.qlist_secondary_axe.clear()
         self.qlist_x_axe.clear()
