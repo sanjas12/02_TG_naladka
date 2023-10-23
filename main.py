@@ -140,9 +140,14 @@ class MainWindow(QMainWindow):
         wid.setLayout(main_layout)
         
     def open_files(self) -> None:
-        self.files, self.extension = QFileDialog.getOpenFileNames(self, 'Выбор данных: ', '',
-                                                           "GZ Files (*.gz) ;; CSV Files (*.csv) ;; txt (*.txt)")
-        if self.extension: 
+        FILE_FILTERS = [
+            "GZ Files (*.gz)",
+            "CSV Files (*.csv)",
+            "txt (*.txt)"
+        ]
+        self.files, self.extension = QFileDialog.getOpenFileNames(self, 'Выбор данных: ', initialFilter=FILE_FILTERS[0], 
+                                                                    filter=";;".join(FILE_FILTERS))
+        if self.files: 
             print(*self.files, sep='\n')
             self.clear_qlists()
             self.parser()
