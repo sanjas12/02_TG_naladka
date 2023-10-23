@@ -5,7 +5,7 @@ import gzip
 from typing import List
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGroupBox, \
     QVBoxLayout, QGridLayout, QLabel, QFileDialog, QListWidget, QComboBox, QMainWindow, \
-    QMessageBox, QTableWidget, QTableWidgetItem, QHeaderView
+    QMessageBox, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
 from grath import WindowGrath
 
 
@@ -23,6 +23,7 @@ class MainWindow(QMainWindow):
         self.field_name = ("Основная Ось", "Вспомогательная Ось", "Ось X (Времени)")
         self.time_c = 'time, c'
         self.df = None
+        self.selected_signal = dict()
         self.setup_ui()
 
     def setup_ui(self):
@@ -30,6 +31,11 @@ class MainWindow(QMainWindow):
 
         # Список сигналов:
         self.tb_signals = QTableWidget()
+        self.tb_signals.setColumnCount(1)
+        self.tb_signals.horizontalHeader().hide()
+        self.tb_signals.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.tb_signals.horizontalHeader().setStretchLastSection(True)
+
         button_open_files = QPushButton('Open files')
         button_open_files.clicked.connect(self.open_files)
         
@@ -96,11 +102,9 @@ class MainWindow(QMainWindow):
         self.first_huge_GroupBox.setLayout(self.first_huge_lay)
 
         # второй слой 
-        self.ql_ = QLabel("Исходные файлы:")
         self.ql_info = QLabel()
 
         self.second_lay = QHBoxLayout()
-        self.second_lay.addWidget(self.ql_)
         self.second_lay.addWidget(self.ql_info)
 
         self.second_huge_GroupBox = QGroupBox()
@@ -163,24 +167,19 @@ class MainWindow(QMainWindow):
             # удаляем лишние колонки
             all_signals = all_signals.loc[:, ~all_signals.columns.str.contains('^Unnamed')]
 
-            self.tb_signals.setRowCount(len(all_signals.columns))
-            self.tb_signals.setColumnCount(1)
-            
             # заполняем колонку ось columns (Выбирай параметр)
-            for i, signal in enumerate(all_signals):
-                self.tb_signals.setItem(i, 0, QTableWidgetItem(signal))
+            for _, signal in enumerate(all_signals):
+                row_position = self.tb_signals.rowCount()
+                self.tb_signals.insertRow(row_position)
+                self.tb_signals.setItem(row_position, 0, QTableWidgetItem(signal))
 
-            self.tb_signals.horizontalHeader().setStretchLastSection(True)
-            # self.tb_signals.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            row_position = self.tb_signals.rowCount()
+            self.tb_signals.insertRow(row_position)
+            self.tb_signals.setItem(row_position, 0, QTableWidgetItem(self.time_c))
+            self.tb_signals.selectRow(0)
+            
+            self.qlist_x_axe.addItem(self.time_c)
 
-
-            # по умолчанию на ось columns (Выбирай параметр) добавляем 'time'
-            # и тут же ее перемещяем на ось Х
-            # self.signals.addItem('time, c')
-            # self.signals.setCurrentRow(self.qlist_signals.count() - 1)
-            # self.qlist_x_axe.addItem(self.qlist_signals.takeItem(self.qlist_signals.currentRow()))
-            # self.signals.setCurrentRow(0)
-            # self.qlist_x_axe.setCurrentRow(0)
 
     def parser(self) -> None:
         """ 
@@ -220,21 +219,28 @@ class MainWindow(QMainWindow):
             text = f"Не удалось определить кодировку, попробуйте разархивировать файл {self.files[0]}"
             self.dialog_box(text)
 
-    def add_to_qlist(self, qlist: QListWidget) -> None:
-        add_signal = self.qlist_signals.takeItem(self.qlist_signals.currentRow())
-        qlist.addItem(add_signal)
-        qlist.setCurrentRow(0)
+    def add_to_qlist(self, qlist: QListWidget = 0) -> None:
+        _row = self.tb_signals.currentRow()
+        self.selected_signal[self.tb_signals.currentItem().text()] = _row
+        print(self.selected_signal)
+        self.tb_signals.removeRow(_row)
+        # qlist.addItem(self.selected_signal[_row])
 
     def remove_qlist(self, qlist: QListWidget) -> None:
+        print(self.selected_signal)
         remove_signal = qlist.takeItem(qlist.currentRow())
-        self.qlist_signals.addItem(remove_signal)
-        self.qlist_signals.setCurrentRow(0)                
+        print(remove_signal)
+        # self.tb_signals.setItem(row_position, 0, QTableWidgetItem(self.time_c))
+        row_position = self.tb_signals.rowCount()
+        # self.tb_signals.insertRow(row_position)
+        self.tb_signals.setItem(row_position, 0, QTableWidgetItem(signal))
+
 
     def clear_qlists(self) -> None:
         """
         Clear All QListWidgets (Список сигналов, Основная Ось, Вспомогательная, Ось X)
         """
-        self.tb_signals.clear()
+        self.tb_signals.setRowCount(0)
         self.qlist_base_axe.clear()
         self.qlist_secondary_axe.clear()
         self.qlist_x_axe.clear()
