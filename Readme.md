@@ -36,6 +36,7 @@ TODO
 6. Сделать серверную службу
 7. Сделать десктопную версию
 8. Сделать мобильную версию
+9. Добавить тесты
 
 help:
 python -m pip  install -r requirements.txt --no-index -f d:\\temp\\python_Library
