@@ -2,7 +2,7 @@ import pandas as pd
 import sys
 import chardet
 import gzip
-from typing import List
+from typing import List, Dict
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGroupBox, \
     QVBoxLayout, QGridLayout, QLabel, QFileDialog, QListWidget, QComboBox, QMainWindow, \
     QMessageBox, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
@@ -17,13 +17,11 @@ class MainWindow(QMainWindow):
         self.width = 640
         self.height = 400
         self.files, self.extension = None, None
-        self.field_x = []
-        self.field_y = []
-        self.field_y2 = []
+        self.field_x, self.field_y,  self.field_y2 = [], [], []
+        self.dict_x_axe, self.dict_base_y, self.dict_secondary_y = {}, {}, {}
         self.field_name = ("Основная Ось", "Вспомогательная Ось", "Ось X (Времени)")
         self.time_c = 'time, c'
         self.df = None
-        self.selected_signal = dict()
         self.setup_ui()
 
     def setup_ui(self):
@@ -49,9 +47,9 @@ class MainWindow(QMainWindow):
         # Основная ось:
         self.qlist_base_axe = QListWidget()
         btn_base_axe_add = QPushButton('Add to Y')
-        btn_base_axe_add.clicked.connect(lambda: self.add_to_qlist(self.qlist_base_axe))
+        btn_base_axe_add.clicked.connect(lambda: self.add_signal(self.qlist_base_axe, self.dict_base_y))
         btn_base_axe_remove = QPushButton('Remove from Y')
-        btn_base_axe_remove.clicked.connect(lambda: self.remove_qlist(self.qlist_base_axe))
+        btn_base_axe_remove.clicked.connect(lambda: self.remove_signal(self.qlist_base_axe, self.dict_base_y))
         
         base_axe_layout = QVBoxLayout()
         base_axe_layout.addWidget(self.qlist_base_axe)
@@ -64,9 +62,9 @@ class MainWindow(QMainWindow):
         # Вспомогательная ось:
         self.qlist_secondary_axe = QListWidget()
         btn_secondary_axe_add = QPushButton('Add to Y2')
-        btn_secondary_axe_add.clicked.connect(lambda: self.add_to_qlist(self.qlist_secondary_axe))
+        btn_secondary_axe_add.clicked.connect(lambda: self.add_signal(self.qlist_secondary_axe))
         btn_secondary_axe_remove = QPushButton('Remove from Y2')
-        btn_secondary_axe_remove.clicked.connect(lambda: self.remove_qlist(self.qlist_secondary_axe))
+        btn_secondary_axe_remove.clicked.connect(lambda: self.remove_signal(self.qlist_secondary_axe))
         
         secondary_axe_layout = QVBoxLayout()
         secondary_axe_layout.addWidget(self.qlist_secondary_axe)
@@ -79,9 +77,9 @@ class MainWindow(QMainWindow):
         # Ось X
         self.qlist_x_axe = QListWidget()
         btn_x_axe_add = QPushButton('Add to X')
-        btn_x_axe_add.clicked.connect(lambda: self.add_to_qlist(self.qlist_x_axe))
+        btn_x_axe_add.clicked.connect(lambda: self.add_signal(self.qlist_x_axe))
         btn_x_axe_remove = QPushButton('Remove from X')
-        btn_x_axe_remove.clicked.connect(lambda: self.remove_qlist(self.qlist_x_axe))
+        btn_x_axe_remove.clicked.connect(lambda: self.remove_signal(self.qlist_x_axe))
         
         layout_x_axe = QVBoxLayout()
         layout_x_axe.addWidget(self.qlist_x_axe)
@@ -154,34 +152,35 @@ class MainWindow(QMainWindow):
                                                                     filter=";;".join(FILE_FILTERS))
         if self.files: 
             print(*self.files, sep='\n')
-            self.clear_qlists()
+            self.clear_signals()
             self.parser()
-            self.insert_signals_to_qlists()
+            self.insert_signals_to_qtable()
     
-    def insert_signals_to_qlists(self) -> None:
+    def insert_signals_to_qtable(self) -> None:
 
         if self.files and self.encoding:
-            # Считывание названия всех сингалов из одного файла
-            all_signals = pd.read_csv(self.files[0], encoding=self.encoding, delimiter=self.delimiter, nrows=0)
+            # Считывание названия всех сингалов из первого файла
+            df_all_signals = pd.read_csv(self.files[0], encoding=self.encoding, delimiter=self.delimiter, nrows=0)
             
             # удаляем лишние колонки
-            all_signals = all_signals.loc[:, ~all_signals.columns.str.contains('^Unnamed')]
+            df_all_signals = df_all_signals.loc[:, ~df_all_signals.columns.str.contains('^Unnamed')]
+            self.dict_all_signals = {signal:i for i, signal in enumerate(df_all_signals)}
+           
+            # добавление моего времени
+            self.dict_all_signals[self.time_c] = len(self.dict_all_signals)
 
-            # заполняем колонку ось columns (Выбирай параметр)
-
-            all_signal = {i:v for i, v in enumerate(all_signals)}
-            for i, signal in all_signals.items():
-                row_position = self.tb_signals.rowCount()
-                # self.tb_signals.insertRow(row_position)
-                self.tb_signals.setItem(i, 0, QTableWidgetItem(signal))
-
-            row_position = self.tb_signals.rowCount()
-            self.tb_signals.insertRow(row_position)
-            self.tb_signals.setItem(row_position, 0, QTableWidgetItem(self.time_c))
-            self.tb_signals.selectRow(0)
-            
+            # и тут же перемещаем ее на "Ось Х"
+            self.dict_x_axe.setdefault(*self.dict_all_signals.popitem())
             self.qlist_x_axe.addItem(self.time_c)
-
+            
+            # заполняем колонку (Список сигналов)
+            for signal, i in self.dict_all_signals.items():
+                row_position = self.tb_signals.rowCount()
+                self.tb_signals.insertRow(row_position)
+                self.tb_signals.setItem(i, 0, QTableWidgetItem(signal))
+            
+            # ставим указатель на первый сигнал
+            self.tb_signals.selectRow(0)
 
     def parser(self) -> None:
         """ 
@@ -221,31 +220,47 @@ class MainWindow(QMainWindow):
             text = f"Не удалось определить кодировку, попробуйте разархивировать файл {self.files[0]}"
             self.dialog_box(text)
 
-    def add_to_qlist(self, qlist: QListWidget = 0) -> None:
-        _row = self.tb_signals.currentRow()
-        self.selected_signal[self.tb_signals.currentItem().text()] = _row
-        print(self.selected_signal)
-        self.tb_signals.removeRow(_row)
-        # qlist.addItem(self.selected_signal[_row])
+    def add_signal(self, qlist_axe: QListWidget = 0, dict_axe: Dict = {}) -> None:
+        """
+        Remove signal from Qtable(Список сигналов) and append his to qlist(given qlist) and dict_axe
+        """
+        if self.tb_signals.rowCount():
+            row = self.tb_signals.currentRow()
+            signal = self.tb_signals.item(row, 0).text()
+            remove_row = self.dict_all_signals.pop(signal)
+            dict_axe.setdefault(signal, remove_row)
+            self.tb_signals.removeRow(row) 
+            self.tb_signals.selectRow(0) # ставим указатель на первый сигнал
+            qlist_axe.addItem(signal)  # добавляем 
+        else:
+            print("don't open files")
 
-    def remove_qlist(self, qlist: QListWidget) -> None:
-        print(self.selected_signal)
-        remove_signal = qlist.takeItem(qlist.currentRow())
-        print(remove_signal)
-        # self.tb_signals.setItem(row_position, 0, QTableWidgetItem(self.time_c))
-        row_position = self.tb_signals.rowCount()
-        # self.tb_signals.insertRow(row_position)
-        self.tb_signals.setItem(row_position, 0, QTableWidgetItem(signal))
+    def remove_signal(self, qlist: QListWidget, dict_axe: Dict = {}) -> None:
+        # print(qlist.currentRow())
+        if qlist.count() and qlist.currentRow() != -1:
+            print(dict_axe)
+            remove_signal = qlist.takeItem(qlist.currentRow())
+            print(remove_signal.text())
+            # self.tb_signals.setItem(row_position, 0, QTableWidgetItem(self.time_c))
+            # row_position = self.tb_signals.rowCount()
+            # self.tb_signals.insertRow(row_position)
+            # self.tb_signals.setItem(row_position, 0, QTableWidgetItem(signal))
+            print(dict_axe)
+        else:
+            print("don't select signals for removing")
 
-
-    def clear_qlists(self) -> None:
+    def clear_signals(self) -> None:
         """
         Clear All QListWidgets (Список сигналов, Основная Ось, Вспомогательная, Ось X)
+        и их словари
         """
-        self.tb_signals.setRowCount(0)
+        self.dict_x_axe.clear()
+        self.dict_base_y.clear()
+        self.dict_secondary_y.clear()
         self.qlist_base_axe.clear()
         self.qlist_secondary_axe.clear()
         self.qlist_x_axe.clear()
+        self.tb_signals.setRowCount(0)
 
     def load_field_name(self, qlist_axe: QListWidget, field_name: str, num: int):
         if qlist_axe.count() > 0:
