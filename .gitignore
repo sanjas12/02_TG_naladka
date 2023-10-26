@@ -49,6 +49,7 @@ log.txt
 #### Python ####
 __pycache__
 .venv*
+*.pyc
 
 #### Project ####
 DATA_out
