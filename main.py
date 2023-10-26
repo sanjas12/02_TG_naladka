@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGr
     QVBoxLayout, QGridLayout, QLabel, QFileDialog, QListWidget, QComboBox, QMainWindow, \
     QMessageBox, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
 from grath import WindowGrath
+from config.config import MYTIME
 
 
 class MainWindow(QMainWindow):
@@ -20,7 +21,7 @@ class MainWindow(QMainWindow):
         self.field_x, self.field_y,  self.field_y2 = [], [], []
         self.dict_x_axe, self.dict_base_y, self.dict_secondary_y = {}, {}, {}
         self.field_name = ("Основная Ось", "Вспомогательная Ось", "Ось X (Времени)")
-        self.time_c = 'time, c'
+        self.time_c = MYTIME
         self.df = None
         self.setup_ui()
 
@@ -215,7 +216,6 @@ class MainWindow(QMainWindow):
                 self.decimal = ','
 
             self.ql_info.setText(f"Исходные файлы: encoding: {self.encoding} delimiter: {repr(self.delimiter)} decimal: {self.decimal}")
-            print(f"encoding: {self.encoding} delimiter: {repr(self.delimiter)} decimal: {self.decimal}")
         else:
             text = f"Не удалось определить кодировку, попробуйте разархивировать файл {self.files[0]}"
             self.dialog_box(text)
@@ -233,7 +233,7 @@ class MainWindow(QMainWindow):
             self.tb_signals.selectRow(0) # ставим указатель на первый сигнал
             qlist_axe.addItem(signal)  # добавляем 
         else:
-            print("don't open files")
+            self.dialog_box("don't open files")
 
     def remove_signal(self, qlist: QListWidget, dict_axe: Dict = {}) -> None:
         # print(qlist.currentRow())
@@ -247,7 +247,7 @@ class MainWindow(QMainWindow):
             # self.tb_signals.setItem(row_position, 0, QTableWidgetItem(signal))
             print(dict_axe)
         else:
-            print("don't select signals for removing")
+            self.dialog_box("don't select signals for removing")
 
     def clear_signals(self) -> None:
         """
@@ -275,7 +275,7 @@ class MainWindow(QMainWindow):
     # FIXME
     def load_data(self) -> None:
         self.df = None
-        self.field_x, self.field_y, self.field_y2 = [], [], []
+        self.field_x.clear(), self.field_y.clear(), self.field_y2.clear()
         self.field_y = self.load_field_name(self.qlist_base_axe, self.field_y, 0) 
         self.field_y2 = self.load_field_name(self.qlist_secondary_axe, self.field_y2, 1) 
         self.field_x = self.load_field_name(self.qlist_x_axe, self.field_x, 2) 

@@ -8,6 +8,7 @@ import random
 import pandas as pd
 from matplotlib.widgets import CheckButtons
 import matplotlib.ticker as ticker
+from config.config import MYTIME
 
 
 class WindowGrath(QMainWindow):
@@ -21,8 +22,8 @@ class WindowGrath(QMainWindow):
         super().__init__()
         self.filename = filename
         self.data = data
-        self.data_x = self.data['time, c']
-        self.data_y = self.data.drop('time, c', axis=1)
+        self.data_x = self.data[MYTIME]
+        self.data_y = self.data.drop(MYTIME, axis=1)
         self.step = int(step)
         self.color = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
         self.color_inv = self.color[::-1]
@@ -118,7 +119,7 @@ class WindowGrath(QMainWindow):
                     ax1.xaxis.set_major_locator(ticker.MaxNLocator(20))
                     ax1.yaxis.set_major_locator(ticker.MaxNLocator(20))
             ax1.legend(loc=2)
-            ax1.set_xlabel('time, c')
+            ax1.set_xlabel(MYTIME)
 
         if self.columns_y2:
             for i, v in enumerate(self.columns_y2):
@@ -165,7 +166,7 @@ def main():
     number_point = 15
     df['ГСМ-А'] = [random.randint(300, 321) for _ in range(number_point)]
     df['ГСМ-Б'] = [random.randint(300, 321) for _ in range(number_point)]
-    df['time, c'] = [i for i in range(number_point)]
+    df[MYTIME] = [i for i in range(number_point)]
     df['ОЗ-А'] = [random.random() for _ in range(number_point)]
     df['ОЗ-Б'] = [random.random() for _ in range(number_point)]
 
