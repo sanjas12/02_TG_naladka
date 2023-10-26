@@ -190,13 +190,11 @@ class MainWindow(QMainWindow):
         if self.extension.endswith('(*.gz)'): # если файлы архивы
             with gzip.open(self.files[0], 'rb') as f:
                 data_raw = f.read(20000)
-                print(len(f.readlines()))
-                print(f.readlines())
                 second_row_raw = f.readlines()[1] # вторая строка быстрых
         else:
             with open(self.files[0], 'rb') as f:
                 data_raw = f.read(20000)
-                second_row_raw = f.readlines()[2]
+                second_row_raw = f.readlines()[1]
 
         # Кодировка
         self.encoding = chardet.detect(data_raw).get('encoding')
