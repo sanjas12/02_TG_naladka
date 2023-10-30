@@ -5,3 +5,10 @@
             File "h:/My_Works/Python/02_TG_naladka/main.py", line 242, in add_signal
                 remove_row = self.dict_all_signals.pop(add_signal)
             KeyError: 'фрЄр/тЁхь 
+2. Нельзя добавить сигнал в QTable (Ось X):
+            Traceback (most recent call last):
+            File "h:/My_Works/Python/02_TG_naladka/main.py", line 80, in <lambda>
+                btn_x_axe_add.clicked.connect(lambda: self.add_signal(self.qlist_x_axe, self.dict_x_axe))
+            File "h:/My_Works/Python/02_TG_naladka/main.py", line 242, in add_signal
+                remove_row = self.dict_all_signals.pop(add_signal)
+            KeyError: 'фрЄр/тЁхь '
