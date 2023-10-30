@@ -2,7 +2,7 @@ import pandas as pd
 import sys
 import chardet
 import gzip
-from typing import List, Dict
+from typing import List, Dict, Tuple
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGroupBox, \
     QVBoxLayout, QGridLayout, QLabel, QFileDialog, QListWidget, QComboBox, QMainWindow, \
     QMessageBox, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
@@ -34,12 +34,12 @@ class MainWindow(QMainWindow):
         self.tb_signals.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.tb_signals.horizontalHeader().setStretchLastSection(True)
 
-        button_open_files = QPushButton('Open files')
-        button_open_files.clicked.connect(self.open_files)
+        btn_open_files = QPushButton('Open files')
+        btn_open_files.clicked.connect(self.insert_all_signals)
         
         signals_layout = QVBoxLayout()
         signals_layout.addWidget(self.tb_signals)
-        signals_layout.addWidget(button_open_files)
+        signals_layout.addWidget(btn_open_files)
         
         self.gb_signals = QGroupBox("Список сигналов")
         self.gb_signals.setLayout(signals_layout)
@@ -143,6 +143,9 @@ class MainWindow(QMainWindow):
         wid.setLayout(main_layout)
         
     def open_files(self) -> None:
+        """
+        Return List opened files and his extension
+        """
         FILE_FILTERS = [
             "GZ Files (*.gz)",
             "CSV Files (*.csv)",
@@ -150,13 +153,7 @@ class MainWindow(QMainWindow):
         ]
         self.files, self.extension = QFileDialog.getOpenFileNames(self, 'Выбор данных: ', initialFilter=FILE_FILTERS[0], 
                                                                     filter=";;".join(FILE_FILTERS))
-        if self.files: 
-            print(*self.files, sep='\n')
-            self.clear_signals()
-            self.parser()
-            self.read_all_signals()
-            self.insert_signals_to_qtable(self.dict_all_signals)
-
+        
     def read_all_signals(self) -> None:
 
         if self.files and self.encoding:
@@ -174,18 +171,27 @@ class MainWindow(QMainWindow):
             self.dict_x_axe.setdefault(*self.dict_all_signals.popitem())
             self.qlist_x_axe.addItem(self.time_c)
             
-    def insert_signals_to_qtable(self, signals: Dict) -> None:
+    def insert_all_signals(self) -> None:
         """
         Clear all old signals and insert new signals to QTable(Список сигналов)
         """
         self.tb_signals.setRowCount(0)
-        for signal, i in sorted(signals.items(), key=lambda item: item[1]):
-            row_position = self.tb_signals.rowCount()
-            self.tb_signals.insertRow(row_position)
-            self.tb_signals.setItem(i, 0, QTableWidgetItem(signal))
+        if not self.files:
+            self.open_files()
+        
+        if self.files: 
+            print(*self.files, sep='\n')
+            self.clear_signals()
+            self.parser()
+            self.read_all_signals()
+        
+            for signal, i in sorted(self.dict_all_signals.items(), key=lambda item: item[1]):
+                row_position = self.tb_signals.rowCount()
+                self.tb_signals.insertRow(row_position)
+                self.tb_signals.setItem(i, 0, QTableWidgetItem(signal))
 
-        # ставим указатель на первый сигнал ()
-        self.tb_signals.selectRow(0)
+            # ставим указатель на первый сигнал ()
+            self.tb_signals.selectRow(0)
 
     def parser(self) -> None:
         """ 
@@ -228,6 +234,8 @@ class MainWindow(QMainWindow):
         """
         Remove signal from Qtable(Список сигналов) and append his to qlist(given qlist) and dict_axe
         """
+        print(self.tb_signals.rowCount())
+        print(self.tb_signals)
         if self.tb_signals.rowCount():
             row = self.tb_signals.currentRow()
             add_signal = self.tb_signals.item(row, 0).text()
@@ -239,20 +247,25 @@ class MainWindow(QMainWindow):
             qlist_axe.setCurrentRow(0)
         else:
             self.dialog_box(f"Don't open files.\n\tor\nAll signals are already selected.")
+        
+        print(self.dict_all_signals)
 
-    def remove_signal(self, qlist: QListWidget, dict_axe: Dict = {}) -> None:
+    def remove_signal(self, qlist_axe: QListWidget, dict_axe: Dict = {}) -> None:
         """
         Remove signal from Qlist(given qlist) and append his to Qtable(Список сигналов) and dict_axe
         """
-        if qlist.count() and qlist.currentRow() != -1:
-            remove_signal = qlist.takeItem(qlist.currentRow()).text()
-            remove_key = dict_axe.pop(remove_signal)
-            self.dict_all_signals.setdefault(remove_signal, remove_key)
-            # self.tb_signals.setItem(remove_row, 0, QTableWidgetItem(remove_signal))
-            self.insert_signals_to_qtable(self.dict_all_signals)
+        if qlist_axe.count() and qlist_axe.currentRow() != -1:
+            remove_signal = qlist_axe.takeItem(qlist_axe.currentRow()).text()
+            remove_row_signal = dict_axe.pop(remove_signal)
+            self.dict_all_signals.setdefault(remove_row_signal, remove_signal)
+            row_position = self.tb_signals.rowCount()
+            print(remove_row_signal, remove_signal)
+            self.tb_signals.insertRow(row_position)
+            self.tb_signals.setItem(remove_row_signal, 0, QTableWidgetItem(remove_signal))
+            self.tb_signals.selectRow(0) # ставим указатель на первый сигнал
         else:
             self.dialog_box("don't select signals for removing")
-
+        
     def clear_signals(self) -> None:
         """
         Clear All QListWidgets (Список сигналов, Основная Ось, Вспомогательная, Ось X)
@@ -326,7 +339,7 @@ class MainWindow(QMainWindow):
         print('-' * 30)
 
     def dialog_box(self, text: str) -> None:
-        dlg = QMessageBox.information(self, 'My_info', text, QMessageBox.StandardButton.Ok)
+        dlg = QMessageBox.information(self, 'TG_info', text, QMessageBox.StandardButton.Ok)
 
     def plot_grath(self) -> None:
         self.load_data()
