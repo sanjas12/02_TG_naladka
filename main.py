@@ -176,22 +176,18 @@ class MainWindow(QMainWindow):
         Clear all old signals and insert new signals to QTable(Список сигналов)
         """
         self.tb_signals.setRowCount(0)
-        if not self.files:
-            self.open_files()
-        
-        if self.files: 
-            print(*self.files, sep='\n')
-            self.clear_signals()
-            self.parser()
-            self.read_all_signals()
-        
-            for signal, i in sorted(self.dict_all_signals.items(), key=lambda item: item[1]):
-                row_position = self.tb_signals.rowCount()
-                self.tb_signals.insertRow(row_position)
-                self.tb_signals.setItem(i, 0, QTableWidgetItem(signal))
+        self.open_files()
+        self.clear_signals()
+        self.parser()
+        self.read_all_signals()
+    
+        for signal, i in sorted(self.dict_all_signals.items(), key=lambda item: item[1]):
+            row_position = self.tb_signals.rowCount()
+            self.tb_signals.insertRow(row_position)
+            self.tb_signals.setItem(i, 0, QTableWidgetItem(signal))
 
-            # ставим указатель на первый сигнал ()
-            self.tb_signals.selectRow(0)
+        # ставим указатель на первый сигнал ()
+        self.tb_signals.selectRow(0)
 
     def parser(self) -> None:
         """ 
