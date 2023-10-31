@@ -11,6 +11,7 @@ from matplotlib.widgets import CheckButtons
 import matplotlib.ticker as ticker
 from config.config import MYTIME
 
+TICK_MARK_COUNT = 20
 
 class WindowGrath(QMainWindow):
     def __init__(self, data: pd.DataFrame, base_axe: List = [], secondary_axe: List = [], axe_x: List = [],
@@ -104,10 +105,11 @@ class WindowGrath(QMainWindow):
             for i, signal in enumerate(self.base_axe):
                                 # X                     Y
                 ax1.plot(self.axe_x[::self.step], self.data[signal][::self.step], lw=2, label=signal)
-                # ax1.set_ylabel(self.base_axe[i])
-                ax1.xaxis.set_major_locator(ticker.MaxNLocator(20))
-                ax1.yaxis.set_major_locator(ticker.MaxNLocator(20))
-                ax1.legend(loc=2)
+                print(signal)
+                ax1.set_ylabel(signal, loc='bottom')
+            ax1.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
+            ax1.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
+            ax1.legend(loc=2)
             ax1.set_xlabel(MYTIME)
 
         if self.secondary_axe:
@@ -117,8 +119,8 @@ class WindowGrath(QMainWindow):
                 ax2.plot(self.axe_x[::self.step], self.data[signal][::self.step], ls='-.', lw=2, label=signal, color=self.color_inv[i])
                 ax2.set_ylabel(self.secondary_axe[i], color='b')  # we already handled the x-label with ax1
                 ax2.tick_params(axis='y', labelcolor='b')
-                ax2.xaxis.set_major_locator(ticker.MaxNLocator(20))
-                ax2.yaxis.set_major_locator(ticker.MaxNLocator(20))
+                ax2.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
+                ax2.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
             ax2.legend(loc=4)
 
         # plt.draw()
