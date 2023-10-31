@@ -6,7 +6,7 @@ from typing import List, Dict, Tuple
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGroupBox, \
     QVBoxLayout, QGridLayout, QLabel, QFileDialog, QListWidget, QComboBox, QMainWindow, \
     QMessageBox, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
-from grath import WindowGrath
+from grath_matplot import WindowGrath
 from config.config import MYTIME
 
 class MainWindow(QMainWindow):
