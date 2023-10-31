@@ -106,7 +106,7 @@ class WindowGrath(QMainWindow):
                                 # X                     Y
                 ax1.plot(self.axe_x[::self.step], self.data[signal][::self.step], lw=2, label=signal)
                 print(signal)
-                ax1.set_ylabel(signal, loc='bottom')
+                ax1.set_ylabel(self.base_axe[i], loc='top')
             ax1.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
             ax1.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
             ax1.legend(loc=2)
@@ -117,7 +117,7 @@ class WindowGrath(QMainWindow):
             for i, signal in enumerate(self.secondary_axe):
                                   # X                     Y
                 ax2.plot(self.axe_x[::self.step], self.data[signal][::self.step], ls='-.', lw=2, label=signal, color=self.color_inv[i])
-                ax2.set_ylabel(self.secondary_axe[i], color='b')  # we already handled the x-label with ax1
+                ax2.set_ylabel(self.secondary_axe[i], color='b', loc='bottom')  # we already handled the x-label with ax1
                 ax2.tick_params(axis='y', labelcolor='b')
                 ax2.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
                 ax2.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
