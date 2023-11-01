@@ -53,7 +53,7 @@ class WindowGrath(QMainWindow):
         # vbox_1.addWidget(self.combobox_dot)
         vbox_1.addWidget(QLabel('Число точек: '))
         vbox_1.addWidget(self.number_point)
-        # vbox_1.addWidget(btn_update)
+        vbox_1.addWidget(btn_update)
 
         self.gb_1 = QGroupBox()
         self.gb_1.setLayout(vbox_1)
@@ -92,21 +92,22 @@ class WindowGrath(QMainWindow):
         index = self.label_list.index(label)
         print(index)
         self.lines_list[index].set_visible(not self.lines_list[index].get_visible())
-
         plt.draw()
 
     def plot(self) -> None:
-        self.figure.clear()
+        # self.figure.clear()
         self.set_suptitle_grath()
 
         if self.base_axe:
-            ax1 = self.figure.add_subplot(111)
+            ax1 = self.figure.add_subplot()
+            # fig = plt.figure()
+            # ax1 = fig.add_subplot()
             ax1.grid(linestyle='--', linewidth=0.5, alpha=.85)
             for i, signal in enumerate(self.base_axe):
                                 # X                     Y
                 ax1.plot(self.axe_x[::self.step], self.data[signal][::self.step], lw=2, label=signal)
                 print(signal)
-                ax1.set_ylabel(self.base_axe[i], loc='top')
+            ax1.set_ylabel('\n'.join(self.base_axe), rotation=0, labelpad=20)
             ax1.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
             ax1.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
             ax1.legend(loc=2)
@@ -117,16 +118,14 @@ class WindowGrath(QMainWindow):
             for i, signal in enumerate(self.secondary_axe):
                                   # X                     Y
                 ax2.plot(self.axe_x[::self.step], self.data[signal][::self.step], ls='-.', lw=2, label=signal, color=self.color_inv[i])
-                ax2.set_ylabel(self.secondary_axe[i], color='b', loc='bottom')  # we already handled the x-label with ax1
                 ax2.tick_params(axis='y', labelcolor='b')
                 ax2.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
                 ax2.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
+            ax2.set_ylabel('\n'.join(self.secondary_axe), rotation=0, labelpad=20, color='b')
             ax2.legend(loc=4)
 
-        # plt.draw()
-
         # refresh canvas
-        # self.canvas.draw()        
+        self.canvas.draw()        
 
     def set_suptitle_grath(self):
         if not self.filename:
@@ -160,16 +159,11 @@ def main():
     df['ОЗ-Б'] = [random.random() for _ in range(number_point)]
     df[MYTIME] = [i for i in range(number_point)]
 
-    # print(df.info())
-
     y1 = ['ОЗ-А', 'ОЗ-Б']
     y2 = ['ГСМ-А', 'ГСМ-Б']
 
     app = QApplication(sys.argv)
     ex = WindowGrath(df, base_axe=y1, secondary_axe=y2, axe_x=df[MYTIME], filename='E:/ТГ41-2021-06-25_134810_14099.csv.gz ')
-    # user32 = ctypes.windll.user32
-    # screensize = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
-    # ex.resize(screensize[0]-10, screensize[1]-150)
     ex.show()
 
     try:
