@@ -107,6 +107,7 @@ class WindowGrath(QMainWindow):
                                 # X                     Y
                 ax1.plot(self.axe_x[::self.step], self.data[signal][::self.step], lw=2, label=signal)
                 print(signal)
+            # print(ax1.set_ylabel.__code__.co_varnames)
             ax1.set_ylabel('\n'.join(self.base_axe), rotation=0, labelpad=20)
             ax1.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
             ax1.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
