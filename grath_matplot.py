@@ -108,7 +108,7 @@ class WindowGrath(QMainWindow):
                 ax1.plot(self.axe_x[::self.step], self.data[signal][::self.step], lw=2, label=signal)
                 print(signal)
             # print(ax1.set_ylabel.__code__.co_varnames)
-            ax1.set_ylabel('\n'.join(self.base_axe), rotation=0, labelpad=20)
+            ax1.set_ylabel(',\n'.join(self.base_axe))
             ax1.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
             ax1.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
             ax1.legend(loc=2)
@@ -122,7 +122,7 @@ class WindowGrath(QMainWindow):
                 ax2.tick_params(axis='y', labelcolor='b')
                 ax2.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
                 ax2.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
-            ax2.set_ylabel('\n'.join(self.secondary_axe), rotation=0, labelpad=20, color='b')
+            ax2.set_ylabel(f',\n'.join(self.secondary_axe), color='b')
             ax2.legend(loc=4)
 
         # refresh canvas
@@ -154,14 +154,15 @@ class WindowGrath(QMainWindow):
 def main():
     df = pd.DataFrame()
     number_point = 15
-    df['ГСМ-А'] = [random.randint(300, 321) for _ in range(number_point)]
+    first_signal = 'ГСМ-А. Очень длинный сигнал'
+    df[first_signal] = [random.randint(300, 321) for _ in range(number_point)]
     df['ГСМ-Б'] = [random.randint(300, 321) for _ in range(number_point)]
     df['ОЗ-А'] = [random.random() for _ in range(number_point)]
     df['ОЗ-Б'] = [random.random() for _ in range(number_point)]
     df[MYTIME] = [i for i in range(number_point)]
 
     y1 = ['ОЗ-А', 'ОЗ-Б']
-    y2 = ['ГСМ-А', 'ГСМ-Б']
+    y2 = [first_signal, 'ГСМ-Б']
 
     app = QApplication(sys.argv)
     ex = WindowGrath(df, base_axe=y1, secondary_axe=y2, axe_x=df[MYTIME], filename='E:/ТГ41-2021-06-25_134810_14099.csv.gz ')
