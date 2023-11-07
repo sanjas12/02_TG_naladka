@@ -178,36 +178,39 @@ class MainWindow(QMainWindow):
         self.tb_signals.setRowCount(0)
         self.open_files()
         self.clear_signals()
-        self.parser()
-        self.read_all_signals()
-    
-        for signal, i in sorted(self.dict_all_signals.items(), key=lambda item: item[1]):
-            row_position = self.tb_signals.rowCount()
-            self.tb_signals.insertRow(row_position)
-            self.tb_signals.setItem(i, 0, QTableWidgetItem(signal))
 
-        # ставим указатель на первый сигнал ()
-        self.tb_signals.selectRow(0)
+        if self.files:
+            self.parser(self.files[0])
+            self.read_all_signals()
+        
+            for signal, i in sorted(self.dict_all_signals.items(), key=lambda item: item[1]):
+                row_position = self.tb_signals.rowCount()
+                self.tb_signals.insertRow(row_position)
+                self.tb_signals.setItem(i, 0, QTableWidgetItem(signal))
 
-    def parser(self) -> None:
+            # ставим указатель на первый сигнал ()
+            self.tb_signals.selectRow(0)
+
+    def parser(self, file: str = None) -> None:
         """ 
         Detect encoding, delimiter, decimal in opened files
         only in first file
         """
-        if self.extension.endswith('(*.gz)'): # если файлы архивы
+        if file and self.extension.endswith('(*.gz)'): # если файлы архивы
             with gzip.open(self.files[0], 'rb') as f:
                 data_raw = f.read(20000)
                 second_row_raw = f.readlines()[1] # вторая строка быстрых
-        else:
+        elif file:
             with open(self.files[0], 'rb') as f:
                 data_raw = f.read(20000)
                 second_row_raw = f.readlines()[1]
 
         # Кодировка
-        self.encoding = chardet.detect(data_raw).get('encoding')
+        if file:
+            self.encoding = chardet.detect(data_raw).get('encoding')
 
-        if self.encoding:
-            # Разделитель
+        # Разделитель
+        if file and self.encoding:
             data_str = data_raw[:200].decode(self.encoding)
             if data_str.count(';'):
                 self.delimiter = ';'
@@ -223,15 +226,13 @@ class MainWindow(QMainWindow):
 
             self.ql_info.setText(f"Исходные файлы: encoding: {self.encoding} delimiter: {repr(self.delimiter)} decimal: {self.decimal}")
         else:
-            text = f"Не удалось определить кодировку, попробуйте разархивировать файл {self.files[0]}"
+            text = f"Не удалось определить кодировку, попробуйте разархивировать файл {file}"
             self.dialog_box(text)
 
     def add_signal(self, qlist_axe: QListWidget = 0, dict_axe: Dict = {}) -> None:
         """
         Remove signal from Qtable(Список сигналов) and append his to qlist(given qlist) and dict_axe
         """
-        print(self.tb_signals.rowCount())
-        print(self.tb_signals)
         if self.tb_signals.rowCount():
             row = self.tb_signals.currentRow()
             add_signal = self.tb_signals.item(row, 0).text()
@@ -244,8 +245,6 @@ class MainWindow(QMainWindow):
         else:
             self.dialog_box(f"Don't open files.\n\tor\nAll signals are already selected.")
         
-        print(self.dict_all_signals)
-
     def remove_signal(self, qlist_axe: QListWidget, dict_axe: Dict = {}) -> None:
         """
         Remove signal from Qlist(given qlist) and append his to Qtable(Список сигналов) and dict_axe
@@ -255,7 +254,6 @@ class MainWindow(QMainWindow):
             remove_row_signal = dict_axe.pop(remove_signal)
             self.dict_all_signals.setdefault(remove_row_signal, remove_signal)
             row_position = self.tb_signals.rowCount()
-            print(remove_row_signal, remove_signal)
             self.tb_signals.insertRow(row_position)
             self.tb_signals.setItem(remove_row_signal, 0, QTableWidgetItem(remove_signal))
             self.tb_signals.selectRow(0) # ставим указатель на первый сигнал
