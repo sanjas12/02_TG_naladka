@@ -1,7 +1,17 @@
 import sys
 from typing import List
-from PyQt5.QtWidgets import QApplication, QComboBox, QHBoxLayout, QLabel, QGroupBox, QVBoxLayout, QWidget, \
-    QDialog, QPushButton, QMainWindow
+from PyQt5.QtWidgets import (
+                            QApplication, 
+                            QComboBox, 
+                            QHBoxLayout,
+                            QLabel,
+                            QGroupBox,
+                            QVBoxLayout,
+                            QWidget,
+                            QDialog,
+                            QPushButton,
+                            QMainWindow
+                            )
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib.pyplot as plt
@@ -100,14 +110,11 @@ class WindowGrath(QMainWindow):
 
         if self.base_axe:
             ax1 = self.figure.add_subplot()
-            # fig = plt.figure()
-            # ax1 = fig.add_subplot()
             ax1.grid(linestyle='--', linewidth=0.5, alpha=.85)
             for i, signal in enumerate(self.base_axe):
                                 # X                     Y
                 ax1.plot(self.axe_x[::self.step], self.data[signal][::self.step], lw=2, label=signal)
                 print(signal)
-            # print(ax1.set_ylabel.__code__.co_varnames)
             ax1.set_ylabel(',\n'.join(self.base_axe))
             ax1.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
             ax1.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
