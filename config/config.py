@@ -16,3 +16,6 @@ OUT_FILE = Path(OUT_DIR, 'out_merge.csv')
 FORMAT = '%(asctime)s:%(levelname)s:%(message)s'
 
 MYTIME = 'my time, c'
+
+# plot
+TICK_MARK_COUNT = 10
