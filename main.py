@@ -1,3 +1,4 @@
+import time
 import pandas as pd
 import sys
 import chardet
@@ -12,19 +13,17 @@ from config.config import MYTIME
 class MainWindow(QMainWindow):
     cycle_plc = 0.01
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
-        self.width = 640
-        self.height = 400
+        self.df = None
+        self.ready_plot = False
         self.files, self.extension = None, None
-        self.field_x, self.field_y,  self.field_y2 = [], [], []
+        self.base_signals, self.secondary_signals = [], []
         self.dict_x_axe, self.dict_base_axe, self.dict_secondary_axe = {}, {}, {}
         self.field_name = ("Основная Ось", "Вспомогательная Ось", "Ось X (Времени)")
-        self.time_c = MYTIME
-        self.df = None
         self.setup_ui()
 
-    def setup_ui(self):
+    def setup_ui(self) -> None:
         self.setWindowTitle(__file__)
 
         # Список сигналов:
@@ -144,7 +143,7 @@ class MainWindow(QMainWindow):
         
     def open_files(self) -> None:
         """
-        Return List opened files and his extension
+        Create List contein opened files and his extension
         """
         FILE_FILTERS = [
             "GZ Files (*.gz)",
@@ -164,13 +163,6 @@ class MainWindow(QMainWindow):
             df_all_signals = df_all_signals.loc[:, ~df_all_signals.columns.str.contains('^Unnamed')]
             self.dict_all_signals = {signal:i for i, signal in enumerate(df_all_signals)}
            
-            # добавление моего времени
-            self.dict_all_signals[self.time_c] = len(self.dict_all_signals)
-
-            # и тут же перемещаем ее на "Ось Х"
-            self.dict_x_axe.setdefault(*self.dict_all_signals.popitem())
-            self.qlist_x_axe.addItem(self.time_c)
-            
     def insert_all_signals(self) -> None:
         """
         Clear all old signals and insert new signals to QTable(Список сигналов)
@@ -239,7 +231,7 @@ class MainWindow(QMainWindow):
             remove_row = self.dict_all_signals.pop(add_signal)
             dict_axe.setdefault(add_signal, remove_row)
             self.tb_signals.removeRow(row) 
-            self.tb_signals.selectRow(0) # ставим указатель на первый сигнал
+            # self.tb_signals.selectRow(0) # ставим указатель на первый сигнал
             qlist_axe.addItem(add_signal)  # добавляем 
             qlist_axe.setCurrentRow(0)
         else:
@@ -272,80 +264,52 @@ class MainWindow(QMainWindow):
         self.qlist_secondary_axe.clear()
         self.qlist_x_axe.clear()
         self.tb_signals.setRowCount(0)
-
-    def load_field_name(self, qlist_axe: QListWidget, field_name: str, num: int) -> str:
+    
+    def load_signals_name(self, qlist_axe: QListWidget, num: int) -> List:
         if qlist_axe.count() > 0:
-            field_name = []
-            for _ in range(qlist_axe.count()):
-                field_name.append(qlist_axe.item(_).text())
-            print(self.field_name[num], field_name)
+            return [qlist_axe.item(_).text() for _ in range(qlist_axe.count())]
         else:
-            print(f"Для {self.field_name[num]} не выбраны сигналы")
-        return field_name
+            print(f"{time.ctime()} -> Для {self.field_name[num]} не выбраны сигналы")
+            return []
 
-    # FIXME
     def load_data(self) -> None:
         self.df = None
-        self.field_x.clear(), self.field_y.clear(), self.field_y2.clear()
-        self.field_y = self.load_field_name(self.qlist_base_axe, self.field_y, 0) 
-        self.field_y2 = self.load_field_name(self.qlist_secondary_axe, self.field_y2, 1) 
-        self.field_x = self.load_field_name(self.qlist_x_axe, self.field_x, 2) 
+        self.base_signals.clear(), self.secondary_signals.clear()
         
-        # Основная загрузка данных (из множества CSV файлов)
-        if self.files:
+        self.base_signals = self.load_signals_name(self.qlist_base_axe, 0) 
+        self.secondary_signals = self.load_signals_name(self.qlist_secondary_axe, 1) 
+        self.x_axe = self.load_signals_name(self.qlist_x_axe, 2)
+        row = self.tb_signals.selectRow(0)
+        print('row ->', row)
+
+        # Основная загрузка данных (из нескольких файлов)
+        if self.files and (self.base_signals or self.secondary_signals):
+            
+            # автоматически перемещаем 0 сигнал(дата/время) на Ось Х
+            time = self.tb_signals.item(row, 0).text()
+            remove_row = self.dict_all_signals.pop(time)
+            print(remove_row)
+
             self.df = pd.concat(pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
-                                            usecols=self.field_y+self.field_y2, decimal=self.decimal) for file in self.files)
+                                            usecols=self.base_signals+self.secondary_signals+self.x_axe, decimal=self.decimal) for file in self.files)
 
             self.number_raw_point.setText(str(len(self.df.index)))
-            # для токов и мощностей учет отрицательных значений
-            all_signals = ['Электрическая мощность двигателя ЭМП ОЗ ГСМ-А, десятки Вт',
-                           'Электрическая мощность двигателя ЭМП ОЗ ГСМ-Б, десятки Вт',
-                           'Ток момента двигателя ЭМП ОЗ ГСМ-А, десятки мА',
-                           'Ток момента двигателя ЭМП ОЗ ГСМ-Б, десятки мА',
-                           'Ток статора ЭМП ОЗ ГСМ-А, десятки мА',
-                           'Ток статора ЭМП ОЗ ГСМ-Б, десятки мА']
-            for _ in self.field_y:
-                if _ in all_signals:
-                    self.df[_] = self.df[_].where(lambda x: x < 50000, lambda x: x - 65536)
-                    print(_, ' - есть такой')
-                else:
-                    pass
-                    # print(_, ' - нет такого')
-            for _ in self.field_y2:
-                if _ in all_signals:
-                    self.df[_] = self.df[_].where(lambda x: x < 50000, lambda x: x - 65536)
-                    print(_, ' - есть такой')
-                else:
-                    pass
-                    # print(_, ' - нет такого')
 
-            # добавляем колонку time если ее нет
-            if self.time_c not in self.df:
-                self.df[self.time_c] = [_ * __class__.cycle_plc for _ in range(len(self.df.index))]
-                print('Time added.')
-            else:
-                print("Time exist in DataFrame")
-
+            self.ready_plot = True
         else:
-            text = "Не открыты файлы архивов"
+            text = f"Не открыты файлы архивов или не выбраны сигналы"
             self.dialog_box(text)
 
-        print('-' * 30)
-
     def dialog_box(self, text: str) -> None:
-        dlg = QMessageBox.information(self, 'TG_info', text, QMessageBox.StandardButton.Ok)
+        QMessageBox.information(self, 'TG_info', text, QMessageBox.StandardButton.Ok)
 
     def plot_grath(self) -> None:
         self.load_data()
-        if self.field_y or self.field_y2:
+        if self.ready_plot:
             self.number_plot_point.setText(str(int(len(self.df.index)/int(self.combobox_dot.currentText()))))
-            self.grath = WindowGrath(self.df, self.field_y, self.field_y2,
-                                step=self.combobox_dot.currentText(),
-                                filename=self.files[0])
+            self.grath = WindowGrath(self.df, self.base_signals, self.secondary_signals, *self.x_axe, 
+                                    step=self.combobox_dot.currentText(), filename=self.files[0])
             self.grath.show()
-        else:
-            text = "Не выбраны сигналы для отображения"
-            self.dialog_box(text)
 
 def main():
     app = QApplication(sys.argv)
