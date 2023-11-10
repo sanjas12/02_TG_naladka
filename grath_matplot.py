@@ -8,7 +8,6 @@ from PyQt5.QtWidgets import (
                             QGroupBox,
                             QVBoxLayout,
                             QWidget,
-                            QDialog,
                             QPushButton,
                             QMainWindow
                             )
@@ -19,13 +18,12 @@ import random
 import pandas as pd
 from matplotlib.widgets import CheckButtons
 import matplotlib.ticker as ticker
-from config.config import MYTIME
+from config.config import MYTIME, TICK_MARK_COUNT
 
-TICK_MARK_COUNT = 20
 
 class WindowGrath(QMainWindow):
-    def __init__(self, data: pd.DataFrame, base_axe: List = [], secondary_axe: List = [], axe_x: List = [],
-                 step: int = 1, filename: str = None) -> None:
+    def __init__(self, data: pd.DataFrame, base_axe: List = [str], secondary_axe: List = [str],
+                x_axe: str = None, step: int = 1, filename: str = None) -> None:
         """
         Class to plot grath
         """
@@ -37,9 +35,7 @@ class WindowGrath(QMainWindow):
         self.color_inv = self.color[::-1]
         self.base_axe = base_axe
         self.secondary_axe = secondary_axe
-        self.axe_x = axe_x
-        # print(self.axe_x, self.base_axe, self.secondary_axe, sep='\n')
-        self.columns = self.data.columns
+        self.x_axe = x_axe
         self.label_list = []
         self.lines_list = []
 
@@ -105,27 +101,29 @@ class WindowGrath(QMainWindow):
         plt.draw()
 
     def plot(self) -> None:
-        # self.figure.clear()
         self.set_suptitle_grath()
 
         if self.base_axe:
             ax1 = self.figure.add_subplot()
             ax1.grid(linestyle='--', linewidth=0.5, alpha=.85)
-            for i, signal in enumerate(self.base_axe):
-                                # X                     Y
-                ax1.plot(self.axe_x[::self.step], self.data[signal][::self.step], lw=2, label=signal)
-                print(signal)
+            for signal in self.base_axe:
+                                     # X                                   Y
+                ax1.plot(self.data[self.x_axe][::self.step], self.data[signal][::self.step], lw=2, label=signal)
             ax1.set_ylabel(',\n'.join(self.base_axe))
             ax1.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
             ax1.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
             ax1.legend(loc=2)
-            ax1.set_xlabel(MYTIME)
+            ax1.set_xlabel('Время', loc='right')
+            # ax1.set_xticklabels(ax1.get_xticks(), rotation = 45)
+            for tick in ax1.get_xticklabels():
+                # print(tick)
+                tick.set_rotation(15)
 
         if self.secondary_axe:
             ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
             for i, signal in enumerate(self.secondary_axe):
-                                  # X                     Y
-                ax2.plot(self.axe_x[::self.step], self.data[signal][::self.step], ls='-.', lw=2, label=signal, color=self.color_inv[i])
+                                            # X                               Y
+                ax2.plot(self.data[self.x_axe][::self.step], self.data[signal][::self.step], ls='-.', lw=2, label=signal, color=self.color_inv[i])
                 ax2.tick_params(axis='y', labelcolor='b')
                 ax2.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
                 ax2.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
@@ -172,7 +170,7 @@ def main():
     y2 = [first_signal, 'ГСМ-Б']
 
     app = QApplication(sys.argv)
-    ex = WindowGrath(df, base_axe=y1, secondary_axe=y2, axe_x=df[MYTIME], filename='E:/ТГ41-2021-06-25_134810_14099.csv.gz ')
+    ex = WindowGrath(df, base_axe=y1, secondary_axe=y2, x_axe=MYTIME, filename='E:/ТГ41-2021-06-25_134810_14099.csv.gz ')
     ex.show()
 
     try:
