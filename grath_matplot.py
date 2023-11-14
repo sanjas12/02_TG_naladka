@@ -113,7 +113,7 @@ class WindowGrath(QMainWindow):
             ax1.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
             ax1.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
             ax1.legend(loc=2)
-            ax1.set_xlabel('Время', loc='right')
+            ax1.set_xlabel(self.x_axe, loc='right')
             # ax1.set_xticklabels(ax1.get_xticks(), rotation = 45)
             for tick in ax1.get_xticklabels():
                 # print(tick)

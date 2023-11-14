@@ -180,7 +180,21 @@ class MainWindow(QMainWindow):
                 self.tb_signals.insertRow(row_position)
                 self.tb_signals.setItem(i, 0, QTableWidgetItem(signal))
 
-            # ставим указатель на первый сигнал ()
+            # автоматически перемещаем 0 сигнал(дата/время) на Ось Х
+            self.tb_signals.selectRow(0)
+            row = self.tb_signals.currentRow()
+            time = self.tb_signals.item(row, 0).text()
+            remove_row = self.dict_all_signals.pop(time)
+            print(row, time, remove_row)
+
+            self.dict_x_axe.setdefault(time, remove_row)
+            self.tb_signals.removeRow(row) 
+
+            # вставить ось Х на место ОСЬ Х
+            self.qlist_x_axe.addItem(time)  # добавляем 
+            self.qlist_x_axe.setCurrentRow(0)
+            
+            # ставим указатель на первый сигнал (Список сигналов)
             self.tb_signals.selectRow(0)
 
     def parser(self, file: str = None) -> None:
@@ -285,10 +299,7 @@ class MainWindow(QMainWindow):
         # Основная загрузка данных (из нескольких файлов)
         if self.files and (self.base_signals or self.secondary_signals):
             
-            # автоматически перемещаем 0 сигнал(дата/время) на Ось Х
-            time = self.tb_signals.item(row, 0).text()
-            remove_row = self.dict_all_signals.pop(time)
-            print(remove_row)
+
 
             self.df = pd.concat(pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
                                             usecols=self.base_signals+self.secondary_signals+self.x_axe, decimal=self.decimal) for file in self.files)
