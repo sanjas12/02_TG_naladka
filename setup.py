@@ -5,7 +5,6 @@ from cx_Freeze import setup, Executable
 
 
 file = "setup.py"
-# python_dir = os.path.dirname(sys.executable)
 
 with open(file, 'r+', encoding='utf-8') as f:
     version = f.readline().split('.')
@@ -15,6 +14,7 @@ with open(file, 'r+', encoding='utf-8') as f:
     f.write(version)
 
 # для включения конкретных файлов в build
+# python_dir = os.path.dirname(sys.executable)
 # files = [("install.cmd"), os.path.join(python_dir, "vcruntime140.dll")]
 # files = [os.path.join(python_dir, "vcruntime140.dll")]
 
