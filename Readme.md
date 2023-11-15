@@ -38,6 +38,7 @@ TODO
 8. Сделать мобильную версию
 9. Добавить тесты
 10. Поиск в списке сигналов (Qtablewidget) https://stackoverflow.com/questions/51613638/highlight-search-results-in-qtablewidgetselect-and-highlight-that-text-or-chara
+11. Портировать на Linux(Astra и Ubuntu)
 
 help:
 python -m pip  install -r requirements.txt --no-index -f d:\\temp\\python_Library
