@@ -1,0 +1,25 @@
+TG-Naladka v0.0.1.21 Release Notes
+==========================
+
+Fixes since v0.0.1.20
+------------------
+
+* Bugfixes
+
+  - Refactor:
+    - Rename grath to grath_marplot and refactor her
+    - All methods MainWindow class in Main.py
+    - Remove  # для токов и мощностей учет отрицательных значений
+    - Remove  # добавляем колонку time если ее нет
+  - Update:
+    - Readme.md
+    - requirements.txt
+    - 
+
+* Tweaks
+
+  - Add MYTIME in confif.py
+  - Add TICK_MARK_COUNT in confif.py
+  - Add BUG_TRAKER
+  - Add groupbox.py for further switching by groupbox
+  - Add build_version to title MainWindow GUI
