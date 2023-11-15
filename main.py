@@ -7,13 +7,14 @@ from typing import List, Dict, Tuple
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGroupBox, \
     QVBoxLayout, QGridLayout, QLabel, QFileDialog, QListWidget, QComboBox, QMainWindow, \
     QMessageBox, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
+from win32api import GetFileVersionInfo
 from grath_matplot import WindowGrath
 from config.config import MYTIME
 
 class MainWindow(QMainWindow):
     cycle_plc = 0.01
 
-    def __init__(self) -> None:
+    def __init__(self, version: str) -> None:
         super().__init__()
         self.df = None
         self.ready_plot = False
@@ -21,10 +22,10 @@ class MainWindow(QMainWindow):
         self.base_signals, self.secondary_signals = [], []
         self.dict_x_axe, self.dict_base_axe, self.dict_secondary_axe = {}, {}, {}
         self.field_name = ("Основная Ось", "Вспомогательная Ось", "Ось X (Времени)")
-        self.setup_ui()
+        self.setup_ui(version)
 
-    def setup_ui(self) -> None:
-        self.setWindowTitle(__file__)
+    def setup_ui(self, version) -> None:
+        self.setWindowTitle(version)
 
         # Список сигналов:
         self.tb_signals = QTableWidget()
@@ -323,8 +324,19 @@ class MainWindow(QMainWindow):
             self.grath.show()
 
 def main():
-    app = QApplication(sys.argv)
-    ex = MainWindow()
+    global app
+    sys_argv = sys.argv
+    if '.exe' in sys.argv[0]:                                # если EXE in Win
+        version = GetFileVersionInfo(sys.argv[0], '\\')
+        version = (version['FileVersionMS'] // 65536, version['FileVersionMS'] % 65536, version['FileVersionLS'] // 65536, version['FileVersionLS'] % 65536)
+        version = '#' + '.'.join(map(str, version))
+    else:
+        with open('setup.py', 'r+', encoding='utf-8') as f:
+            version = f.readline()
+        print(version)
+
+    app = QApplication(sys_argv)
+    ex = MainWindow(version)
     ex.show()
     try:
         sys.exit(app.exec())
