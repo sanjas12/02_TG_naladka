@@ -11,6 +11,59 @@ from win32api import GetFileVersionInfo
 from grath_matplot import WindowGrath
 from config.config import MYTIME
 
+
+class MyGroupBox(QWidget):
+        """
+        My group box Widget
+        """
+        def __init__(self, parent = None, name: str = ''):
+            super().__init__(parent)
+            self.qlist_base_axe = QListWidget()
+            btn_base_axe_add = QPushButton(f'Add to {name}')
+            btn_base_axe_add.clicked.connect(lambda: self.add_signal(self.qlist_base_axe, self.dict_base_axe))
+            btn_base_axe_remove = QPushButton(f'Remove from {name}')
+            btn_base_axe_remove.clicked.connect(lambda: self.remove_signal(self.qlist_base_axe, self.dict_base_axe))
+            
+            base_axe_layout = QVBoxLayout()
+            base_axe_layout.addWidget(self.qlist_base_axe)
+            base_axe_layout.addWidget(btn_base_axe_add)
+            base_axe_layout.addWidget(btn_base_axe_remove)
+            
+            self.gb_base_axe = QGroupBox(name)
+            self.gb_base_axe.setLayout(base_axe_layout)
+        
+        def add_signal(self, qlist_axe: QListWidget = 0, dict_axe: Dict = {}) -> None:
+            """
+            Remove signal from Qtable(Список сигналов) and append his to qlist(given qlist) and dict_axe
+            """
+            if self.tb_signals.rowCount():
+                row = self.tb_signals.currentRow()
+                add_signal = self.tb_signals.item(row, 0).text()
+                remove_row = self.dict_all_signals.pop(add_signal)
+                dict_axe.setdefault(add_signal, remove_row)
+                self.tb_signals.removeRow(row) 
+                # self.tb_signals.selectRow(0) # ставим указатель на первый сигнал
+                qlist_axe.addItem(add_signal)  # добавляем 
+                qlist_axe.setCurrentRow(0)
+            else:
+                self.dialog_box(f"Don't open files.\n\tor\nAll signals are already selected.")
+        
+        def remove_signal(self, qlist_axe: QListWidget, dict_axe: Dict = {}) -> None:
+            """
+            Remove signal from Qlist(given qlist) and append his to Qtable(Список сигналов) and dict_axe
+            """
+            if qlist_axe.count() and qlist_axe.currentRow() != -1:
+                remove_signal = qlist_axe.takeItem(qlist_axe.currentRow()).text()
+                remove_row_signal = dict_axe.pop(remove_signal)
+                self.dict_all_signals.setdefault(remove_row_signal, remove_signal)
+                row_position = self.tb_signals.rowCount()
+                self.tb_signals.insertRow(row_position)
+                self.tb_signals.setItem(remove_row_signal, 0, QTableWidgetItem(remove_signal))
+                self.tb_signals.selectRow(0) # ставим указатель на первый сигнал
+            else:
+                self.dialog_box("don't select signals for removing")
+
+
 class MainWindow(QMainWindow):
     cycle_plc = 0.01
 
