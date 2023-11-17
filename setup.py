@@ -1,6 +1,6 @@
 #0.0.1.21
 import sys
-# import os
+import os
 from cx_Freeze import setup, Executable
 
 
@@ -15,8 +15,10 @@ with open(file, 'r+', encoding='utf-8') as f:
 
 # для включения конкретных файлов в build
 # python_dir = os.path.dirname(sys.executable)
+# print(python_dir)
 # files = [("install.cmd"), os.path.join(python_dir, "vcruntime140.dll")]
 # files = [os.path.join(python_dir, "vcruntime140.dll")]
+# print(files)
 
 
 # Dependencies are automatically detected, but it might need fine tuning.
@@ -30,6 +32,7 @@ build_exe_options = {
     "optimize": 0,      # c 2 exe не запускается
     # "zip_include_packages": ["PyQt5", "matplotlib"],
     # "include_files" : files
+    "include_files" : ['Documentation/']
 }
 
 # base="Win32GUI" should be used only for Windows GUI app. If comment this line, will appear console
