@@ -16,22 +16,29 @@ class MyGroupBox(QWidget):
         """
         My group box Widget
         """
-        def __init__(self, parent = None, name: str = ''):
+        def __init__(self, parent = None, name: str = '', dict_axe: Dict = {}):
             super().__init__(parent)
-            self.qlist_base_axe = QListWidget()
-            btn_base_axe_add = QPushButton(f'Add to {name}')
-            btn_base_axe_add.clicked.connect(lambda: self.add_signal(self.qlist_base_axe, self.dict_base_axe))
-            btn_base_axe_remove = QPushButton(f'Remove from {name}')
-            btn_base_axe_remove.clicked.connect(lambda: self.remove_signal(self.qlist_base_axe, self.dict_base_axe))
+            self.qlist_signal = QListWidget()
+            btn_add = QPushButton(f'Add to {name}')
+            btn_add.clicked.connect(lambda: self.add_signal(self.qlist_signal, dict_axe))
+            btn_remove = QPushButton(f'Remove from {name}')
+            btn_remove.clicked.connect(lambda: self.remove_signal(self.qlist_signal, dict_axe))
             
-            base_axe_layout = QVBoxLayout()
-            base_axe_layout.addWidget(self.qlist_base_axe)
-            base_axe_layout.addWidget(btn_base_axe_add)
-            base_axe_layout.addWidget(btn_base_axe_remove)
+            layout = QVBoxLayout()
+            layout.addWidget(self.qlist_signal)
+            layout.addWidget(btn_add)
+            layout.addWidget(btn_remove)
             
-            self.gb_base_axe = QGroupBox(name)
-            self.gb_base_axe.setLayout(base_axe_layout)
-        
+            gb = QGroupBox(name)
+            self.setLayout(layout)
+
+            main = QHBoxLayout
+            main.addWidget(gb)
+
+            wid = QWidget()
+            wid.setLayout(main)
+            # self.setCentralWidget(wid)
+
         def add_signal(self, qlist_axe: QListWidget = 0, dict_axe: Dict = {}) -> None:
             """
             Remove signal from Qtable(Список сигналов) and append his to qlist(given qlist) and dict_axe
@@ -97,60 +104,20 @@ class MainWindow(QMainWindow):
         self.gb_signals = QGroupBox("Список сигналов")
         self.gb_signals.setLayout(signals_layout)
 
-        # Основная ось:
-        self.qlist_base_axe = QListWidget()
-        btn_base_axe_add = QPushButton('Add to Y')
-        btn_base_axe_add.clicked.connect(lambda: self.add_signal(self.qlist_base_axe, self.dict_base_axe))
-        btn_base_axe_remove = QPushButton('Remove from Y')
-        btn_base_axe_remove.clicked.connect(lambda: self.remove_signal(self.qlist_base_axe, self.dict_base_axe))
-        
-        base_axe_layout = QVBoxLayout()
-        base_axe_layout.addWidget(self.qlist_base_axe)
-        base_axe_layout.addWidget(btn_base_axe_add)
-        base_axe_layout.addWidget(btn_base_axe_remove)
-        
-        self.gb_base_axe = QGroupBox("Основная Ось")
-        self.gb_base_axe.setLayout(base_axe_layout)
+        # Оси:
+        self.base = MyGroupBox(name='Основная ось', dict_axe=self.dict_base_axe)
+        self.secondary = MyGroupBox(name='Вспомогательная ось', dict_axe=self.dict_secondary_axe)
+        self.x_a = MyGroupBox(name='Ось Х', dict_axe=self.dict_x_axe)
 
-        # Вспомогательная ось:
-        self.qlist_secondary_axe = QListWidget()
-        btn_secondary_axe_add = QPushButton('Add to Y2')
-        btn_secondary_axe_add.clicked.connect(lambda: self.add_signal(self.qlist_secondary_axe, self.dict_secondary_axe))
-        btn_secondary_axe_remove = QPushButton('Remove from Y2')
-        btn_secondary_axe_remove.clicked.connect(lambda: self.remove_signal(self.qlist_secondary_axe, self.dict_secondary_axe))
-        
-        secondary_axe_layout = QVBoxLayout()
-        secondary_axe_layout.addWidget(self.qlist_secondary_axe)
-        secondary_axe_layout.addWidget(btn_secondary_axe_add)
-        secondary_axe_layout.addWidget(btn_secondary_axe_remove)
-        
-        self.gb_secondary_axe = QGroupBox("Вспомогательная Ось")
-        self.gb_secondary_axe.setLayout(secondary_axe_layout)
-
-        # Ось X
-        self.qlist_x_axe = QListWidget()
-        btn_x_axe_add = QPushButton('Add to X')
-        btn_x_axe_add.clicked.connect(lambda: self.add_signal(self.qlist_x_axe, self.dict_x_axe))
-        btn_x_axe_remove = QPushButton('Remove from X')
-        btn_x_axe_remove.clicked.connect(lambda: self.remove_signal(self.qlist_x_axe, self.dict_x_axe))
-        
-        layout_x_axe = QVBoxLayout()
-        layout_x_axe.addWidget(self.qlist_x_axe)
-        layout_x_axe.addWidget(btn_x_axe_add)
-        layout_x_axe.addWidget(btn_x_axe_remove)
-        
-        self.gb_x_axe = QGroupBox("Ось X")
-        self.gb_x_axe.setLayout(layout_x_axe)
-        
         # первый слой
-        self.first_huge_lay = QHBoxLayout()
-        self.first_huge_lay.addWidget(self.gb_signals)
-        self.first_huge_lay.addWidget(self.gb_base_axe)
-        self.first_huge_lay.addWidget(self.gb_secondary_axe)
-        self.first_huge_lay.addWidget(self.gb_x_axe)
+        self.first_lay = QHBoxLayout()
+        self.first_lay.addWidget(self.gb_signals)
+        self.first_lay.addWidget(self.base)
+        self.first_lay.addWidget(self.secondary)
+        self.first_lay.addWidget(self.x_a)
 
-        self.first_huge_GroupBox = QGroupBox()
-        self.first_huge_GroupBox.setLayout(self.first_huge_lay)
+        self.first_GroupBox = QGroupBox()
+        self.first_GroupBox.setLayout(self.first_lay)
 
         # второй слой 
         self.ql_info = QLabel()
@@ -158,8 +125,8 @@ class MainWindow(QMainWindow):
         self.second_lay = QHBoxLayout()
         self.second_lay.addWidget(self.ql_info)
 
-        self.second_huge_GroupBox = QGroupBox()
-        self.second_huge_GroupBox.setLayout(self.second_lay)
+        self.second_GroupBox = QGroupBox()
+        self.second_GroupBox.setLayout(self.second_lay)
 
         # третий слой 
         self.number_raw_point = QLabel()
@@ -171,25 +138,25 @@ class MainWindow(QMainWindow):
         button_grath = QPushButton('Построить графики')
         button_grath.clicked.connect(self.plot_grath)
 
-        second_vertical_lay = QGridLayout()
-        second_vertical_lay.addWidget(QLabel('Количество исходных данных:'), 0, 0)
-        second_vertical_lay.addWidget(QLabel('Выборка, каждые:'), 1, 0)
-        second_vertical_lay.addWidget(QLabel('Количество отображаемых данных:'), 2, 0)
-        second_vertical_lay.addWidget(self.number_raw_point, 0, 1)
-        second_vertical_lay.addWidget(self.combobox_dot, 1, 1)
-        second_vertical_lay.addWidget(self.number_plot_point, 2, 1)
-        second_vertical_lay.addWidget(QLabel(), 2, 3)
-        second_vertical_lay.addWidget(QLabel(), 2, 4)
-        second_vertical_lay.addWidget(button_grath, 2, 5)
+        third_lay = QGridLayout()
+        third_lay.addWidget(QLabel('Количество исходных данных:'), 0, 0)
+        third_lay.addWidget(QLabel('Выборка, каждые:'), 1, 0)
+        third_lay.addWidget(QLabel('Количество отображаемых данных:'), 2, 0)
+        third_lay.addWidget(self.number_raw_point, 0, 1)
+        third_lay.addWidget(self.combobox_dot, 1, 1)
+        third_lay.addWidget(self.number_plot_point, 2, 1)
+        third_lay.addWidget(QLabel(), 2, 3)
+        third_lay.addWidget(QLabel(), 2, 4)
+        third_lay.addWidget(button_grath, 2, 5)
         
-        self.third_huge_GroupBox = QGroupBox()
-        self.third_huge_GroupBox.setLayout(second_vertical_lay)
+        self.third_GroupBox = QGroupBox()
+        self.third_GroupBox.setLayout(third_lay)
         
         # main_layout
         main_layout = QVBoxLayout()
-        main_layout.addWidget(self.first_huge_GroupBox)
-        main_layout.addWidget(self.second_huge_GroupBox)
-        main_layout.addWidget(self.third_huge_GroupBox)
+        main_layout.addWidget(self.first_GroupBox)
+        main_layout.addWidget(self.second_GroupBox)
+        main_layout.addWidget(self.third_GroupBox)
 
         wid = QWidget(self)
         self.setCentralWidget(wid)
@@ -289,37 +256,6 @@ class MainWindow(QMainWindow):
             text = f"Не удалось определить кодировку, попробуйте разархивировать файл {file}"
             self.dialog_box(text)
 
-    def add_signal(self, qlist_axe: QListWidget = 0, dict_axe: Dict = {}) -> None:
-        """
-        Remove signal from Qtable(Список сигналов) and append his to qlist(given qlist) and dict_axe
-        """
-        if self.tb_signals.rowCount():
-            row = self.tb_signals.currentRow()
-            add_signal = self.tb_signals.item(row, 0).text()
-            remove_row = self.dict_all_signals.pop(add_signal)
-            dict_axe.setdefault(add_signal, remove_row)
-            self.tb_signals.removeRow(row) 
-            # self.tb_signals.selectRow(0) # ставим указатель на первый сигнал
-            qlist_axe.addItem(add_signal)  # добавляем 
-            qlist_axe.setCurrentRow(0)
-        else:
-            self.dialog_box(f"Don't open files.\n\tor\nAll signals are already selected.")
-        
-    def remove_signal(self, qlist_axe: QListWidget, dict_axe: Dict = {}) -> None:
-        """
-        Remove signal from Qlist(given qlist) and append his to Qtable(Список сигналов) and dict_axe
-        """
-        if qlist_axe.count() and qlist_axe.currentRow() != -1:
-            remove_signal = qlist_axe.takeItem(qlist_axe.currentRow()).text()
-            remove_row_signal = dict_axe.pop(remove_signal)
-            self.dict_all_signals.setdefault(remove_row_signal, remove_signal)
-            row_position = self.tb_signals.rowCount()
-            self.tb_signals.insertRow(row_position)
-            self.tb_signals.setItem(remove_row_signal, 0, QTableWidgetItem(remove_signal))
-            self.tb_signals.selectRow(0) # ставим указатель на первый сигнал
-        else:
-            self.dialog_box("don't select signals for removing")
-        
     def clear_signals(self) -> None:
         """
         Clear All QListWidgets (Список сигналов, Основная Ось, Вспомогательная, Ось X)
