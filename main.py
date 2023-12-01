@@ -72,8 +72,6 @@ class MyGroupBox(QWidget):
 
 
 class MainWindow(QMainWindow):
-    cycle_plc = 0.01
-
     def __init__(self, version: str) -> None:
         super().__init__()
         self.df = None
