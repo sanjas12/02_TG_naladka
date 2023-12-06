@@ -12,3 +12,20 @@
             File "h:/My_Works/Python/02_TG_naladka/main.py", line 242, in add_signal
                 remove_row = self.dict_all_signals.pop(add_signal)
             KeyError: 'фрЄр/тЁхь '
+3. При добавлении любого сигнала в QTable (вспомогательная ОСь):
+    branch -> master
+    file -> "e:\2023_12_04 - слетает референс_ТГ6\Новая папка\ТГ61-2023-05-15_141720_26926_.csv" 
+            
+            Traceback (most recent call last):
+            File "d:\My_work\Python\02_TG_naladka\main.py", line 322, in plot_grath
+                self.grath = WindowGrath(self.df, self.base_signals, self.secondary_signals, *self.x_axe, 
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            File "d:\My_work\Python\02_TG_naladka\grath_matplot.py", line 42, in __init__
+                self.ui()
+            File "d:\My_work\Python\02_TG_naladka\grath_matplot.py", line 87, in ui
+                self.plot()
+            File "d:\My_work\Python\02_TG_naladka\grath_matplot.py", line 123, in plot
+                ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+                    ^^^
+            UnboundLocalError: cannot access local variable 'ax1' where it is not associated with a value
+            (base) 
