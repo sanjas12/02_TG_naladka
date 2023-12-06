@@ -133,6 +133,7 @@ class WindowGrath(QMainWindow):
         # refresh canvas
         self.canvas.draw()        
 
+    #TODO rewrite by re module
     def set_suptitle_grath(self):
         if not self.filename:
             self.figure.suptitle(__file__)
