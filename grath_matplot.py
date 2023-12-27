@@ -31,7 +31,7 @@ class WindowGrath(QMainWindow):
         self.filename = filename
         self.data = data
         self.step = int(step)
-        self.color = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
+        self.color = ['b', 'g', 'r', 'c', 'm', 'purple', 'k']
         self.color_inv = self.color[::-1]
         self.base_axe = base_axe
         self.secondary_axe = secondary_axe
@@ -133,29 +133,22 @@ class WindowGrath(QMainWindow):
         # refresh canvas
         self.canvas.draw()        
 
-    #TODO rewrite by re module
     def set_suptitle_grath(self):
         if not self.filename:
             self.figure.suptitle(__file__)
         elif self.filename.find('ШУР') >= 0:
-            index_tg = self.filename.find('ШУР')
-            self.figure.suptitle(f'ТГ:{self.filename[index_tg + 3]}, '
-                                 f'канал:{self.filename[index_tg + 4]} '
-                                 f'Кол-во данных: {str(len(self.data))}'
-                                 )
-            # для проекта РК
+            index_tg = self.filename.rfind('ШУР')
+            title = f'ТГ:{self.filename[index_tg + 3]}, Канал:{self.filename[index_tg + 4]}, Кол-во данных: {str(len(self.data))}'
+            self.figure.suptitle(title)
+        # для проекта РК
         elif self.filename.find('ШСП') >= 0:
-            index_tg = self.filename.find('ШСП')
-            self.figure.suptitle(f'ШСП:{self.filename[index_tg + 3]}, '
-                                 f'канал:{self.filename[index_tg + 4]} '
-                                 f'Кол-во данных: {str(len(self.data))}'
-                                 )
+            index_tg = self.filename.rfind('ШСП')
+            title = f'ШСП:{self.filename[index_tg + 3]}, Канал:{self.filename[index_tg + 4]}, Кол-во данных: {str(len(self.data))}'
+            self.figure.suptitle(title)
         else:
-            index_tg = self.filename.find('ТГ')
-            self.figure.suptitle(f'ТГ:{self.filename[index_tg+2]}, '
-                                 f'канал:{self.filename[index_tg+3]} '
-                                 f'Кол-во данных: {str(len(self.data))}'
-                                 )
+            index_tg = self.filename.rfind('ТГ')
+            title = f'ТГ:{self.filename[index_tg + 2]}, Канал:{self.filename[index_tg + 3]}, Кол-во данных: {str(len(self.data))}'
+            self.figure.suptitle(title)
 
 def main():
     df = pd.DataFrame()
