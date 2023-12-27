@@ -45,3 +45,5 @@ TODO
 help:
 python -m pip  install -r requirements.txt --no-index -f d:\\temp\\python_Library
 
+### Ugage (Windows)
+1. source build.bat -> создание текущеко билда
