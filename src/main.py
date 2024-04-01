@@ -221,35 +221,38 @@ class MainWindow(QMainWindow):
         """
         Clear all old signals and insert new signals to QTable(Список сигналов)
         """
-        self.tb_signals.setRowCount(0)
-        self.open_files()
-        self.clear_signals()
+        try:
+            self.tb_signals.setRowCount(0)
+            self.open_files()
+            self.clear_signals()
 
-        if self.files:
-            self.parser(self.files[0])
-            self.read_all_signals()
-        
-            for signal, i in sorted(self.dict_all_signals.items(), key=lambda item: item[1]):
-                row_position = self.tb_signals.rowCount()
-                self.tb_signals.insertRow(row_position)
-                self.tb_signals.setItem(i, 0, QTableWidgetItem(signal))
-
-            # автоматически перемещаем 0 сигнал(дата/время) на Ось Х
-            self.tb_signals.selectRow(0)
-            row = self.tb_signals.currentRow()
-            time = self.tb_signals.item(row, 0).text()
-            remove_row = self.dict_all_signals.pop(time)
-            print(row, time, remove_row)
-
-            self.dict_x_axe.setdefault(time, remove_row)
-            self.tb_signals.removeRow(row) 
-
-            # вставить ось Х на место ОСЬ Х
-            self.qlist_x_axe.addItem(time)  # добавляем 
-            self.qlist_x_axe.setCurrentRow(0)
+            if self.files:
+                self.parser(self.files[0])
+                self.read_all_signals()
             
-            # ставим указатель на первый сигнал (Список сигналов)
-            self.tb_signals.selectRow(0)
+                for signal, i in sorted(self.dict_all_signals.items(), key=lambda item: item[1]):
+                    row_position = self.tb_signals.rowCount()
+                    self.tb_signals.insertRow(row_position)
+                    self.tb_signals.setItem(i, 0, QTableWidgetItem(signal))
+
+                # автоматически перемещаем 0 сигнал(дата/время) на Ось Х
+                self.tb_signals.selectRow(0)
+                row = self.tb_signals.currentRow()
+                time = self.tb_signals.item(row, 0).text()
+                remove_row = self.dict_all_signals.pop(time)
+                print(row, time, remove_row)
+
+                self.dict_x_axe.setdefault(time, remove_row)
+                self.tb_signals.removeRow(row) 
+
+                # вставить ось Х на место ОСЬ Х
+                self.qlist_x_axe.addItem(time)  # добавляем 
+                self.qlist_x_axe.setCurrentRow(0)
+                
+                # ставим указатель на первый сигнал (Список сигналов)
+                self.tb_signals.selectRow(0)
+        except EOFError:
+            self.dialog_box(f"Ошибка в данных {self.files}. Файл испорченю Попробуйте распаковать сторонним архиватором.")
 
     def parser(self, file: str = None) -> None:
         """ 
@@ -375,6 +378,7 @@ class MainWindow(QMainWindow):
             self.grath = WindowGrath(self.df, self.base_signals, self.secondary_signals, *self.x_axe, 
                                     step=self.combobox_dot.currentText(), filename=self.files[0])
             self.grath.show()
+
 
 def main():
     global app
