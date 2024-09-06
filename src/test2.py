@@ -1,63 +1,58 @@
+# Demonstrates a way to put multiple axes around a single plot. 
+# (This will eventually become a built-in feature of PlotItem)
+# c:\users\sanja\AppData\Local\Programs\Python\Python311\Lib\site-packages\pyqtgraph\examples\MultiplePlotAxes.py 
+
 import pyqtgraph as pg
 
-class MultiplePlotAxesExample:
-    def __init__(self):
-        # Create application and PlotWidget
-        self.app = pg.mkQApp()
-        self.pw = pg.PlotWidget()
-        self.pw.setWindowTitle("pyqtgraph example: MultiplePlotAxes")
-        self.pw.show()
+pg.mkQApp()
 
-        self.p1 = self.pw.plotItem
-        self.p1.setLabels(left="axis 1")
+pw = pg.PlotWidget()
+pw.show()
+pw.setWindowTitle("pyqtgraph example: MultiplePlotAxes")
+p1 = pw.plotItem
+p1.setLabels(left="axis 1")
 
-        # Create a new ViewBox, link the right axis to its coordinate system
-        self.p2 = pg.ViewBox()
-        self.p1.showAxis("right")
-        self.p1.scene().addItem(self.p2)
-        self.p1.getAxis("right").linkToView(self.p2)
-        self.p2.setXLink(self.p1)
-        self.p1.getAxis("right").setLabel("axis2", color="#0000ff")
+## create a new ViewBox, link the right axis to its coordinate system
+p2 = pg.ViewBox()
+p1.showAxis("right")
+p1.scene().addItem(p2)
+p1.getAxis("right").linkToView(p2)
+p2.setXLink(p1)
+p1.getAxis("right").setLabel("axis2", color="#0000ff")
 
-        # Create third ViewBox, and a new axis
-        self.p3 = pg.ViewBox()
-        self.ax3 = pg.AxisItem("right")
-        self.p1.layout.addItem(self.ax3, 2, 3)
-        self.p1.scene().addItem(self.p3)
-        self.ax3.linkToView(self.p3)
-        self.p3.setXLink(self.p1)
-        self.ax3.setZValue(-10000)
-        self.ax3.setLabel("axis 3", color="#ff0000")
-
-        # Handle view resizing
-        self.updateViews()
-        self.p1.vb.sigResized.connect(self.updateViews)
-
-        # Plot data
-        self.p1.plot([1, 2, 4, 8, 16, 32])
-        self.p2.addItem(pg.PlotCurveItem([10, 20, 40, 80, 40, 20], pen="b"))
-        self.p3.addItem(pg.PlotCurveItem([3200, 1600, 800, 400, 200, 100], pen="r"))
-
-    def updateViews(self):
-        # Update auxiliary views to match when resized
-        self.p2.setGeometry(self.p1.vb.sceneBoundingRect())
-        self.p3.setGeometry(self.p1.vb.sceneBoundingRect())
-
-        # Update linked axes
-        self.p2.linkedViewChanged(self.p1.vb, self.p2.XAxis)
-        self.p3.linkedViewChanged(self.p1.vb, self.p3.XAxis)
-
-    def run(self):
-        # Start the application loop
-        pg.exec()
+## create third ViewBox.
+## this time we need to create a new axis as well.
+p3 = pg.ViewBox()
+ax3 = pg.AxisItem("right")
+p1.layout.addItem(ax3, 2, 3)
+p1.scene().addItem(p3)
+ax3.linkToView(p3)
+p3.setXLink(p1)
+ax3.setZValue(-10000)
+ax3.setLabel("axis 3", color="#ff0000")
 
 
-def main():
-    example = MultiplePlotAxesExample()
-    example.run()
+## Handle view resizing
+def updateViews():
+    ## view has resized; update auxiliary views to match
+    global p1, p2, p3
+    p2.setGeometry(p1.vb.sceneBoundingRect())
+    p3.setGeometry(p1.vb.sceneBoundingRect())
+
+    ## need to re-update linked axes since this was called
+    ## incorrectly while views had different shapes.
+    ## (probably this should be handled in ViewBox.resizeEvent)
+    p2.linkedViewChanged(p1.vb, p2.XAxis)
+    p3.linkedViewChanged(p1.vb, p3.XAxis)
 
 
+updateViews()
+p1.vb.sigResized.connect(updateViews)
 
-# To run the example
+
+p1.plot([1, 2, 4, 8, 16, 32])
+p2.addItem(pg.PlotCurveItem([10, 20, 40, 80, 40, 20], pen="b"))
+p3.addItem(pg.PlotCurveItem([3200, 1600, 800, 400, 200, 100], pen="r"))
+
 if __name__ == "__main__":
-    main()
+    pg.exec()
