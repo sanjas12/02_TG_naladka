@@ -1,15 +1,15 @@
 import sys
 from typing import List
 from PyQt5.QtWidgets import (
-    QApplication,
-    QComboBox,
+    QApplication, 
+    QComboBox, 
     QHBoxLayout,
     QLabel,
     QGroupBox,
     QVBoxLayout,
     QWidget,
     QPushButton,
-    QMainWindow,
+    QMainWindow
 )
 import pyqtgraph as pg
 import pandas as pd
@@ -18,15 +18,8 @@ from config.config import MYTIME, TICK_MARK_COUNT
 
 
 class WindowGrath(QMainWindow):
-    def __init__(
-        self,
-        data: pd.DataFrame,
-        base_axe: List[str],
-        secondary_axe: List[str],
-        x_axe: str = MYTIME,
-        step: int = 1,
-        filename: str = "E:/ТГ41-2021-06-25_134810_14099.csv.gz ",
-    ) -> None:
+    def __init__(self, data: pd.DataFrame, base_axe: List = [str], secondary_axe: List = [str],
+                x_axe: str = None, step: int = 1, filename: str = None) -> None:
         """
         Class to plot graph
         """
@@ -41,21 +34,21 @@ class WindowGrath(QMainWindow):
         self.ui()
 
     def ui(self):
-        self.setWindowTitle("Graphs")
+        self.setWindowTitle('Graphs')
 
         # first line of GUI
-        list_dot = ["1", "10", "100", "1000", "10000"]
+        list_dot = ['1', '10', '100', '1000', '10000']
         self.combobox_dot = QComboBox()
         self.combobox_dot.addItems(list_dot)
         self.combobox_dot.setCurrentIndex(1)
         self.number_point = QLabel()
         self.number_point.setText(str(len(self.data)))
-        btn_update = QPushButton("Update Graphs")
-        btn_update.clicked.connect(self.update_graph)
-
+        btn_update = QPushButton('Update Graphs')
+        btn_update.clicked.connect(self.update)
+        
         vbox_1 = QVBoxLayout()
         vbox_1.addStretch(10)
-        vbox_1.addWidget(QLabel("Number of points: "))
+        vbox_1.addWidget(QLabel('Number of points: '))
         vbox_1.addWidget(self.number_point)
         vbox_1.addWidget(btn_update)
 
@@ -64,12 +57,12 @@ class WindowGrath(QMainWindow):
 
         # second line of GUI
         self.plot_widget = pg.PlotWidget()
-        self.plot_widget.setLabel("left", "Y Axis")
-        self.plot_widget.setLabel("bottom", "X Axis")
-
+        self.plot_widget.setLabel('left', 'Y Axis')
+        self.plot_widget.setLabel('bottom', 'X Axis')
+        
         vbox_2 = QVBoxLayout()
         vbox_2.addWidget(self.plot_widget)
-
+        
         self.gb_2 = QGroupBox()
         self.gb_2.setLayout(vbox_2)
 
@@ -82,7 +75,7 @@ class WindowGrath(QMainWindow):
 
         self.plot()
 
-    def update_graph(self):
+    def update(self):
         self.step = int(self.combobox_dot.currentText())
         print(self.step)
         self.plot()
@@ -93,19 +86,19 @@ class WindowGrath(QMainWindow):
         if self.base_axe:
             for signal in self.base_axe:
                 self.plot_widget.plot(
-                    self.data[self.x_axe][:: self.step],
-                    self.data[signal][:: self.step],
-                    pen="b",
-                    name=signal,
+                    self.data[self.x_axe][::self.step], 
+                    self.data[signal][::self.step], 
+                    pen='b', 
+                    name=signal
                 )
 
         if self.secondary_axe:
             for i, signal in enumerate(self.secondary_axe):
                 self.plot_widget.plot(
-                    self.data[self.x_axe][:: self.step],
-                    self.data[signal][:: self.step],
-                    pen={"color": "r", "width": 2},
-                    name=signal,
+                    self.data[self.x_axe][::self.step], 
+                    self.data[signal][::self.step], 
+                    pen={'color': 'r', 'width': 2}, 
+                    name=signal
                 )
 
         # Add legend
@@ -115,50 +108,42 @@ class WindowGrath(QMainWindow):
         self.set_suptitle_grath()
 
     def set_suptitle_grath(self):
-        title = ""
+        title = ''
         if not self.filename:
             title = __file__
-        elif "ШУР" in self.filename:
-            index_tg = self.filename.rfind("ШУР")
-            title = f"ТГ:{self.filename[index_tg + 3]}, Канал:{self.filename[index_tg + 4]}, Кол-во данных: {str(len(self.data))}"
-        elif "ШСП" in self.filename:
-            index_tg = self.filename.rfind("ШСП")
-            title = f"ШСП:{self.filename[index_tg + 3]}, Канал:{self.filename[index_tg + 4]}, Кол-во данных: {str(len(self.data))}"
+        elif 'ШУР' in self.filename:
+            index_tg = self.filename.rfind('ШУР')
+            title = f'ТГ:{self.filename[index_tg + 3]}, Канал:{self.filename[index_tg + 4]}, Кол-во данных: {str(len(self.data))}'
+        elif 'ШСП' in self.filename:
+            index_tg = self.filename.rfind('ШСП')
+            title = f'ШСП:{self.filename[index_tg + 3]}, Канал:{self.filename[index_tg + 4]}, Кол-во данных: {str(len(self.data))}'
         else:
-            index_tg = self.filename.rfind("ТГ")
-            title = f"ТГ:{self.filename[index_tg + 2]}, Канал:{self.filename[index_tg + 3]}, Кол-во данных: {str(len(self.data))}"
-
+            index_tg = self.filename.rfind('ТГ')
+            title = f'ТГ:{self.filename[index_tg + 2]}, Канал:{self.filename[index_tg + 3]}, Кол-во данных: {str(len(self.data))}'
+        
         self.setWindowTitle(title)
-
 
 def main():
     df = pd.DataFrame()
     number_point = 15
-    first_signal = "ГСМ-А. Очень длинный сигнал"
+    first_signal = 'ГСМ-А. Очень длинный сигнал'
     df[first_signal] = [random.randint(300, 321) for _ in range(number_point)]
-    df["ГСМ-Б"] = [random.randint(300, 321) for _ in range(number_point)]
-    df["ОЗ-А"] = [random.random() for _ in range(number_point)]
-    df["ОЗ-Б"] = [random.random() for _ in range(number_point)]
+    df['ГСМ-Б'] = [random.randint(300, 321) for _ in range(number_point)]
+    df['ОЗ-А'] = [random.random() for _ in range(number_point)]
+    df['ОЗ-Б'] = [random.random() for _ in range(number_point)]
     df[MYTIME] = [i for i in range(number_point)]
 
-    y1 = ["ОЗ-А", "ОЗ-Б"]
-    y2 = [first_signal, "ГСМ-Б"]
+    y1 = ['ОЗ-А', 'ОЗ-Б']
+    y2 = [first_signal, 'ГСМ-Б']
 
     app = QApplication(sys.argv)
-    ex = WindowGrath(
-        df,
-        base_axe=y1,
-        secondary_axe=y2,
-        x_axe=MYTIME,
-        filename="E:/ТГ41-2021-06-25_134810_14099.csv.gz ",
-    )
+    ex = WindowGrath(df, base_axe=y1, secondary_axe=y2, x_axe=MYTIME, filename='E:/ТГ41-2021-06-25_134810_14099.csv.gz ')
     ex.show()
 
     try:
         sys.exit(app.exec())
     except:
-        print("close: ", __file__)
+        print('close: ', __file__)
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
