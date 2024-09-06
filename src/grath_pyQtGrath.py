@@ -19,7 +19,7 @@ from config.config import MYTIME, TICK_MARK_COUNT
 
 class WindowGrath(QMainWindow):
     def __init__(self, data: pd.DataFrame, base_axe: List = [str], secondary_axe: List = [str],
-                x_axe: str = None, step: int = 1, filename: str = None) -> None:
+                x_axe: str = MYTIME, step: int = 1, filename: str = 'E:/ТГ41-2021-06-25_134810_14099.csv.gz ') -> None:
         """
         Class to plot graph
         """
@@ -44,7 +44,7 @@ class WindowGrath(QMainWindow):
         self.number_point = QLabel()
         self.number_point.setText(str(len(self.data)))
         btn_update = QPushButton('Update Graphs')
-        btn_update.clicked.connect(self.update)
+        btn_update.clicked.connect(self.update_graph)
         
         vbox_1 = QVBoxLayout()
         vbox_1.addStretch(10)
@@ -75,7 +75,7 @@ class WindowGrath(QMainWindow):
 
         self.plot()
 
-    def update(self):
+    def update_graph(self):
         self.step = int(self.combobox_dot.currentText())
         print(self.step)
         self.plot()
