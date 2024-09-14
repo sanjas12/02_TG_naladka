@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGr
     QMessageBox, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
 from win32api import GetFileVersionInfo
 from grath_matplot import WindowGrath
-from config.config import MYTIME
+from config.config import MYTIME, AxeName
 
 
 class MyGroupBox(QWidget):
@@ -121,7 +121,7 @@ class MainWindow(QMainWindow):
         base_axe_layout.addWidget(btn_base_axe_add)
         base_axe_layout.addWidget(btn_base_axe_remove)
         
-        self.gb_base_axe = QGroupBox("Основная Ось")
+        self.gb_base_axe = QGroupBox(AxeName.BASE_AXE.value)
         self.gb_base_axe.setLayout(base_axe_layout)
 
         # Вспомогательная ось:
@@ -140,7 +140,7 @@ class MainWindow(QMainWindow):
         secondary_axe_layout.addWidget(btn_secondary_axe_add)
         secondary_axe_layout.addWidget(btn_secondary_axe_remove)
         
-        self.gb_secondary_axe = QGroupBox("Вспомогательная Ось")
+        self.gb_secondary_axe = QGroupBox(AxeName.SECONDARY_AXE.value)
         self.gb_secondary_axe.setLayout(secondary_axe_layout)
 
         # Ось X
