@@ -1,4 +1,10 @@
 from pathlib import Path
+from enum import Enum
+
+class AxeName(Enum):
+    BASE_AXE = "Основная Ось"
+    SECONDARY_AXE = "Вспомогательная Ось"
+    X_AXE = "Ось X (Времени)"
 
 # Directories
 BASE_DIR = Path(__file__).parent.parent.absolute()
