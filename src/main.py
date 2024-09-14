@@ -275,42 +275,57 @@ class MainWindow(QMainWindow):
             self.dialog_box(f"Ошибка в данных {self.files}. Файл испорченю Попробуйте распаковать сторонним архиватором.")
 
     def parser(self, file: str = None) -> None:
-        """ 
+        """
         Detect encoding, delimiter, decimal in opened files by first file
         """
-        if file and self.extension.endswith('(*.gz)'): # если файлы архивы
-            with gzip.open(self.files[0], 'rb') as f:
-                data_raw = f.read(20000)
-                second_row_raw = f.readlines()[1] # вторая строка быстрых
-        elif file:
-            with open(self.files[0], 'rb') as f:
-                data_raw = f.read(20000)
-                second_row_raw = f.readlines()[1]
 
-        # Кодировка
-        if file:
-            self.encoding = chardet.detect(data_raw).get('encoding')
-
-        # Разделитель
-        if file and self.encoding:
-            data_str = data_raw[:200].decode(self.encoding)
-            if data_str.count(';'):
-                self.delimiter = ';'
+        if not file:
+            self.dialog_box(f"Файл не указан или недоступен: {file}")
+            return
+        
+        try:
+            if self.extension.endswith("(*.gz)"):  # если файлы архивы
+                with gzip.open(self.files[0], "rb") as f: # type: ignore
+                    data_raw = f.read(20000)
+                    f.seek(0)
+                    second_row_raw = f.readlines()[1]  # вторая строка быстрых
             else:
-                self.delimiter = '\t'
+                with open(self.files[0], "rb") as f: # type: ignore
+                    data_raw = f.read(20000)
+                    f.seek(0)
+                    second_row_raw = f.readlines()[1]
 
-            # Decimal 
-            second_row_str = second_row_raw.decode(self.encoding) 
-            if second_row_str.count('.') > second_row_str.count(','):
-                self.decimal = '.'
+            # Encoding detection
+            self.encoding = chardet.detect(data_raw).get("encoding")
+
+            if self.encoding:
+                data_str = data_raw[:200].decode(self.encoding)
+                # Delimiter detection
+                if data_str.count(";") > data_str.count("\t"):
+                    self.delimiter = ";"
+                else:
+                    self.delimiter = "\t"
+
+                # Decimal detection
+                second_row_str = second_row_raw.decode(self.encoding)
+                if second_row_str.count(".") > second_row_str.count(","):
+                    self.decimal = "."
+                else:
+                    self.decimal = ","
+
+                self.ql_info.setText(
+                    f"Исходные файлы: encoding: {self.encoding} delimiter: {repr(self.delimiter)} decimal: {self.decimal}"
+                )
             else:
-                self.decimal = ','
+                raise ValueError("Encoding could not be detected")
 
-            self.ql_info.setText(f"Исходные файлы: encoding: {self.encoding} delimiter: {repr(self.delimiter)} decimal: {self.decimal}")
-        else:
-            text = f"Не удалось определить кодировку, попробуйте разархивировать файл {file}"
+        except Exception as e:
+            text = (
+                f"Не удалось определить параметры файла: {str(e)}\n"
+                f"Не удалось определить кодировку, попробуйте разархивировать файл {file}"
+            )
             self.dialog_box(text)
-
+        
     def add_signal(self, qt_axe: QTableWidget = 0, dict_axe: Dict = {}) -> None:
         """
         Remove signal from Qtable(Список сигналов) and append his to qlist(given qlist) and dict_axe
