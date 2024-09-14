@@ -4,7 +4,7 @@ https://learn.microsoft.com/en-US/cpp/windows/latest-supported-vc-redist?view=ms
 
 ### Usage
 main.py - текущая версия программы (GUI-QT5) выбора любых данный из файлов (csv, gz, txt)
-grath - модуль построения графиков на matplotlib
+grath_matplot.py - модуль построения графиков на matplotlib
 
 
 
