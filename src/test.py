@@ -1,11 +1,5 @@
-"""
-Demonstrates a way to put multiple axes around a single plot. 
+# c:\users\sanja\AppData\Local\Programs\Python\Python311\Lib\site-packages\pyqtgraph\examples\MultiplePlotAxes.py  # type: ignore
 
-(This will eventually become a built-in feature of PlotItem)
-
-c:\users\sanja\AppData\Local\Programs\Python\Python311\Lib\site-packages\pyqtgraph\examples\MultiplePlotAxes.py 
-
-"""
 
 import pyqtgraph as pg
 
