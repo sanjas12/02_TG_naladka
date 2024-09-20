@@ -149,19 +149,26 @@ class MainWindow(QMainWindow):
         self.gb_secondary_axe.setLayout(secondary_axe_layout)
 
         # Ось X
-        self.qt_x_axe = QTableWidget()
+        self.qt_x_axe = QTableWidget(1,2)
+        # self.qt_x_axe.setRowCount(1)
+        self.qt_x_axe.setColumnCount(2)
+        self.qt_x_axe.setColumnWidth(0, 1)
+        self.qt_x_axe.horizontalHeader().hide()
+        self.qt_x_axe.verticalHeader().hide()
+        self.qt_x_axe.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.qt_x_axe.horizontalHeader().setStretchLastSection(True)
         btn_x_axe_add = QPushButton('Add to X')
         btn_x_axe_add.clicked.connect(lambda: self.add_signal(self.qt_x_axe, self.dict_x_axe))
         btn_x_axe_remove = QPushButton('Remove from X')
-        btn_x_axe_remove.clicked.connect(lambda: self.remove_signal(self.qt_x_axe))
+        btn_x_axe_remove.clicked.connect(lambda: self.remove_signal(self.qt_x_axe, self.dict_x_axe))
         
-        layout_x_axe = QVBoxLayout()
-        layout_x_axe.addWidget(self.qt_x_axe)
-        layout_x_axe.addWidget(btn_x_axe_add)
-        layout_x_axe.addWidget(btn_x_axe_remove)
+        x_axe_layout = QVBoxLayout()
+        x_axe_layout.addWidget(self.qt_x_axe)
+        x_axe_layout.addWidget(btn_x_axe_add)
+        x_axe_layout.addWidget(btn_x_axe_remove)
         
-        self.gb_x_axe = QGroupBox("Ось X")
-        self.gb_x_axe.setLayout(layout_x_axe)
+        self.gb_x_axe = QGroupBox(AxeName.X_AXE.value)
+        self.gb_x_axe.setLayout(x_axe_layout)
         
         # первый слой
         self.first_huge_lay = QHBoxLayout()
@@ -366,7 +373,7 @@ class MainWindow(QMainWindow):
     
     def selected_signals(self, qt_axe: QTableWidget, name_axe: str) -> List[str]:
         if qt_axe.rowCount() > 0:
-            return [qt_axe.item(_).text() for _ in range(qt_axe.count())]
+            return [qt_axe.item(_, 1).text() for _ in range(qt_axe.rowCount())]
         else:
             print(f"{time.ctime()} -> Для {name_axe} не выбраны сигналы")
             return []
@@ -378,13 +385,9 @@ class MainWindow(QMainWindow):
         self.base_signals = self.selected_signals(self.qt_base_axe, AxeName.BASE_AXE.value) 
         self.secondary_signals = self.selected_signals(self.qt_secondary_axe, AxeName.SECONDARY_AXE.value) 
         self.x_axe = self.selected_signals(self.qt_x_axe, AxeName.X_AXE.value)
-        row = self.qt_all_signals.selectRow(0)
-        print('row ->', row)
 
         # Основная загрузка данных (из нескольких файлов)
         if self.files and (self.base_signals or self.secondary_signals):
-            
-
 
             self.df = pd.concat(pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
                                             usecols=self.base_signals+self.secondary_signals+self.x_axe, decimal=self.decimal) for file in self.files)
