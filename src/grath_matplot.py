@@ -22,7 +22,7 @@ from config.config import MYTIME, TICK_MARK_COUNT
 
 
 class WindowGrath(QMainWindow):
-    def __init__(self, data: pd.DataFrame, base_axe: List = [str], secondary_axe: List = [str],
+    def __init__(self, data: pd.DataFrame, base_axe: List[str], secondary_axe: List[str],
                 x_axe: str = None, step: int = 1, filename: str = None) -> None:
         """
         Class to plot grath
