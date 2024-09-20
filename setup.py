@@ -1,4 +1,4 @@
-#0.0.1.21
+#0.0.1.27
 import sys
 import os
 from cx_Freeze import setup, Executable
@@ -23,10 +23,12 @@ with open(file, 'r+', encoding='utf-8') as f:
 
 # Dependencies are automatically detected, but it might need fine tuning.
 build_exe_options = {
+    "path": sys.path + ["src"],  # Добавляем путь к 'src'
     "excludes": ["tkinter", "unittest", "http",
                 "PyQT5.QtopenGL4",
                 "pydoc_data", "email",
-                "concurent", "xml",
+                "concurent", 
+                # "xml",
                 # "asyncio", "curses", "distutils", "html", "multiprocessing",
                 "sqlite3", "test", "urlib"],
     "optimize": 0,      # c 2 exe не запускается
@@ -44,5 +46,5 @@ setup(
     description="My TG-Naladka",
     options={"build_exe": build_exe_options},
     # executables=[Executable("main.py", target_name="TG-Naladka",  base=base)],
-    executables=[Executable("main.py", target_name="TG-Naladka")],
+    executables=[Executable("src/main.py", target_name="TG-Naladka")],
 )
