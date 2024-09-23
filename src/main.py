@@ -11,58 +11,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGr
 from win32api import GetFileVersionInfo
 from grath_matplot import WindowGrath
 from config.config import MYTIME, AxeName
-
-
-class MyGroupBox(QWidget):
-        """
-        My group box Widget
-        """
-        def __init__(self, parent = None, name: str = ''):
-            super().__init__(parent)
-            self.qt_base_axe = QListWidget()
-            btn_base_axe_add = QPushButton(f'Add to {name}')
-            btn_base_axe_add.clicked.connect(lambda: self.add_signal(self.qt_base_axe, self.dict_base_axe))
-            btn_base_axe_remove = QPushButton(f'Remove from {name}')
-            btn_base_axe_remove.clicked.connect(lambda: self.remove_signal(self.qt_base_axe, self.dict_base_axe))
-            
-            base_axe_layout = QVBoxLayout()
-            base_axe_layout.addWidget(self.qt_base_axe)
-            base_axe_layout.addWidget(btn_base_axe_add)
-            base_axe_layout.addWidget(btn_base_axe_remove)
-            
-            self.gb_base_axe = QGroupBox(name)
-            self.gb_base_axe.setLayout(base_axe_layout)
-        
-        def add_signal(self, qt_axe: QListWidget = 0, dict_axe: Dict = {}) -> None:
-            """
-            Remove signal from Qtable(Список сигналов) and append his to qlist(given qlist) and dict_axe
-            """
-            if self.qt_all_signals.rowCount():
-                row = self.qt_all_signals.currentRow()
-                add_signal = self.qt_all_signals.item(row, 0).text()
-                remove_row = self.dict_all_signals.pop(add_signal)
-                dict_axe.setdefault(add_signal, remove_row)
-                self.qt_all_signals.removeRow(row) 
-                # self.qt_all_signals.selectRow(0) # ставим указатель на первый сигнал
-                qt_axe.addItem(add_signal)  # добавляем 
-                qt_axe.setCurrentRow(0)
-            else:
-                self.dialog_box(f"Don't open files.\n\tor\nAll signals are already selected.")
-        
-        def remove_signal(self, qt_axe: QListWidget, dict_axe: Dict = {}) -> None:
-            """
-            Remove signal from Qlist(given qlist) and append his to Qtable(Список сигналов) and dict_axe
-            """
-            if qt_axe.count() and qt_axe.currentRow() != -1:
-                remove_signal = qt_axe.takeItem(qt_axe.currentRow()).text()
-                remove_row_signal = dict_axe.pop(remove_signal)
-                self.dict_all_signals.setdefault(remove_row_signal, remove_signal)
-                row_position = self.qt_all_signals.rowCount()
-                self.qt_all_signals.insertRow(row_position)
-                self.qt_all_signals.setItem(remove_row_signal, 0, QTableWidgetItem(remove_signal))
-                self.qt_all_signals.selectRow(0) # ставим указатель на первый сигнал
-            else:
-                self.dialog_box("don't select signals for removing")
+from myGroupBox import MyGroupBox
 
 
 class MainWindow(QMainWindow):
@@ -77,7 +26,6 @@ class MainWindow(QMainWindow):
         self.dict_x_axe: Dict[str, int] = {}
         self.dict_base_axe: Dict[str, int] = {}
         self.dict_secondary_axe: Dict[str, int] = {}
-        self.field_name = ("Основная Ось", "Вспомогательная Ось", "Ось X (Времени)")
         self.setup_ui(version)
 
     def setup_ui(self, version) -> None:
@@ -92,7 +40,6 @@ class MainWindow(QMainWindow):
         self.qt_all_signals.verticalHeader().hide()
         self.qt_all_signals.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.qt_all_signals.horizontalHeader().setStretchLastSection(True)
-        # self.qt_all_signals.setSortingEnabled(True)
 
         btn_open_files = QPushButton('Open files')
         btn_open_files.clicked.connect(self.insert_all_signals)
@@ -105,72 +52,28 @@ class MainWindow(QMainWindow):
         self.gb_signals.setLayout(signals_layout)
 
         # Основная ось:
-        self.qt_base_axe = QTableWidget()
-        self.qt_base_axe.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.qt_base_axe.setColumnCount(2)
-        self.qt_base_axe.setColumnWidth(0, 1)
-        self.qt_base_axe.horizontalHeader().hide()
-        self.qt_base_axe.verticalHeader().hide()
-        self.qt_base_axe.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.qt_base_axe.horizontalHeader().setStretchLastSection(True)
+        self.gb_base_axe = MyGroupBox(title=AxeName.BASE_AXE.value)
+        self.gb_base_axe.add_func_to_btn(self.gb_base_axe.btn_add, 
+                                         lambda: self.add_signal(self.gb_base_axe.qtable_axe, self.gb_base_axe.dict_axe))
+        self.gb_base_axe.add_func_to_btn(self.gb_base_axe.btn_remove, 
+                                         lambda: self.remove_signal(self.gb_base_axe.qtable_axe, self.gb_base_axe.dict_axe))
         
-        btn_base_axe_add = QPushButton('Add to Y')
-        btn_base_axe_add.clicked.connect(lambda: self.add_signal(self.qt_base_axe, self.dict_base_axe))
-        btn_base_axe_remove = QPushButton('Remove from Y')
-        btn_base_axe_remove.clicked.connect(lambda: self.remove_signal(self.qt_base_axe, self.dict_base_axe))
-        
-        base_axe_layout = QVBoxLayout()
-        base_axe_layout.addWidget(self.qt_base_axe)
-        base_axe_layout.addWidget(btn_base_axe_add)
-        base_axe_layout.addWidget(btn_base_axe_remove)
-        
-        self.gb_base_axe = QGroupBox(AxeName.BASE_AXE.value)
-        self.gb_base_axe.setLayout(base_axe_layout)
 
         # Вспомогательная ось:
-        self.qt_secondary_axe = QTableWidget()
-        self.qt_secondary_axe.setColumnCount(2)
-        self.qt_secondary_axe.setColumnWidth(0, 1)
-        self.qt_secondary_axe.horizontalHeader().hide()
-        self.qt_secondary_axe.verticalHeader().hide()
-        self.qt_secondary_axe.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.qt_secondary_axe.horizontalHeader().setStretchLastSection(True)
-        btn_secondary_axe_add = QPushButton('Add to Y2')
-        btn_secondary_axe_add.clicked.connect(lambda: self.add_signal(self.qt_secondary_axe, self.dict_secondary_axe))
-        btn_secondary_axe_remove = QPushButton('Remove from Y2')
-        btn_secondary_axe_remove.clicked.connect(lambda: self.remove_signal(self.qt_secondary_axe, self.dict_secondary_axe))
-        
-        secondary_axe_layout = QVBoxLayout()
-        secondary_axe_layout.addWidget(self.qt_secondary_axe)
-        secondary_axe_layout.addWidget(btn_secondary_axe_add)
-        secondary_axe_layout.addWidget(btn_secondary_axe_remove)
-        
-        self.gb_secondary_axe = QGroupBox(AxeName.SECONDARY_AXE.value)
-        self.gb_secondary_axe.setLayout(secondary_axe_layout)
+        self.gb_secondary_axe = MyGroupBox(title=AxeName.SECONDARY_AXE.value)
+        self.gb_secondary_axe.add_func_to_btn(self.gb_secondary_axe.btn_add, 
+                                         lambda: self.add_signal(self.gb_secondary_axe.qtable_axe, self.gb_secondary_axe.dict_axe))
+        self.gb_secondary_axe.add_func_to_btn(self.gb_secondary_axe.btn_remove, 
+                                         lambda: self.remove_signal(self.gb_secondary_axe.qtable_axe, self.gb_secondary_axe.dict_axe))
 
         # Ось X
-        self.qt_x_axe = QTableWidget(1,2)
-        # self.qt_x_axe.setRowCount(1)
-        self.qt_x_axe.setColumnCount(2)
-        self.qt_x_axe.setColumnWidth(0, 1)
-        self.qt_x_axe.horizontalHeader().hide()
-        self.qt_x_axe.verticalHeader().hide()
-        self.qt_x_axe.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.qt_x_axe.horizontalHeader().setStretchLastSection(True)
-        btn_x_axe_add = QPushButton('Add to X')
-        btn_x_axe_add.clicked.connect(lambda: self.add_signal(self.qt_x_axe, self.dict_x_axe))
-        btn_x_axe_remove = QPushButton('Remove from X')
-        btn_x_axe_remove.clicked.connect(lambda: self.remove_signal(self.qt_x_axe, self.dict_x_axe))
+        self.gb_x_axe = MyGroupBox(title=AxeName.X_AXE.value)
+        self.gb_x_axe.add_func_to_btn(self.gb_x_axe.btn_add, 
+                                         lambda: self.add_signal(self.gb_x_axe.qtable_axe, self.gb_x_axe.dict_axe))
+        self.gb_x_axe.add_func_to_btn(self.gb_x_axe.btn_remove, 
+                                         lambda: self.remove_signal(self.gb_x_axe.qtable_axe, self.gb_x_axe.dict_axe))
         
-        x_axe_layout = QVBoxLayout()
-        x_axe_layout.addWidget(self.qt_x_axe)
-        x_axe_layout.addWidget(btn_x_axe_add)
-        x_axe_layout.addWidget(btn_x_axe_remove)
-        
-        self.gb_x_axe = QGroupBox(AxeName.X_AXE.value)
-        self.gb_x_axe.setLayout(x_axe_layout)
-        
-        # первый слой
+        # первый горизонтальный слой
         self.first_huge_lay = QHBoxLayout()
         self.first_huge_lay.addWidget(self.gb_signals)
         self.first_huge_lay.addWidget(self.gb_base_axe)
@@ -180,7 +83,7 @@ class MainWindow(QMainWindow):
         self.first_huge_GroupBox = QGroupBox()
         self.first_huge_GroupBox.setLayout(self.first_huge_lay)
 
-        # второй слой 
+        # второй горизонтальный слой 
         self.ql_info = QLabel()
 
         self.second_lay = QHBoxLayout()
@@ -189,7 +92,7 @@ class MainWindow(QMainWindow):
         self.second_huge_GroupBox = QGroupBox()
         self.second_huge_GroupBox.setLayout(self.second_lay)
 
-        # третий слой 
+        # третий горизонтальный слой 
         self.number_raw_point = QLabel()
         self.number_plot_point = QLabel()
         list_dot = ['1', '10', '100', '1000', '10000']
@@ -222,7 +125,7 @@ class MainWindow(QMainWindow):
         wid = QWidget(self)
         self.setCentralWidget(wid)
         wid.setLayout(main_layout)
-        
+
     def open_files(self) -> None:
         """
         Create List contein opened files and his extension
@@ -252,8 +155,8 @@ class MainWindow(QMainWindow):
         """
         try:
             self.qt_all_signals.setRowCount(0)
-            self.qt_base_axe.setRowCount(0)
-            self.qt_secondary_axe.setRowCount(0)
+            # self.qt_base_axe.setRowCount(0)
+            # self.qt_secondary_axe.setRowCount(0)
             self.open_files()
             self.clear_signals()
 
@@ -366,9 +269,9 @@ class MainWindow(QMainWindow):
         self.dict_base_axe.clear()
         self.dict_secondary_axe.clear()
         self.dict_x_axe.clear()
-        self.qt_base_axe.clear()
-        self.qt_secondary_axe.clear()
-        self.qt_x_axe.clear()
+        self.gb_base_axe.qtable_axe.clear()
+        # self.qt_secondary_axe.clear()
+        # self.qt_x_axe.clear()
         self.qt_all_signals.setRowCount(0)
     
     def selected_signals(self, qt_axe: QTableWidget, name_axe: str) -> List[str]:
@@ -380,11 +283,12 @@ class MainWindow(QMainWindow):
 
     def load_data_for_plot(self) -> None:
         self.df = None
-        self.base_signals.clear(), self.secondary_signals.clear()
+        self.base_signals.clear()
+        self.secondary_signals.clear()
         
-        self.base_signals = self.selected_signals(self.qt_base_axe, AxeName.BASE_AXE.value) 
-        self.secondary_signals = self.selected_signals(self.qt_secondary_axe, AxeName.SECONDARY_AXE.value) 
-        self.x_axe = self.selected_signals(self.qt_x_axe, AxeName.X_AXE.value)
+        self.base_signals = self.selected_signals(self.gb_base_axe.qtable_axe, AxeName.BASE_AXE.value) 
+        self.secondary_signals = self.selected_signals(self.gb_secondary_axe.qtable_axe, AxeName.SECONDARY_AXE.value) 
+        self.x_axe = self.selected_signals(self.gb_x_axe.qtable_axe, AxeName.X_AXE.value)
 
         # Основная загрузка данных (из нескольких файлов)
         if self.files and (self.base_signals or self.secondary_signals):
