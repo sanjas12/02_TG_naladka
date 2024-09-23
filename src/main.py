@@ -1,3 +1,4 @@
+import os
 import time
 import pandas as pd
 import sys
@@ -176,24 +177,28 @@ class MainWindow(QMainWindow):
                 qt_axe.setItem(row_position, 0, QTableWidgetItem(str(i)))
                 qt_axe.setItem(row_position, 1, QTableWidgetItem(signal))
                 
-    def parser(self, file: str = None) -> None:
+    def parser(self, file: str = None, read_bytes: int = 20000) -> None:
         """
         Detect encoding, delimiter, decimal in opened files by first file
+        
+        :param file: Путь к файлу для анализа.
+        :param read_bytes: Количество байт для чтения из файла (по умолчанию 20,000).
+        
         """
 
-        if not file:
+        if not file or not os.path.isfile(file):
             self.dialog_box(f"Файл не указан или недоступен: {file}")
             return
         
         try:
-            if self.extension.endswith("(*.gz)"):  # если файлы архивы
+            if file.endswith(".gz"):  # если файлы архивы
                 with gzip.open(self.files[0], "rb") as f: # type: ignore
-                    data_raw = f.read(20000)
+                    data_raw = f.read(read_bytes)
                     f.seek(0)
                     second_row_raw = f.readlines()[1]  # вторая строка быстрых
             else:
                 with open(self.files[0], "rb") as f: # type: ignore
-                    data_raw = f.read(20000)
+                    data_raw = f.read(read_bytes)
                     f.seek(0)
                     second_row_raw = f.readlines()[1]
 
@@ -201,7 +206,7 @@ class MainWindow(QMainWindow):
             self.encoding = chardet.detect(data_raw).get("encoding")
 
             if self.encoding:
-                data_str = data_raw[:200].decode(self.encoding)
+                data_str = data_raw[:200].decode(self.encoding, errors='ignore')
                 # Delimiter detection
                 if data_str.count(";") > data_str.count("\t"):
                     self.delimiter = ";"
