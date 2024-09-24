@@ -157,8 +157,6 @@ class MainWindow(QMainWindow):
         """
         try:
             self.qt_all_signals.setRowCount(0)
-            # self.qt_base_axe.setRowCount(0)
-            # self.qt_secondary_axe.setRowCount(0)
             self.clear_signals()
             self.open_files()
 
@@ -168,7 +166,6 @@ class MainWindow(QMainWindow):
                 self.read_all_signals()
                 self.insert_all_signals_true(self.qt_all_signals, self.dict_all_signals)
                 self.insert_default_time()
-
         
         except EOFError:
             self.dialog_box(f"Ошибка в данных {self.files}. Файл испорчен. Попробуйте распаковать сторонним архиватором.")
@@ -182,14 +179,12 @@ class MainWindow(QMainWindow):
                 qt_axe.setItem(row_position, 1, QTableWidgetItem(signal))
 
     def insert_default_time(self) -> None:
-        # print(f"{DEFAULT_TIME=}")
-        # print(f"{self.dict_all_signals.keys()=}")
         if DEFAULT_TIME in self.dict_all_signals.keys():
             self.qt_all_signals.selectRow(0)
             self.add_signal(self.gb_x_axe.qtable_axe, self.gb_x_axe.dict_axe)
             print("дефолтное время найдено")
         else:
-            print("время не найдено")
+            print("дефолтное время не найдено")
 
     def parser(self, file: str = None, read_bytes: int = 20000) -> None:
         """
