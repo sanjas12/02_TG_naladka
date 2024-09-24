@@ -1,7 +1,7 @@
 TG-Naladka v0.0.1.22 Release Notes
 ==========================
 
-Fixes since v0.0.1.22
+Fixes since v0.0.1.21
 ------------------
 
 * Bugfixes
@@ -13,12 +13,3 @@ Fixes since v0.0.1.22
   - Update:
     - Readme.md
     - requirements.txt
-    - 
-
-* Tweaks
-
-  - Add MYTIME in confif.py
-  - Add TICK_MARK_COUNT in confif.py
-  - Add BUG_TRAKER
-  - Add groupbox.py for further switching by groupbox
-  - Add build_version to title MainWindow GUI
