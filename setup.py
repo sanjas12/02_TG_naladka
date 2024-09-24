@@ -11,7 +11,7 @@ with open(file, 'r+', encoding='utf-8') as f:
     version[-1] = str(int(version[-1]) + 1)
     version = '.'.join(version)
     f.seek(0)
-    f.write(version)
+    # f.write(version)
 
 # для включения конкретных файлов в build
 # python_dir = os.path.dirname(sys.executable)
