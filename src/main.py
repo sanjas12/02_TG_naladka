@@ -100,8 +100,9 @@ class MainWindow(QMainWindow):
         self.combobox_dot = QComboBox()
         self.combobox_dot.addItems(list_dot)
         self.combobox_dot.setCurrentIndex(1)
-        button_grath = QPushButton('Построить графики')
-        button_grath.clicked.connect(self.plot_grath)
+        self.button_grath = QPushButton('Построить графики')
+        self.button_grath.clicked.connect(self.plot_grath)
+        self.button_grath.setEnabled(False)
 
         second_vertical_lay = QGridLayout()
         second_vertical_lay.addWidget(QLabel('Количество исходных данных:'), 0, 0)
@@ -112,7 +113,7 @@ class MainWindow(QMainWindow):
         second_vertical_lay.addWidget(self.number_plot_point, 2, 1)
         second_vertical_lay.addWidget(QLabel(), 2, 3)
         second_vertical_lay.addWidget(QLabel(), 2, 4)
-        second_vertical_lay.addWidget(button_grath, 2, 5)
+        second_vertical_lay.addWidget(self.button_grath, 2, 5)
         
         self.third_huge_GroupBox = QGroupBox()
         self.third_huge_GroupBox.setLayout(second_vertical_lay)
@@ -162,6 +163,7 @@ class MainWindow(QMainWindow):
             self.clear_signals()
 
             if self.files:
+                self.button_grath.setEnabled(True)
                 self.parser(self.files[0])
                 self.read_all_signals()
                 self.insert_all_signals_true(self.qt_all_signals, self.dict_all_signals)
@@ -271,13 +273,15 @@ class MainWindow(QMainWindow):
         Clear All QTableWidgets (Список сигналов, Основная Ось, Вспомогательная, Ось X)
         и их словари
         """
+        self.button_grath.setEnabled(False)
         self.dict_base_axe.clear()
         self.dict_secondary_axe.clear()
         self.dict_x_axe.clear()
         self.gb_base_axe.qtable_axe.clear()
-        # self.qt_secondary_axe.clear()
-        # self.qt_x_axe.clear()
+        self.gb_secondary_axe.qtable_axe.clear()
+        self.gb_x_axe.qtable_axe.clear()
         self.qt_all_signals.setRowCount(0)
+        self.ql_info.setText(f"")
     
     def selected_signals(self, qt_axe: QTableWidget, name_axe: str) -> List[str]:
         if qt_axe.rowCount() > 0:
