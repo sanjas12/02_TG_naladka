@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGr
     QMessageBox, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
 from win32api import GetFileVersionInfo
 from grath_matplot import WindowGrath
-from config.config import MYTIME, AxeName, DEFAULT_TIME
+from config.config import MYTIME, AxeName, DEFAULT_TIME, FONT_SIZE
 from myGroupBox import MyGroupBox
 
 
@@ -344,6 +344,16 @@ def main():
         print(version)
 
     app = QApplication(sys_argv)
+    
+    font_size =FONT_SIZE
+    style = f"""
+        * {{
+        font-size: {font_size}pt;  /* Используем переменную font_size */
+        font-family: Arial;
+        }}
+    """
+    app.setStyleSheet(style)
+    
     ex = MainWindow(version)
     ex.show()
     try:
