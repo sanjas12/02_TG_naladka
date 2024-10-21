@@ -348,7 +348,7 @@ def main():
     font_size =FONT_SIZE
     style = f"""
         * {{
-        font-size: {font_size}pt;  /* Используем переменную font_size */
+        font-size: {font_size}pt;
         font-family: Arial;
         }}
     """
