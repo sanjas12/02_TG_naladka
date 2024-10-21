@@ -1,3 +1,4 @@
+import os
 import sys
 from typing import List
 from PyQt5.QtWidgets import (
@@ -18,7 +19,15 @@ import random
 import pandas as pd
 from matplotlib.widgets import CheckButtons
 import matplotlib.ticker as ticker
-from config.config import MYTIME, TICK_MARK_COUNT
+# Определяем путь к директории config в зависимости от текущего местоположения
+# if getattr(sys, 'frozen', False):
+#     # Если программа запущена как исполняемый файл
+#     config_dir = os.path.join(os.path.dirname(sys.executable), 'config')
+# else:
+#     # Если программа запущена как скрипт
+#     config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../config'))
+# sys.path.append(config_dir)
+from config.config import MYTIME, TICK_MARK_COUNT_Y
 
 
 class WindowGrath(QMainWindow):
@@ -110,8 +119,8 @@ class WindowGrath(QMainWindow):
                                      # X                                   Y
                 ax1.plot(self.data[self.x_axe][::self.step], self.data[signal][::self.step], lw=2, label=signal)
             ax1.set_ylabel(',\n'.join(self.base_axe))
-            ax1.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
-            ax1.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
+            ax1.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_Y))
+            ax1.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_Y))
             ax1.legend(loc=2)
             ax1.set_xlabel(self.x_axe, loc='right')
             # ax1.set_xticklabels(ax1.get_xticks(), rotation = 45)
@@ -125,8 +134,8 @@ class WindowGrath(QMainWindow):
                                             # X                               Y
                 ax2.plot(self.data[self.x_axe][::self.step], self.data[signal][::self.step], ls='-.', lw=2, label=signal, color=self.color_inv[i])
                 ax2.tick_params(axis='y', labelcolor='b')
-                ax2.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
-                ax2.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT))
+                ax2.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_Y))
+                ax2.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_Y))
             ax2.set_ylabel(f',\n'.join(self.secondary_axe), color='b')
             ax2.legend(loc=4)
 

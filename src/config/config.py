@@ -25,7 +25,7 @@ MYTIME = 'my time, c'
 DEFAULT_TIME = 'дата/время'
 
 # plot
-TICK_MARK_COUNT = 10
+TICK_MARK_COUNT_Y = 10
 
 # UI
 FONT_SIZE = 10
