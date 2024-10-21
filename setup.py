@@ -1,6 +1,6 @@
-#0.0.1.22
+#0.0.1.23
 import sys
-import os
+# import os
 from cx_Freeze import setup, Executable
 
 
@@ -8,9 +8,9 @@ file = "setup.py"
 
 with open(file, 'r+', encoding='utf-8') as f:
     version = f.readline().split('.')
-    version[-1] = str(int(version[-1]) + 1)
+    # version[-1] = str(int(version[-1]) + 1)
     version = '.'.join(version)
-    f.seek(0)
+    # f.seek(0)
     # f.write(version)
 
 # для включения конкретных файлов в build
@@ -34,7 +34,7 @@ build_exe_options = {
     "optimize": 0,      # c 2 exe не запускается
     # "zip_include_packages": ["PyQt5", "matplotlib"],
     # "include_files" : files
-    "include_files" : ['Documentation/']
+    "include_files" : ['Documentation/', 'src/config/config.py']
 }
 
 # base="Win32GUI" should be used only for Windows GUI app. If comment this line, will appear console
