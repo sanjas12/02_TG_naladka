@@ -23,8 +23,10 @@ FORMAT = '%(asctime)s:%(levelname)s:%(message)s'
 
 MYTIME = 'my time, c'
 DEFAULT_TIME = 'дата/время'
+DEFAULT_MS = 'миллисекунды'
 
 # plot
+TICK_MARK_COUNT_X = 15
 TICK_MARK_COUNT_Y = 10
 
 # UI

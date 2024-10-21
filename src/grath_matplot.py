@@ -27,7 +27,7 @@ import matplotlib.ticker as ticker
 #     # Если программа запущена как скрипт
 #     config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../config'))
 # sys.path.append(config_dir)
-from config.config import MYTIME, TICK_MARK_COUNT_Y
+from config.config import MYTIME, TICK_MARK_COUNT_X, TICK_MARK_COUNT_Y
 
 
 class WindowGrath(QMainWindow):
@@ -119,7 +119,7 @@ class WindowGrath(QMainWindow):
                                      # X                                   Y
                 ax1.plot(self.data[self.x_axe][::self.step], self.data[signal][::self.step], lw=2, label=signal)
             ax1.set_ylabel(',\n'.join(self.base_axe))
-            ax1.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_Y))
+            ax1.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_X))
             ax1.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_Y))
             ax1.legend(loc=2)
             ax1.set_xlabel(self.x_axe, loc='right')
@@ -134,7 +134,7 @@ class WindowGrath(QMainWindow):
                                             # X                               Y
                 ax2.plot(self.data[self.x_axe][::self.step], self.data[signal][::self.step], ls='-.', lw=2, label=signal, color=self.color_inv[i])
                 ax2.tick_params(axis='y', labelcolor='b')
-                ax2.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_Y))
+                ax2.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_X))
                 ax2.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_Y))
             ax2.set_ylabel(f',\n'.join(self.secondary_axe), color='b')
             ax2.legend(loc=4)
