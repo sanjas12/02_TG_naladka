@@ -112,8 +112,8 @@ class WindowGrath(QMainWindow):
     def plot(self) -> None:
         self.set_suptitle_grath()
 
+        ax1 = self.figure.add_subplot()
         if self.base_axe:
-            ax1 = self.figure.add_subplot()
             ax1.grid(linestyle='--', linewidth=0.5, alpha=.85)
             for signal in self.base_axe:
                                      # X                                   Y
@@ -123,10 +123,6 @@ class WindowGrath(QMainWindow):
             ax1.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_Y))
             ax1.legend(loc=2)
             ax1.set_xlabel(self.x_axe, loc='right')
-            # ax1.set_xticklabels(ax1.get_xticks(), rotation = 45)
-            for tick in ax1.get_xticklabels():
-                # print(tick)
-                tick.set_rotation(15)
 
         if self.secondary_axe:
             ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
@@ -138,6 +134,9 @@ class WindowGrath(QMainWindow):
                 ax2.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_Y))
             ax2.set_ylabel(f',\n'.join(self.secondary_axe), color='b')
             ax2.legend(loc=4)
+    
+        for tick in ax1.get_xticklabels():
+            tick.set_rotation(15)
 
         # refresh canvas
         self.canvas.draw()        

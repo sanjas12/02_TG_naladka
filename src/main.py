@@ -324,7 +324,7 @@ class MainWindow(QMainWindow):
         self.df = None
         self.base_signals.clear()
         self.secondary_signals.clear()
-        
+        self.ready_plot = False
         self.base_signals = self.selected_signals(self.gb_base_axe.qtable_axe, AxeName.BASE_AXE.value) 
         self.secondary_signals = self.selected_signals(self.gb_secondary_axe.qtable_axe, AxeName.SECONDARY_AXE.value) 
         self.x_axe = self.selected_signals(self.gb_x_axe.qtable_axe, AxeName.X_AXE.value)
