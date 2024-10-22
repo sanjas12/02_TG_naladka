@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGr
     QMessageBox, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
 from win32api import GetFileVersionInfo
 from grath_matplot import WindowGrath
-from config.config import MYTIME, AxeName, DEFAULT_TIME, FONT_SIZE
+from config.config import COMMON_TIME, AxeName, DEFAULT_TIME, DEFAULT_MS, FONT_SIZE
 from myGroupBox import MyGroupBox
 
 
@@ -68,7 +68,7 @@ class MainWindow(QMainWindow):
                                          lambda: self.remove_signal(self.gb_secondary_axe.qtable_axe, self.gb_secondary_axe.dict_axe))
 
         # Ось X
-        self.gb_x_axe = MyGroupBox(title=AxeName.X_AXE.value)
+        self.gb_x_axe = MyGroupBox(title=AxeName.X_AXE.value, enable_btn=False)
         self.gb_x_axe.add_func_to_btn(self.gb_x_axe.btn_add, 
                                          lambda: self.add_signal(self.gb_x_axe.qtable_axe, self.gb_x_axe.dict_axe))
         self.gb_x_axe.add_func_to_btn(self.gb_x_axe.btn_remove, 
@@ -141,6 +141,8 @@ class MainWindow(QMainWindow):
                                                                     filter=";;".join(FILE_FILTERS))
         
     def read_all_signals(self) -> None:
+        self.is_time = False
+        self.is_ms = False
 
         if self.encoding:
             # Считывание названия всех сигналов из первого файла
@@ -150,6 +152,21 @@ class MainWindow(QMainWindow):
             df_all_signals = df_all_signals.loc[:, ~df_all_signals.columns.str.contains('^Unnamed')]
             self.dict_all_signals: Dict[str, int] = {signal:i for i, signal in enumerate(df_all_signals.columns, start=1)}
             # print(f"{self.dict_all_signals=}")
+
+            if DEFAULT_TIME in self.dict_all_signals.keys():
+                self.is_time = True
+                print("дефолтное время/дата найдено")
+            else:
+                print("дефолтное время/дата не найдено")
+                
+            if DEFAULT_MS in self.dict_all_signals.keys():
+                self.is_ms = True
+                print("миллисекунды найдены")
+            else:
+                print("миллисекунды не найдены")
+
+            if self.is_time and self.is_ms:
+                self.dict_all_signals[COMMON_TIME] = len(self.dict_all_signals.keys()) + 1
            
     def insert_all_signals(self) -> None:
         """
@@ -164,13 +181,13 @@ class MainWindow(QMainWindow):
                 self.button_grath.setEnabled(True)
                 self.parser(self.files[0])
                 self.read_all_signals()
-                self.insert_all_signals_true(self.qt_all_signals, self.dict_all_signals)
+                self.insert_all_signals_to_qtable(self.qt_all_signals, self.dict_all_signals)
                 self.insert_default_time()
         
         except EOFError:
             self.dialog_box(f"Ошибка в данных {self.files}. Файл испорчен. Попробуйте распаковать сторонним архиватором.")
             
-    def insert_all_signals_true(self, qt_axe: QTableWidget, dict_axe: Dict[str, int]) -> None:
+    def insert_all_signals_to_qtable(self, qt_axe: QTableWidget, dict_axe: Dict[str, int]) -> None:
             qt_axe.setRowCount(0)
             for signal, i in sorted(dict_axe.items(), key=lambda item: item[1]):
                 row_position = qt_axe.rowCount()
@@ -179,12 +196,18 @@ class MainWindow(QMainWindow):
                 qt_axe.setItem(row_position, 1, QTableWidgetItem(signal))
 
     def insert_default_time(self) -> None:
-        if DEFAULT_TIME in self.dict_all_signals.keys():
+        self.gb_x_axe.dict_axe.clear()
+        if self.is_time and self.is_ms:
+            last_row_index = self.qt_all_signals.rowCount() - 1
+            self.qt_all_signals.selectRow(last_row_index)
+            self.add_signal(self.gb_x_axe.qtable_axe, self.gb_x_axe.dict_axe)
+        elif self.is_time:
             self.qt_all_signals.selectRow(0)
             self.add_signal(self.gb_x_axe.qtable_axe, self.gb_x_axe.dict_axe)
-            print("дефолтное время найдено")
         else:
-            print("дефолтное время не найдено")
+            self.dialog_box("Данные для времени не найдены")
+        
+        self.qt_all_signals.selectRow(0)
 
     def parser(self, file: str = None, read_bytes: int = 20000) -> None:
         """
@@ -254,7 +277,7 @@ class MainWindow(QMainWindow):
             self.qt_all_signals.removeRow(row)
             self.dict_all_signals.pop(signal) 
 
-            self.insert_all_signals_true(qt_axe, dict_axe)
+            self.insert_all_signals_to_qtable(qt_axe, dict_axe)
         else:
             self.dialog_box(f"Don't open files.\nDon't select signal.\nAll signals are already selected.")
         
@@ -271,7 +294,7 @@ class MainWindow(QMainWindow):
             qt_axe.removeRow(row)
             dict_axe.pop(signal)
 
-            self.insert_all_signals_true(self.qt_all_signals, self.dict_all_signals)
+            self.insert_all_signals_to_qtable(self.qt_all_signals, self.dict_all_signals)
         else:
             self.dialog_box("don't select signals for removing")
         
@@ -308,8 +331,14 @@ class MainWindow(QMainWindow):
 
         # Основная загрузка данных (из нескольких файлов)
         if self.files and (self.base_signals or self.secondary_signals):
+        
+            if self.is_time and self.is_ms:
+                self.df = pd.concat(pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
+                                            usecols=self.base_signals+self.secondary_signals+[DEFAULT_TIME, DEFAULT_MS], decimal=self.decimal) for file in self.files)
 
-            self.df = pd.concat(pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
+                self.df[COMMON_TIME] = self.df[DEFAULT_TIME] + ',' + self.df[DEFAULT_MS].astype(str)
+            else:
+                self.df = pd.concat(pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
                                             usecols=self.base_signals+self.secondary_signals+self.x_axe, decimal=self.decimal) for file in self.files)
 
             self.number_raw_point.setText(str(len(self.df.index)))
@@ -324,6 +353,7 @@ class MainWindow(QMainWindow):
 
     def plot_grath(self) -> None:
         self.load_data_for_plot()
+
         if self.ready_plot:
             self.number_plot_point.setText(str(int(len(self.df.index)/int(self.combobox_dot.currentText()))))
             self.grath = WindowGrath(self.df, self.base_signals, self.secondary_signals, *self.x_axe, 
