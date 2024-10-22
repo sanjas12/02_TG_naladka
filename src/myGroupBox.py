@@ -20,6 +20,7 @@ class MyGroupBox(QGroupBox):
         button_add_name: str = "Add to Axe",
         button_remove_name: str = "Remove from Axe",
         title: str = None,
+        enable_btn: bool = True
     ):
         super().__init__(title)
 
@@ -38,8 +39,9 @@ class MyGroupBox(QGroupBox):
 
         self.lay = QVBoxLayout()
         self.lay.addWidget(self.qtable_axe)
-        self.lay.addWidget(self.btn_add)
-        self.lay.addWidget(self.btn_remove)
+        if enable_btn:
+            self.lay.addWidget(self.btn_add)
+            self.lay.addWidget(self.btn_remove)
 
         self.setLayout(self.lay)
 
@@ -97,7 +99,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     # window = MainWindow()
     # window.show()
-    box = MyGroupBox(button_add_name="1 кнопка", title="заголовок")
+    box = MyGroupBox(button_add_name="1 кнопка", title="заголовок", enable_btn=False)
     box.add_func_to_btn(box.btn_add, lambda: test("sdsd"))
     box.add_func_to_btn(box.btn_remove, lambda: test("remove"))
     box.show()
