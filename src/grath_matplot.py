@@ -27,7 +27,7 @@ import matplotlib.ticker as ticker
 #     # Если программа запущена как скрипт
 #     config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../config'))
 # sys.path.append(config_dir)
-from config.config import MYTIME, TICK_MARK_COUNT_X, TICK_MARK_COUNT_Y
+from config.config import COMMON_TIME, TICK_MARK_COUNT_X, TICK_MARK_COUNT_Y
 
 
 class WindowGrath(QMainWindow):
@@ -167,13 +167,13 @@ def main():
     df['ГСМ-Б'] = [random.randint(300, 321) for _ in range(number_point)]
     df['ОЗ-А'] = [random.random() for _ in range(number_point)]
     df['ОЗ-Б'] = [random.random() for _ in range(number_point)]
-    df[MYTIME] = [i for i in range(number_point)]
+    df[COMMON_TIME] = [i for i in range(number_point)]
 
     y1 = ['ОЗ-А', 'ОЗ-Б']
     y2 = [first_signal, 'ГСМ-Б']
 
     app = QApplication(sys.argv)
-    ex = WindowGrath(df, base_axe=y1, secondary_axe=y2, x_axe=MYTIME, filename='E:/ТГ41-2021-06-25_134810_14099.csv.gz ')
+    ex = WindowGrath(df, base_axe=y1, secondary_axe=y2, x_axe=COMMON_TIME, filename='E:/ТГ41-2021-06-25_134810_14099.csv.gz ')
     ex.show()
 
     try:
