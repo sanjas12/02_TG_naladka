@@ -317,9 +317,9 @@ class MainWindow(QMainWindow):
         self.gb_base_axe.dict_axe.clear()
         self.gb_secondary_axe.dict_axe.clear()
         self.gb_x_axe.dict_axe.clear()
-        self.gb_base_axe.qtable_axe.clear()
-        self.gb_secondary_axe.qtable_axe.clear()
-        self.gb_x_axe.qtable_axe.clear()
+        self.gb_base_axe.qtable_axe.setRowCount(0)
+        self.gb_secondary_axe.qtable_axe.setRowCount(0)
+        self.gb_x_axe.qtable_axe.setRowCount(0)
         self.qt_all_signals.setRowCount(0)
         self.ql_info.setText(f"")
         self.is_kol_1_2 = False
