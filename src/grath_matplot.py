@@ -143,20 +143,19 @@ class WindowGrath(QMainWindow):
 
     def set_suptitle_grath(self):
         if not self.filename:
-            self.figure.suptitle(__file__)
+            title = 'Не предан файл'
         elif self.filename.find('ШУР') >= 0:
             index_tg = self.filename.rfind('ШУР')
-            title = f'ТГ:{self.filename[index_tg + 3]}, Канал:{self.filename[index_tg + 4]}, Кол-во данных: {str(len(self.data))}'
-            self.figure.suptitle(title)
+            title = f'ТГ:{self.filename[index_tg + 3]}, Канал:{self.filename[index_tg + 4]},'
         # для проекта РК
         elif self.filename.find('ШСП') >= 0:
             index_tg = self.filename.rfind('ШСП')
-            title = f'ШСП:{self.filename[index_tg + 3]}, Канал:{self.filename[index_tg + 4]}, Кол-во данных: {str(len(self.data))}'
-            self.figure.suptitle(title)
-        else:
+            title = f'ШСП:{self.filename[index_tg + 3]}, Канал:{self.filename[index_tg + 4]},'
+        elif self.filename.rfind('ТГ') >=0:
             index_tg = self.filename.rfind('ТГ')
-            title = f'ТГ:{self.filename[index_tg + 2]}, Канал:{self.filename[index_tg + 3]}, Кол-во данных: {str(len(self.data))}'
-            self.figure.suptitle(title)
+            title = f'ТГ:{self.filename[index_tg + 2]}, Канал:{self.filename[index_tg + 3]},'
+        title += f' Кол-во данных: {str(len(self.data)//self.step)}' 
+        self.figure.suptitle(title)
 
 def main():
     df = pd.DataFrame()
