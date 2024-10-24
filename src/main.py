@@ -314,9 +314,9 @@ class MainWindow(QMainWindow):
         и их словари
         """
         self.button_grath.setEnabled(False)
-        self.dict_base_axe.clear()
-        self.dict_secondary_axe.clear()
-        self.dict_x_axe.clear()
+        self.gb_base_axe.dict_axe.clear()
+        self.gb_secondary_axe.dict_axe.clear()
+        self.gb_x_axe.dict_axe.clear()
         self.gb_base_axe.qtable_axe.clear()
         self.gb_secondary_axe.qtable_axe.clear()
         self.gb_x_axe.qtable_axe.clear()
