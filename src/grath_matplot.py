@@ -154,6 +154,8 @@ class WindowGrath(QMainWindow):
         elif self.filename.rfind('ТГ') >=0:
             index_tg = self.filename.rfind('ТГ')
             title = f'ТГ:{self.filename[index_tg + 2]}, Канал:{self.filename[index_tg + 3]},'
+        else:
+            title = f'Тестовый файл'
         title += f' Кол-во данных: {str(len(self.data)//self.step)}' 
         self.figure.suptitle(title)
 

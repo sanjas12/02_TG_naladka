@@ -27,6 +27,7 @@ class MainWindow(QMainWindow):
         self.dict_x_axe: Dict[str, int] = {}
         self.dict_base_axe: Dict[str, int] = {}
         self.dict_secondary_axe: Dict[str, int] = {}
+        self.is_kol_1_2 = False
         self.setup_ui(version)
 
     def setup_ui(self, version) -> None:
@@ -146,8 +147,11 @@ class MainWindow(QMainWindow):
 
         if self.encoding:
             # Считывание названия всех сигналов из первого файла
-            df_all_signals = pd.read_csv(self.files[0], encoding=self.encoding, delimiter=self.delimiter, nrows=0)
-            
+            if self.is_kol_1_2:
+                df_all_signals = pd.read_csv(self.files[0], encoding=self.encoding, delimiter=self.delimiter, skiprows=1, nrows=0)
+            else:
+                df_all_signals = pd.read_csv(self.files[0], encoding=self.encoding, delimiter=self.delimiter, nrows=0)
+
             # удаляем лишние колонки
             df_all_signals = df_all_signals.loc[:, ~df_all_signals.columns.str.contains('^Unnamed')]
             self.dict_all_signals: Dict[str, int] = {signal:i for i, signal in enumerate(df_all_signals.columns, start=1)}
@@ -237,8 +241,13 @@ class MainWindow(QMainWindow):
             # Encoding detection
             self.encoding = chardet.detect(data_raw).get("encoding")
 
+
             if self.encoding:
                 data_str = data_raw[:200].decode(self.encoding, errors='ignore')
+                # Detection Koлский архив 1,2 блок 
+                if data_str.startswith("Count="):
+                    self.is_kol_1_2 =True
+
                 # Delimiter detection
                 if data_str.count(";") > data_str.count("\t"):
                     self.delimiter = ";"
@@ -253,7 +262,8 @@ class MainWindow(QMainWindow):
                     self.decimal = ","
 
                 self.ql_info.setText(
-                    f"Исходные файлы: encoding: {self.encoding} delimiter: {repr(self.delimiter)} decimal: {self.decimal}"
+                    f"Исходные файлы: encoding: {self.encoding} delimiter: {repr(self.delimiter)} " 
+                    f"decimal: {self.decimal} Кольский САРЗ 1,2 блок:{self.is_kol_1_2}"
                 )
             else:
                 raise ValueError("Encoding could not be detected")
@@ -312,6 +322,7 @@ class MainWindow(QMainWindow):
         self.gb_x_axe.qtable_axe.clear()
         self.qt_all_signals.setRowCount(0)
         self.ql_info.setText(f"")
+        self.is_kol_1_2 = False
     
     def selected_signals(self, qt_axe: QTableWidget, name_axe: str) -> List[str]:
         if qt_axe.rowCount() > 0:
@@ -331,15 +342,25 @@ class MainWindow(QMainWindow):
 
         # Основная загрузка данных (из нескольких файлов)
         if self.files and (self.base_signals or self.secondary_signals):
-        
-            if self.is_time and self.is_ms:
-                self.df = pd.concat(pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
-                                            usecols=self.base_signals+self.secondary_signals+[DEFAULT_TIME, DEFAULT_MS], decimal=self.decimal) for file in self.files)
+            if self.is_kol_1_2:
+                if self.is_time and self.is_ms:
+                    self.df = pd.concat(pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
+                                                usecols=self.base_signals+self.secondary_signals+[DEFAULT_TIME, DEFAULT_MS], decimal=self.decimal, skiprows=1,) for file in self.files)
 
-                self.df[COMMON_TIME] = self.df[DEFAULT_TIME] + ',' + self.df[DEFAULT_MS].astype(str)
+                    self.df[COMMON_TIME] = self.df[DEFAULT_TIME] + ',' + self.df[DEFAULT_MS].astype(str)
+                else:
+                    self.df = pd.concat(pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
+                                                usecols=self.base_signals+self.secondary_signals+self.x_axe, decimal=self.decimal, skiprows=1,) for file in self.files)
+
             else:
-                self.df = pd.concat(pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
-                                            usecols=self.base_signals+self.secondary_signals+self.x_axe, decimal=self.decimal) for file in self.files)
+                if self.is_time and self.is_ms:
+                    self.df = pd.concat(pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
+                                                usecols=self.base_signals+self.secondary_signals+[DEFAULT_TIME, DEFAULT_MS], decimal=self.decimal) for file in self.files)
+
+                    self.df[COMMON_TIME] = self.df[DEFAULT_TIME] + ',' + self.df[DEFAULT_MS].astype(str)
+                else:
+                    self.df = pd.concat(pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
+                                                usecols=self.base_signals+self.secondary_signals+self.x_axe, decimal=self.decimal) for file in self.files)
 
             self.number_raw_point.setText(str(len(self.df.index)))
 
