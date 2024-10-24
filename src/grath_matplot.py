@@ -141,9 +141,9 @@ class WindowGrath(QMainWindow):
         # refresh canvas
         self.canvas.draw()        
 
-    def set_suptitle_grath(self):
+    def set_suptitle_grath(self) -> None:
         if not self.filename:
-            title = 'Не предан файл'
+            title = 'Не выбран файл с данными'
         elif self.filename.find('ШУР') >= 0:
             index_tg = self.filename.rfind('ШУР')
             title = f'ТГ:{self.filename[index_tg + 3]}, Канал:{self.filename[index_tg + 4]},'
