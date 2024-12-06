@@ -366,7 +366,7 @@ class MainWindow(QMainWindow):
 
             self.ready_plot = True
         else:
-            text = f"Не открыты файлы архивов или не выбраны сигналы"
+            text = f"Не выбраны сигналы"
             self.dialog_box(text)
 
     def dialog_box(self, text: str) -> None:
