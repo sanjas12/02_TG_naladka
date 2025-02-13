@@ -42,6 +42,7 @@ class MainWindow(QMainWindow):
         self.qt_all_signals.verticalHeader().hide()
         self.qt_all_signals.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.qt_all_signals.horizontalHeader().setStretchLastSection(True)
+        self.qt_all_signals.resizeRowsToContents()
 
         btn_open_files = QPushButton('Open files')
         btn_open_files.clicked.connect(self.insert_all_signals)
