@@ -196,8 +196,15 @@ class MainWindow(QMainWindow):
             for signal, i in sorted(dict_axe.items(), key=lambda item: item[1]):
                 row_position = qt_axe.rowCount()
                 qt_axe.insertRow(row_position)
-                qt_axe.setItem(row_position, 0, QTableWidgetItem(str(i)))
-                qt_axe.setItem(row_position, 1, QTableWidgetItem(signal))
+                
+                item_index = QTableWidgetItem(str(i))
+                # item_index.setToolTip(f"Индекс сигнала: {i}")
+                
+                item_signal = QTableWidgetItem(signal)
+                item_signal.setToolTip(f"Название сигнала: {signal}")
+                
+                qt_axe.setItem(row_position, 0, item_index)
+                qt_axe.setItem(row_position, 1, item_signal)
 
     def insert_default_time(self) -> None:
         self.gb_x_axe.dict_axe.clear()
