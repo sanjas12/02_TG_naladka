@@ -5,13 +5,14 @@ import sys
 import chardet
 import gzip
 import csv
+import logging
 from typing import List, Dict, Tuple
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QGroupBox, \
     QVBoxLayout, QGridLayout, QLabel, QFileDialog, QListWidget, QComboBox, QMainWindow, \
     QMessageBox, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView
 from win32api import GetFileVersionInfo
 from grath_matplot import WindowGrath
-from config.config import COMMON_TIME, AxeName, DEFAULT_TIME, DEFAULT_MS, FONT_SIZE
+from config.config import *
 from myGroupBox import MyGroupBox
 
 
@@ -177,6 +178,7 @@ class MainWindow(QMainWindow):
         """
         Clear all old signals and insert new signals to QTable(Список сигналов)
         """
+        logging.info('Начало выполнения insert_all_signals')
         try:
             self.qt_all_signals.setRowCount(0)
             self.clear_signals()
@@ -189,9 +191,12 @@ class MainWindow(QMainWindow):
                 self.insert_all_signals_to_qtable(self.qt_all_signals, self.dict_all_signals)
                 self.insert_default_time()
         
-        except EOFError:
+        except EOFError as e:
+            logging.error(f'Ошибка в данных {self.files}. Файл испорчен. Попробуйте распаковать сторонним архиватором.', exc_info=True)
             self.dialog_box(f"Ошибка в данных {self.files}. Файл испорчен. Попробуйте распаковать сторонним архиватором.")
-            
+        finally:
+            logging.info('Завершение выполнения insert_all_signals')
+
     def insert_all_signals_to_qtable(self, qt_axe: QTableWidget, dict_axe: Dict[str, int]) -> None:
             qt_axe.setRowCount(0)
             for signal, i in sorted(dict_axe.items(), key=lambda item: item[1]):
@@ -230,11 +235,12 @@ class MainWindow(QMainWindow):
         
         """
 
-        if not file or not os.path.isfile(file):
-            self.dialog_box(f"Файл не указан или недоступен: {file}")
-            return
-        
+        logging.info('Начало выполнения parser')
         try:
+            if not file or not os.path.isfile(file):
+                self.dialog_box(f"Файл не указан или недоступен: {file}")
+                return
+            
             if file.endswith(".gz"):  # если файлы архивы
                 with gzip.open(self.files[0], "rb") as f: # type: ignore
                     data_raw = f.read(read_bytes)
@@ -249,12 +255,11 @@ class MainWindow(QMainWindow):
             # Encoding detection
             self.encoding = chardet.detect(data_raw).get("encoding")
 
-
             if self.encoding:
                 data_str = data_raw[:200].decode(self.encoding, errors='ignore')
                 # Detection Koлский архив 1,2 блок 
                 if data_str.startswith("Count="):
-                    self.is_kol_1_2 =True
+                    self.is_kol_1_2 = True
 
                 # Delimiter detection
                 if data_str.count(";") > data_str.count("\t"):
@@ -277,12 +282,15 @@ class MainWindow(QMainWindow):
                 raise ValueError("Encoding could not be detected")
 
         except Exception as e:
+            logging.error(f'Ошибка в методе parser: {e}', exc_info=True)
             text = (
                 f"Не удалось определить параметры файла: {str(e)}\n"
                 f"Не удалось определить кодировку, попробуйте разархивировать файл {file}"
             )
             self.dialog_box(text)
-        
+        finally:
+            logging.info('Завершение выполнения parser')
+            
     def add_signal(self, qt_axe: QTableWidget, dict_axe: Dict[str, int]) -> None:
         """
         Remove signal from Qtable(Список сигналов) and append his to qlist(given qlist) and dict_axe
@@ -340,6 +348,7 @@ class MainWindow(QMainWindow):
             return []
 
     def load_data_for_plot(self) -> None:
+        logging.info('Начало выполнения load_data_for_plot')
         self.df = None
         self.base_signals.clear()
         self.secondary_signals.clear()
@@ -376,6 +385,7 @@ class MainWindow(QMainWindow):
         else:
             text = f"Не выбраны сигналы"
             self.dialog_box(text)
+        logging.info('Завершение выполнения load_data_for_plot')
 
     def dialog_box(self, text: str) -> None:
         QMessageBox.information(self, 'TG_info', text, QMessageBox.StandardButton.Ok)
@@ -391,6 +401,21 @@ class MainWindow(QMainWindow):
 
 
 def main():
+    # "Ваша версия Python 3.9 или выше."
+    if sys.version_info[1]>=9:
+        logging.basicConfig(
+            filename=LOG_FILE, 
+            encoding='utf-8', 
+            level=LEVEL_LOG,
+            format=FORMAT,
+            filemode='a')
+    else:
+        logging.basicConfig(handlers=[logging.FileHandler(filename=LOG_FILE, 
+                                                     encoding='utf-8', mode='a')],
+                            format=FORMAT, level=LEVEL_LOG)
+
+    logging.info('Программа запущена')
+
     global app
     sys_argv = sys.argv
     if '.exe' in sys.argv[0]:                                # если EXE in Win
@@ -417,8 +442,11 @@ def main():
     ex.show()
     try:
         sys.exit(app.exec())
-    except:
-        print("Пока")
+    except Exception as e:
+        logging.error(f'Произошла ошибка: {e}', exc_info=True)
+        logging.info('Программа завершена с ошибкой')
+    finally:
+        logging.info('Программа завершена')
 
 if __name__ == '__main__':
     main()
