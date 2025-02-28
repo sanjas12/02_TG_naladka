@@ -178,7 +178,7 @@ class MainWindow(QMainWindow):
         """
         Clear all old signals and insert new signals to QTable(Список сигналов)
         """
-        logging.info('Начало выполнения insert_all_signals')
+        logging.debug('Начало выполнения insert_all_signals')
         try:
             self.qt_all_signals.setRowCount(0)
             self.clear_signals()
@@ -195,7 +195,7 @@ class MainWindow(QMainWindow):
             logging.error(f'Ошибка в данных {self.files}. Файл испорчен. Попробуйте распаковать сторонним архиватором.', exc_info=True)
             self.dialog_box(f"Ошибка в данных {self.files}. Файл испорчен. Попробуйте распаковать сторонним архиватором.")
         finally:
-            logging.info('Завершение выполнения insert_all_signals')
+            logging.debug('Завершение выполнения insert_all_signals')
 
     def insert_all_signals_to_qtable(self, qt_axe: QTableWidget, dict_axe: Dict[str, int]) -> None:
             qt_axe.setRowCount(0)
@@ -235,7 +235,7 @@ class MainWindow(QMainWindow):
         
         """
 
-        logging.info('Начало выполнения parser')
+        logging.debug('Начало выполнения parser')
         try:
             if not file or not os.path.isfile(file):
                 self.dialog_box(f"Файл не указан или недоступен: {file}")
@@ -289,7 +289,7 @@ class MainWindow(QMainWindow):
             )
             self.dialog_box(text)
         finally:
-            logging.info('Завершение выполнения parser')
+            logging.debug('Завершение выполнения parser')
             
     def add_signal(self, qt_axe: QTableWidget, dict_axe: Dict[str, int]) -> None:
         """
@@ -325,6 +325,7 @@ class MainWindow(QMainWindow):
             self.dialog_box("don't select signals for removing")
         
     def clear_signals(self) -> None:
+        logging.debug("")
         """
         Clear All QTableWidgets (Список сигналов, Основная Ось, Вспомогательная, Ось X)
         и их словари

@@ -21,7 +21,7 @@ OUT_FILE = Path(OUT_DIR, 'out_merge.csv')
 
 #Logging
 FORMAT = '%(asctime)s:%(levelname)s:%(message)s'
-LEVEL_LOG = logging.INFO
+LEVEL_LOG = logging.DEBUG
 
 COMMON_TIME = 'Время'
 DEFAULT_TIME = 'дата/время'
