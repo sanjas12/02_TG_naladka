@@ -19,16 +19,10 @@ import random
 import pandas as pd
 from matplotlib.widgets import CheckButtons
 import matplotlib.ticker as ticker
-# Определяем путь к директории config в зависимости от текущего местоположения
-# if getattr(sys, 'frozen', False):
-#     # Если программа запущена как исполняемый файл
-#     config_dir = os.path.join(os.path.dirname(sys.executable), 'config')
-# else:
-#     # Если программа запущена как скрипт
-#     config_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../config'))
-# sys.path.append(config_dir)
-from config.config import COMMON_TIME, TICK_MARK_COUNT_X, TICK_MARK_COUNT_Y
 
+# Добавляем корневую папку проекта (src) в sys.path для возможности корректного импорта модулей 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+from src.config.config import COMMON_TIME, TICK_MARK_COUNT_X, TICK_MARK_COUNT_Y
 
 class WindowGrath(QMainWindow):
     def __init__(self, data: pd.DataFrame, base_axe: List[str], secondary_axe: List[str],
