@@ -42,6 +42,43 @@ TODO
 10. Поиск в списке сигналов (Qtablewidget) https://stackoverflow.com/questions/51613638/highlight-search-results-in-qtablewidgetselect-and-highlight-that-text-or-chara
 11. Портировать на Linux(Astra и Ubuntu)
 12. добавить The QProgressBar
+13. 📦src
+ ┣ 📂config
+ ┃ ┣ 📜__init__.py
+ ┃ ┗ 📜config.py
+ ┣ 📂ui
+ ┃ ┣ 📜__init__.py
+ ┃ ┣ 📜grath_matplot.py
+ ┃ ┣ 📜MainWindowUI.py
+ ┣ 📂utils
+ ┃ ┣ 📜__init__.py
+ ┃ ┗ 📜helpers.py
+ ┣ 📂logic
+ ┃ ┣ 📜__init__.py
+ ┃ ┣ 📜main_logic.py
+ ┃ ┣ 📜data_processing.py
+ ┃ ┗ 📜network_operations.py
+ ┣ 📂logs
+ ┃ ┗ 📜app.log
+ ┣ 📂tests
+ ┃ ┣ 📜__init__.py
+ ┃ ┣ 📜test_main.py
+ ┃ ┗ 📜test_logic.py
+ ┣ 📂scripts
+ ┃ ┣ 📜build.py
+ ┃ ┣ 📜deploy.py
+ ┣ 📂assets
+ ┃ ┣ 📂images
+ ┃ ┣ 📂fonts
+ ┣ 📂docs
+ ┃ ┣ 📜index.md
+ ┃ ┣ 📜installation.md
+ ┣ 📜main.py
+ ┣ 📜MainWindowLogic.py
+ ┣ 📜logger.py
+ ┣ 📜README.md
+ ┣ 📜requirements.txt
+ ┗ 📜.gitignore
 
 help:
 python -m pip  install -r requirements.txt --no-index -f d:\\temp\\python_Library
