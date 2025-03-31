@@ -10,7 +10,9 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QPushButton,
-    QMainWindow
+    QMainWindow,
+    QCheckBox,
+    QScrollArea
 )
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
@@ -59,8 +61,9 @@ class WindowGrath(QMainWindow):
         self.x_axe = x_axe or COMMON_TIME
         self.label_list = []
         self.lines_list = []
+        self.checkboxes = {}  # Словарь для хранения чекбоксов
+        self.line_visibility = {}  # Словарь для отслеживания видимости линий
         
-        # Цвета для графиков
         self.base_colors = ['b', 'g', 'r', 'c', 'm', 'purple', 'k']
         self.secondary_colors = self.base_colors[::-1]
         
@@ -72,7 +75,6 @@ class WindowGrath(QMainWindow):
         self.setWindowTitle('Графики')
         self.setMinimumSize(800, 600)
         
-        # Создаем основной виджет и layout
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QHBoxLayout(central_widget)
@@ -82,7 +84,7 @@ class WindowGrath(QMainWindow):
         control_layout = QVBoxLayout()
         
         self.points_combobox = QComboBox()
-        self.points_combobox.addItems(['1', '10', '100', '1000', '10000'])
+        self.points_combobox.addItems(['10', '100', '1000'])
         self.points_combobox.setCurrentText(str(self.step))
         
         self.points_label = QLabel(f'Всего точек: {len(self.data)}')
@@ -90,11 +92,49 @@ class WindowGrath(QMainWindow):
         update_button = QPushButton('Обновить графики')
         update_button.clicked.connect(self.update_graphs)
         
+        # Создаем область с прокруткой для чекбоксов
+        scroll = QScrollArea()
+        # scroll.setWidgetResizable(True)
+        scroll_content = QWidget()
+        scroll_layout = QVBoxLayout(scroll_content)
+        
+        # Добавляем чекбоксы для сигналов
+        self.signals_group = QGroupBox("Видимость сигналов")
+        self.signals_layout = QVBoxLayout()
+        
+        # Сначала добавляем чекбоксы для основной оси
+        if self.base_axe:
+            primary_label = QLabel("Основная ось:")
+            self.signals_layout.addWidget(primary_label)
+            for signal in self.base_axe:
+                cb = QCheckBox(signal)
+                cb.setChecked(True)
+                cb.stateChanged.connect(self.toggle_signal_visibility)
+                self.signals_layout.addWidget(cb)
+                self.checkboxes[signal] = cb
+                self.line_visibility[signal] = True
+        
+        # Затем добавляем чекбоксы для вторичной оси
+        if self.secondary_axe:
+            secondary_label = QLabel("\nВторичная ось:")
+            self.signals_layout.addWidget(secondary_label)
+            for signal in self.secondary_axe:
+                cb = QCheckBox(signal)
+                cb.setChecked(True)
+                cb.stateChanged.connect(self.toggle_signal_visibility)
+                self.signals_layout.addWidget(cb)
+                self.checkboxes[signal] = cb
+                self.line_visibility[signal] = True
+        
+        self.signals_group.setLayout(self.signals_layout)
+        scroll_layout.addWidget(self.signals_group)
+        scroll.setWidget(scroll_content)
+        
         control_layout.addWidget(QLabel('Шаг выборки:'))
         control_layout.addWidget(self.points_combobox)
         control_layout.addWidget(self.points_label)
         control_layout.addWidget(update_button)
-        control_layout.addStretch()
+        control_layout.addWidget(scroll)
         control_panel.setLayout(control_layout)
         
         # Панель с графиками
@@ -109,9 +149,15 @@ class WindowGrath(QMainWindow):
         graph_layout.addWidget(self.toolbar)
         graph_panel.setLayout(graph_layout)
         
-        # Добавляем панели в основной layout
         main_layout.addWidget(control_panel, stretch=1)
         main_layout.addWidget(graph_panel, stretch=4)
+
+    def toggle_signal_visibility(self, state: int) -> None:
+        """Переключение видимости сигнала при изменении состояния чекбокса."""
+        sender = self.sender()
+        signal_name = sender.text()
+        self.line_visibility[signal_name] = sender.isChecked()
+        self.update_graphs()
 
     def update_graphs(self) -> None:
         """Обновление графиков при изменении параметров."""
@@ -119,17 +165,8 @@ class WindowGrath(QMainWindow):
         self.plot_graphs()
         self.canvas.draw()
 
-    def set_line_visibility(self, label: str) -> None:
-        """Переключение видимости линии графика по метке."""
-        try:
-            index = self.label_list.index(label)
-            self.lines_list[index].set_visible(not self.lines_list[index].get_visible())
-            self.canvas.draw()
-        except ValueError:
-            print(f"Метка {label} не найдена")
-
     def plot_graphs(self) -> None:
-        """Построение графиков данных."""
+        """Построение графиков данных с учетом видимости сигналов."""
         self.figure.clear()
         self.set_graph_title()
         
@@ -140,21 +177,24 @@ class WindowGrath(QMainWindow):
             return
             
         ax1 = self.figure.add_subplot()
+        self.lines_list = []  # Очищаем список линий
         
         # Построение графиков основной оси
         if self.base_axe:
             for signal in self.base_axe:
-                if signal in self.data.columns:
-                    ax1.plot(self.data[self.x_axe][::self.step], 
-                            self.data[signal][::self.step], 
-                            lw=2, 
-                            label=signal)
+                if signal in self.data.columns and self.line_visibility.get(signal, True):
+                    line, = ax1.plot(self.data[self.x_axe][::self.step], 
+                                   self.data[signal][::self.step], 
+                                   lw=2, 
+                                   label=signal)
+                    self.lines_list.append(line)
             
             ax1.grid(linestyle='--', linewidth=0.5, alpha=.85)
-            ax1.set_ylabel(',\n'.join(self.base_axe))
+            ax1.set_ylabel(',\n'.join([s for s in self.base_axe if self.line_visibility.get(s, True)]))
             ax1.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_X))
             ax1.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_Y))
-            ax1.legend(loc='upper left')
+            if any(self.line_visibility.get(s, False) for s in self.base_axe):
+                ax1.legend(loc='upper left')
             ax1.set_xlabel(self.x_axe, loc='right')
         
         # Построение графиков вторичной оси
@@ -162,19 +202,22 @@ class WindowGrath(QMainWindow):
             ax2 = ax1.twinx()
             
             for i, signal in enumerate(self.secondary_axe):
-                if signal in self.data.columns:
-                    ax2.plot(self.data[self.x_axe][::self.step], 
-                            self.data[signal][::self.step], 
-                            ls='-.', 
-                            lw=2, 
-                            label=signal, 
-                            color=self.secondary_colors[i % len(self.secondary_colors)])
+                if signal in self.data.columns and self.line_visibility.get(signal, True):
+                    line, = ax2.plot(self.data[self.x_axe][::self.step], 
+                                    self.data[signal][::self.step], 
+                                    ls='-.', 
+                                    lw=2, 
+                                    label=signal, 
+                                    color=self.secondary_colors[i % len(self.secondary_colors)])
+                    self.lines_list.append(line)
             
-            ax2.tick_params(axis='y', labelcolor='b')
-            ax2.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_X))
-            ax2.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_Y))
-            ax2.set_ylabel(f',\n'.join(self.secondary_axe), color='b')
-            ax2.legend(loc='upper right')
+            visible_secondary = [s for s in self.secondary_axe if self.line_visibility.get(s, True)]
+            if visible_secondary:
+                ax2.tick_params(axis='y', labelcolor='b')
+                ax2.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_X))
+                ax2.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_Y))
+                ax2.set_ylabel(f',\n'.join(visible_secondary), color='b')
+                ax2.legend(loc='upper right')
         
         # Поворот меток оси X
         for tick in ax1.get_xticklabels():
@@ -206,12 +249,12 @@ class WindowGrath(QMainWindow):
         self.figure.suptitle(title, y=1.02)
 
 def main():
-    """Функция для тестирования класса WindowGrath."""
+    
     df = pd.DataFrame()
     number_point = 15
     first_signal = 'ГСМ-А. Очень длинный сигнал'
     
-    # Генерация тестовых данных
+    
     df[first_signal] = [random.randint(300, 321) for _ in range(number_point)]
     df['ГСМ-Б'] = [random.randint(300, 321) for _ in range(number_point)]
     df['ОЗ-А'] = [random.random() for _ in range(number_point)]
