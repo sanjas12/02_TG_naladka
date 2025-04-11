@@ -1,5 +1,6 @@
 import os
 import sys
+import numpy as np
 from typing import List, Optional
 from PyQt5.QtWidgets import (
     QApplication, 
@@ -63,6 +64,12 @@ class WindowGrath(QMainWindow):
         self.lines_list = []
         self.checkboxes = {}  # Словарь для хранения чекбоксов
         self.line_visibility = {}  # Словарь для отслеживания видимости линий
+
+        self.vline = None
+        self.annotation = None
+        self.cid = None
+        self.ax1 = None
+        self.ax2 = None
         
         self.base_colors = ['b', 'g', 'r', 'c', 'm', 'purple', 'k']
         self.secondary_colors = self.base_colors[::-1]
@@ -226,6 +233,28 @@ class WindowGrath(QMainWindow):
         self.figure.tight_layout()
         self.canvas.draw()
 
+        self.ax1 = ax1  # Сохраняем ссылку на основную ось
+        if self.secondary_axe:
+            self.ax2 = ax2  # Сохраняем ссылку на вторичную ось
+        else:
+            self.ax2 = None
+
+        # Создаем вертикальную линию и аннотацию
+        self.vline = self.ax1.axvline(x=0, color='k', lw=1, ls='--', visible=False)
+        self.annotation = self.figure.text(
+            0.75, 0.1, '', 
+            transform=self.figure.transFigure,
+            bbox=dict(boxstyle="round", fc="w", alpha=0.9),
+            fontsize=8
+        )
+        self.annotation.set_visible(False)
+
+        # Подключаем обработчик движения мыши
+        if self.cid is not None:
+            self.canvas.mpl_disconnect(self.cid)
+        self.cid = self.canvas.mpl_connect('motion_notify_event', self.on_mouse_move)
+
+
     def set_graph_title(self) -> None:
         """Установка заголовка графика на основе имени файла."""
         if not self.filename:
@@ -247,6 +276,49 @@ class WindowGrath(QMainWindow):
             title += f', Точки: {len(self.data)//self.step}'
         
         self.figure.suptitle(title, y=1.02)
+
+
+    def on_mouse_move(self, event):
+        if self.vline is None or self.annotation is None:
+            return
+
+        # Проверяем, находится ли курсор в области графика
+        axes = [self.ax1]
+        if self.ax2 is not None:
+            axes.append(self.ax2)
+        if event.inaxes not in axes:
+            self.vline.set_visible(False)
+            self.annotation.set_visible(False)
+            self.canvas.draw_idle()
+            return
+
+        # Находим ближайшую точку данных
+        x = event.xdata
+        x_data = self.data[self.x_axe].values
+        if len(x_data) == 0:
+            return
+        idx = np.abs(x_data - x).argmin()
+        x_val = x_data[idx]
+
+        # Обновляем вертикальную линию
+        self.vline.set_xdata([x_val])
+        self.vline.set_visible(True)
+
+        # Формируем текст аннотации
+        text_lines = []
+        for signal in self.base_axe + self.secondary_axe:
+            if signal in self.data.columns and self.line_visibility.get(signal, False):
+                y_val = self.data[signal].iloc[idx]
+                text_lines.append(f'{signal}: {y_val:.2f}')
+
+        # Обновляем аннотацию
+        if text_lines:
+            self.annotation.set_text('\n'.join(text_lines))
+            self.annotation.set_visible(True)
+        else:
+            self.annotation.set_visible(False)
+
+        self.canvas.draw_idle()
 
 def main():
     
