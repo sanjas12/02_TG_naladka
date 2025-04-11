@@ -397,16 +397,17 @@ class MainWindow(QMainWindow):
 
         if self.ready_plot:
             self.number_plot_point.setText(str(int(len(self.df.index)/int(self.combobox_dot.currentText()))))
-                    # Create a WindowGrath instance with the provided parameters
-        self.graph = WindowGrath(
-            data=self.df,
-            base_axe=self.base_signals,
-            secondary_axe=self.secondary_signals,
-            x_axe=self.x_axe,
-            step=self.combobox_dot.currentText(),
-            filename=self.files[0]
-        )
-        self.graph.show()
+
+            self.graph = WindowGrath(
+                data=self.df,
+                base_axe=self.base_signals,
+                secondary_axe=self.secondary_signals,
+                x_axe=self.x_axe,
+                step=self.combobox_dot.currentText(),
+                filename=self.files[0]
+            )
+            
+            self.graph.show()
 
 
 def main():
