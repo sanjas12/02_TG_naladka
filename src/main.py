@@ -358,7 +358,7 @@ class MainWindow(QMainWindow):
         self.ready_plot = False
         self.base_signals = self.selected_signals(self.gb_base_axe.qtable_axe, AxeName.BASE_AXE.value) 
         self.secondary_signals = self.selected_signals(self.gb_secondary_axe.qtable_axe, AxeName.SECONDARY_AXE.value) 
-        self.x_axe = self.selected_signals(self.gb_x_axe.qtable_axe, AxeName.X_AXE.value)
+        self.x_axe = self.selected_signals(self.gb_x_axe.qtable_axe, AxeName.X_AXE.value)[0]
 
         # Основная загрузка данных (из нескольких файлов)
         if self.files and (self.base_signals or self.secondary_signals):
@@ -380,7 +380,7 @@ class MainWindow(QMainWindow):
                     self.df[COMMON_TIME] = self.df[DEFAULT_TIME] + ',' + self.df[DEFAULT_MS].astype(str)
                 else:
                     self.df = pd.concat(pd.read_csv(file, header=0, encoding=self.encoding, delimiter=self.delimiter,
-                                                usecols=self.base_signals+self.secondary_signals+self.x_axe, decimal=self.decimal) for file in self.files)
+                                                usecols=self.base_signals+self.secondary_signals+list(self.x_axe), decimal=self.decimal) for file in self.files)
 
             self.number_raw_point.setText(str(len(self.df.index)))
 
@@ -397,9 +397,16 @@ class MainWindow(QMainWindow):
 
         if self.ready_plot:
             self.number_plot_point.setText(str(int(len(self.df.index)/int(self.combobox_dot.currentText()))))
-            self.grath = WindowGrath(self.df, self.base_signals, self.secondary_signals, *self.x_axe, 
-                                    step=self.combobox_dot.currentText(), filename=self.files[0])
-            self.grath.show()
+                    # Create a WindowGrath instance with the provided parameters
+        self.graph = WindowGrath(
+            data=self.df,
+            base_axe=self.base_signals,
+            secondary_axe=self.secondary_signals,
+            x_axe=self.x_axe,
+            step=self.combobox_dot.currentText(),
+            filename=self.files[0]
+        )
+        self.graph.show()
 
 
 def main():
