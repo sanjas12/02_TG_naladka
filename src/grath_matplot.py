@@ -22,6 +22,7 @@ import random
 import pandas as pd
 from matplotlib.widgets import CheckButtons
 import matplotlib.ticker as ticker
+from datetime import datetime, timedelta
 # Определяем путь к директории config в зависимости от текущего местоположения
 # if getattr(sys, 'frozen', False):
 #     # Если программа запущена как исполняемый файл
@@ -241,11 +242,13 @@ class WindowGrath(QMainWindow):
 
         # Создаем вертикальную линию и аннотацию
         self.vline = self.ax1.axvline(x=0, color='k', lw=1, ls='--', visible=False)
+        
         self.annotation = self.figure.text(
-            0.75, 0.1, '', 
+            0.75, 0.05, '',  # Переместим ниже
             transform=self.figure.transFigure,
-            bbox=dict(boxstyle="round", fc="w", alpha=0.9),
-            fontsize=8
+            bbox=dict(boxstyle="round", fc="w", alpha=0.9, ec="0.5"),
+            fontsize=8,
+            fontfamily='monospace'  # Для лучшей читаемости числовых значений
         )
         self.annotation.set_visible(False)
 
@@ -253,7 +256,6 @@ class WindowGrath(QMainWindow):
         if self.cid is not None:
             self.canvas.mpl_disconnect(self.cid)
         self.cid = self.canvas.mpl_connect('motion_notify_event', self.on_mouse_move)
-
 
     def set_graph_title(self) -> None:
         """Установка заголовка графика на основе имени файла."""
@@ -276,7 +278,6 @@ class WindowGrath(QMainWindow):
             title += f', Точки: {len(self.data)//self.step}'
         
         self.figure.suptitle(title, y=1.02)
-
 
     def on_mouse_move(self, event):
         if self.vline is None or self.annotation is None:
@@ -305,7 +306,8 @@ class WindowGrath(QMainWindow):
         self.vline.set_visible(True)
 
         # Формируем текст аннотации
-        text_lines = []
+        # text_lines = [f"Время: {x_val:.2f}"]  # Добавляем значение времени
+        text_lines = [f"Время: {self.format_time(x_val)}"]  # Используем функцию форматирования
         for signal in self.base_axe + self.secondary_axe:
             if signal in self.data.columns and self.line_visibility.get(signal, False):
                 y_val = self.data[signal].iloc[idx]
@@ -319,6 +321,17 @@ class WindowGrath(QMainWindow):
             self.annotation.set_visible(False)
 
         self.canvas.draw_idle()
+
+    def format_time(self, timestamp):
+        """Форматирует время для отображения в аннотации"""
+        if isinstance(timestamp, (int, float)):
+            # Если время в секундах от начала
+            return str(timedelta(seconds=timestamp))
+        elif isinstance(timestamp, (str, pd.Timestamp)):
+            # Если время в строковом формате или pandas Timestamp
+            return str(timestamp)
+        else:
+            return f"{timestamp:.2f}"
 
 def main():
     
