@@ -52,7 +52,7 @@ class WindowGrath(QMainWindow):
                  base_axe: List[str], 
                  secondary_axe: List[str],
                  x_axe: Optional[str] = None, 
-                 step: int = 1, 
+                 step: int = 10, 
                  filename: Optional[str] = None) -> None:
         super().__init__()
         self.filename = filename
@@ -92,7 +92,7 @@ class WindowGrath(QMainWindow):
         control_layout = QVBoxLayout()
         
         self.points_combobox = QComboBox()
-        self.points_combobox.addItems(['10', '100', '1000'])
+        self.points_combobox.addItems(['1', '10', '100', '1000'])
         self.points_combobox.setCurrentText(str(self.step))
         
         self.points_label = QLabel(f'Всего точек: {len(self.data)}')
