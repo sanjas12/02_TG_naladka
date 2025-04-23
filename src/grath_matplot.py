@@ -124,7 +124,7 @@ class WindowGrath(QMainWindow):
         
         # Затем добавляем чекбоксы для вторичной оси
         if self.secondary_axe:
-            secondary_label = QLabel("\nВторичная ось:")
+            secondary_label = QLabel("\nВспомогательная ось:")
             self.signals_layout.addWidget(secondary_label)
             for signal in self.secondary_axe:
                 cb = QCheckBox(signal)
