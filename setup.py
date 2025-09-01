@@ -1,50 +1,70 @@
-#0.1.25
+#0.2.0
 import sys
-# import os
+import os
 from cx_Freeze import setup, Executable
 
+# Получаем текущую версию из первой строки файла
+version = open(__file__, 'r', encoding='utf-8').readline().strip('#').strip()
 
-file = "setup.py"
+# Определяем базовые пути
+project_root = os.path.dirname(os.path.abspath(__file__))
+src_root = os.path.join(project_root, 'tg-naladka', 'src')
 
-with open(file, 'r+', encoding='utf-8') as f:
-    version = f.readline().split('.')
-    # version[-1] = str(int(version[-1]) + 1)
-    version = '.'.join(version)
-    # f.seek(0)
-    # f.write(version)
+# Функция для умного включения файлов
+def get_smart_includes():
+    include_files = []
+    
+    # Добавляем только необходимые конфигурационные файлы
+    config_path = os.path.join(src_root, 'config', 'config.py')
+    if os.path.exists(config_path):
+        include_files.append((config_path, 'config/config.py'))
+    
+    # Добавляем каталог с релизными заметками, если он существует
+    doc_dir = os.path.join(project_root, 'tg-naladka', 'Documentation')
+    relnote_dir = os.path.join(doc_dir, 'RelNote')
+    if os.path.isdir(relnote_dir):
+        include_files.append((relnote_dir, 'Documentation/RelNote'))
+    
+    return include_files
 
-# для включения конкретных файлов в build
-# python_dir = os.path.dirname(sys.executable)
-# print(python_dir)
-# files = [("install.cmd"), os.path.join(python_dir, "vcruntime140.dll")]
-# files = [os.path.join(python_dir, "vcruntime140.dll")]
-# print(files)
+# Собираем файлы для включения в сборку
+include_files = get_smart_includes()
 
-
-# Dependencies are automatically detected, but it might need fine tuning.
+# Настройки сборки
 build_exe_options = {
-    "path": sys.path + ["src"],  # Добавляем путь к 'src'
-    "excludes": ["tkinter", "unittest", "http",
-                "PyQT5.QtopenGL4",
-                "pydoc_data", "email",
-                "concurent", 
-                # "xml",
-                # "asyncio", "curses", "distutils", "html", "multiprocessing",
-                "sqlite3", "test", "urlib"],
-    "optimize": 0,      # c 2 exe не запускается
-    # "zip_include_packages": ["PyQt5", "matplotlib"],
-    # "include_files" : files
-    "include_files" : ['Documentation/', 'src/config/config.py']
+    "path": sys.path + [src_root],
+    "excludes": [
+        "matplotlib.tests", "matplotlib.testing", "pandas.tests", "scipy.tests",
+        "PyQt5.QtWebEngine", "PyQt5.QtNetwork", "PyQt5.QtSql",
+        "PyQt5.QtScript", "PyQt5.QtSvg", "PyQt5.QtTest",
+        "PyQt5.QtXml", "PyQt5.QtDesigner", "PyQt5.QtMultimedia",
+        "PyQt5.QtMultimediaWidgets", "PyQt5.QtOpenGL", "PyQt5.QtPrintSupport",
+        "PyQt5.QtQml",
+    ],
+    "packages": [
+        "numpy", "pandas", "matplotlib", "matplotlib.backends.backend_qt5agg", "PyQt5"
+    ],
+    "optimize": 0, # c 2 - 477 Mb (3.11), c 1 или 0 - 175 Mb (3.11) 
+    "include_files": include_files,
+    # "include_msvcr": True,
+    "zip_include_packages": ["*"],  # Упаковываем все пакеты в zip
+    "zip_exclude_packages": [],  # Можно исключить конкретные пакеты
+    # "silent": False,
 }
 
-# base="Win32GUI" should be used only for Windows GUI app. If comment this line, will appear console
-# base = "Win32GUI" if sys.platform == "win32" else None
+icon_path = os.path.join(src_root, 'ui', 'icon.ico')
 
 setup(
     name="TG-Naladka",
-    version=version.strip('#'),
-    description="My TG-Naladka",
+    version=version,
+    description="TG Analysis Tool",
     options={"build_exe": build_exe_options},
-    # executables=[Executable("main.py", target_name="TG-Naladka",  base=base)],
-    executables=[Executable("src/main.py", target_name="TG-Naladka")],
+    executables=[
+        Executable(
+            os.path.join(src_root, "main.py"),
+            target_name="TG-Naladka.exe",
+            # base=None if sys.platform != "win32" else "Win32GUI",  # - командная строка если закоменчена то, она появляется
+            icon=icon_path if os.path.exists(icon_path) else None
+        )
+    ],
 )

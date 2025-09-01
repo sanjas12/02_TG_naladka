@@ -29,3 +29,16 @@
                     ^^^
             UnboundLocalError: cannot access local variable 'ax1' where it is not associated with a value
             (base) 
+4. Запуск build 
+        cx_Freeze: Python error in main script
+
+    Traceback (most recent call last):
+    File "C:\Users\sanja\AppData\Local\Programs\Python\Python311\Lib\site-packages\cx_Freeze\initscripts\__startup__.py", line 141, in run
+        module_init.run(name + "__main__")
+    File "C:\Users\sanja\AppData\Local\Programs\Python\Python311\Lib\site-packages\cx_Freeze\initscripts\console.py", line 25, in run
+        exec(code, main_globals)
+    File "D:\My_work\Python\02_TG_naladka\tg-naladka\src\main.py", line 19, in <module>
+        from logic.logic import MainLogic
+    File "D:\My_work\Python\02_TG_naladka\tg-naladka\src\logic\logic.py", line 14, in <module>
+        import src.config.config as cfg
+    ModuleNotFoundError: No module named 'src'

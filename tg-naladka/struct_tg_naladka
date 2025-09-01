@@ -1,0 +1,76 @@
+tg-naladka
+ ┣ Documentation
+ ┃ ┗ RelNote
+ ┃ ┃ ┣ 0.0.1.17.txt
+ ┃ ┃ ┣ 0.0.1.18.txt
+ ┃ ┃ ┣ 0.0.1.19.txt
+ ┃ ┃ ┣ 0.0.1.20.txt
+ ┃ ┃ ┣ 0.0.1.21.txt
+ ┃ ┃ ┣ 0.0.1.22.txt
+ ┃ ┃ ┣ 0.0.1.23.txt
+ ┃ ┃ ┣ 0.0.1.24.txt
+ ┃ ┃ ┗ 0.0.1.25.txt
+ ┣ logs
+ ┃ ┗ app.log
+ ┗ src
+ ┃ ┣ config
+ ┃ ┃ ┣ __pycache__
+ ┃ ┃ ┃ ┗ config.cpython-311.pyc
+ ┃ ┃ ┗ config.py
+ ┃ ┣ DATA_in
+ ┃ ┃ ┣ bruk
+ ┃ ┃ ┃ ┗ ТГ22 2020-08-18 105117_2.csv.gz
+ ┃ ┃ ┣ rk
+ ┃ ┃ ┃ ┗ кал
+ ┃ ┃ ┃ ┃ ┗ ШСП11 2022-02-12 202239.csv.gz
+ ┃ ┃ ┣ sarz
+ ┃ ┃ ┃ ┣ кол
+ ┃ ┃ ┃ ┃ ┣ ШУР21-2016-06-23_165635.csv.gz
+ ┃ ┃ ┃ ┃ ┣ ШУР32-2020-09-25_132045.csv.gz
+ ┃ ┃ ┃ ┃ ┗ ШУР71-2024-06-26_131604.csv.gz
+ ┃ ┃ ┃ ┣ кур
+ ┃ ┃ ┃ ┃ ┣ Смещение
+ ┃ ┃ ┃ ┃ ┃ ┗ up
+ ┃ ┃ ┃ ┃ ┃ ┃ ┣ ТГ21-2018-03-07_134451.csv.gz
+ ┃ ┃ ┃ ┃ ┃ ┃ ┣ ТГ21-2018-03-07_134451_1.csv.gz
+ ┃ ┃ ┃ ┃ ┃ ┃ ┣ ТГ21-2018-03-07_134451_2.csv.gz
+ ┃ ┃ ┃ ┃ ┃ ┃ ┣ ТГ21-2018-03-07_134451_3.csv.gz
+ ┃ ┃ ┃ ┃ ┃ ┃ ┣ ТГ21-2018-03-07_134451_4.csv.gz
+ ┃ ┃ ┃ ┃ ┃ ┃ ┗ ТГ21-2018-03-07_134451_5.csv.gz
+ ┃ ┃ ┃ ┃ ┗ ТГ81-2024-10-14_140712.csv.gz
+ ┃ ┃ ┃ ┗ смол
+ ┃ ┃ ┃ ┃ ┣ step
+ ┃ ┃ ┃ ┃ ┃ ┣ ШУР11-2025-07-11_115842.csv.gz
+ ┃ ┃ ┃ ┃ ┃ ┣ ШУР11-2025-07-11_115842_1.csv.gz
+ ┃ ┃ ┃ ┃ ┃ ┣ ШУР11-2025-07-11_115842_2.csv.gz
+ ┃ ┃ ┃ ┃ ┃ ┣ ШУР11-2025-07-11_115842_3.csv.gz
+ ┃ ┃ ┃ ┃ ┃ ┣ ШУР11-2025-07-11_115842_4.csv.gz
+ ┃ ┃ ┃ ┃ ┃ ┗ ШУР11-2025-07-11_115842_5.csv.gz
+ ┃ ┃ ┃ ┃ ┣ ШУР21-2021-09-23_160501.csv.gz
+ ┃ ┃ ┃ ┃ ┗ ШУР41-2021-06-03_145516_28.csv.gz
+ ┃ ┃ ┣ qp.txt
+ ┃ ┃ ┗ test.csv.gz
+ ┃ ┣ DATA_out
+ ┃ ┣ logic
+ ┃ ┃ ┣ __pycache__
+ ┃ ┃ ┃ ┣ logic.cpython-311.pyc
+ ┃ ┃ ┃ ┗ MainWindowLogic.cpython-311.pyc
+ ┃ ┃ ┣ logic.py
+ ┃ ┃ ┗ regulator_analyzer.py
+ ┃ ┣ model
+ ┃ ┃ ┣ __pycache__
+ ┃ ┃ ┃ ┗ basemodel.cpython-311.pyc
+ ┃ ┃ ┗ basemodel.py
+ ┃ ┣ scripts
+ ┃ ┃ ┣ run.bat
+ ┃ ┃ ┣ run.sh
+ ┃ ┃ ┣ setup.py
+ ┃ ┃ ┗ venv_pip.sh
+ ┃ ┣ ui
+ ┃ ┃ ┣ __pycache__
+ ┃ ┃ ┃ ┣ grath_matplot.cpython-311.pyc
+ ┃ ┃ ┃ ┣ MainWindowUI.cpython-311.pyc
+ ┃ ┃ ┃ ┗ __init__.cpython-311.pyc
+ ┃ ┃ ┣ grath_matplot.py
+ ┃ ┃ ┗ MainWindowUI.py
+ ┃ ┗ main.py

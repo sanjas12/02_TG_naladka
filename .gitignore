@@ -55,3 +55,4 @@ __pycache__
 DATA_out
 logs*
 build*
+*.pdf

@@ -27,7 +27,8 @@ grath_matplot.py - модуль построения графиков на matpl
 4. PyCharm 
 Help -> Run->Edit Configurations -> Emulate terminal in output console* (для расшифровки ошибок  pyqt5)
 
-
+5. Запуск программы невозможен, так как на компьютере отсутствует
+api-ms-win-core-path-l1-1-0.dll. -> Установить Visual C++ 2015-2022
 
 TODO
 1. Узнать сколько памяти использует программа (memory_profiler и psutil)
@@ -42,43 +43,8 @@ TODO
 10. Поиск в списке сигналов (Qtablewidget) https://stackoverflow.com/questions/51613638/highlight-search-results-in-qtablewidgetselect-and-highlight-that-text-or-chara
 11. Портировать на Linux(Astra и Ubuntu)
 12. добавить The QProgressBar
-13. 📦src
- ┣ 📂config
- ┃ ┣ 📜__init__.py
- ┃ ┗ 📜config.py
- ┣ 📂ui
- ┃ ┣ 📜__init__.py
- ┃ ┣ 📜grath_matplot.py
- ┃ ┣ 📜MainWindowUI.py
- ┣ 📂utils
- ┃ ┣ 📜__init__.py
- ┃ ┗ 📜helpers.py
- ┣ 📂logic
- ┃ ┣ 📜__init__.py
- ┃ ┣ 📜main_logic.py
- ┃ ┣ 📜data_processing.py
- ┃ ┗ 📜network_operations.py
- ┣ 📂logs
- ┃ ┗ 📜app.log
- ┣ 📂tests
- ┃ ┣ 📜__init__.py
- ┃ ┣ 📜test_main.py
- ┃ ┗ 📜test_logic.py
- ┣ 📂scripts
- ┃ ┣ 📜build.py
- ┃ ┣ 📜deploy.py
- ┣ 📂assets
- ┃ ┣ 📂images
- ┃ ┣ 📂fonts
- ┣ 📂docs
- ┃ ┣ 📜index.md
- ┃ ┣ 📜installation.md
- ┣ 📜main.py
- ┣ 📜MainWindowLogic.py
- ┣ 📜logger.py
- ┣ 📜README.md
- ┣ 📜requirements.txt
- ┗ 📜.gitignore
+13. перейти на polars для версии по Win_11 для загрузки данных из csv
+14. перейти на uv
 
 help:
 python -m pip  install -r requirements.txt --no-index -f d:\\temp\\python_Library
