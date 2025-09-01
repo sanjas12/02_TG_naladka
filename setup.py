@@ -41,18 +41,10 @@ build_exe_options = {
         "PyQt5.QtMultimediaWidgets", "PyQt5.QtOpenGL", "PyQt5.QtPrintSupport",
         "PyQt5.QtQml",
     ],
-    "packages": [
-        "numpy", "pandas", "matplotlib", "matplotlib.backends.backend_qt5agg", "PyQt5"
-    ],
     "optimize": 0, # c 2 - 477 Mb (3.11), c 1 или 0 - 175 Mb (3.11) 
     "include_files": include_files,
-    # "include_msvcr": True,
-    "zip_include_packages": ["*"],  # Упаковываем все пакеты в zip
-    "zip_exclude_packages": [],  # Можно исключить конкретные пакеты
-    # "silent": False,
 }
 
-icon_path = os.path.join(src_root, 'ui', 'icon.ico')
 
 setup(
     name="TG-Naladka",
@@ -64,7 +56,6 @@ setup(
             os.path.join(src_root, "main.py"),
             target_name="TG-Naladka.exe",
             # base=None if sys.platform != "win32" else "Win32GUI",  # - командная строка если закоменчена то, она появляется
-            icon=icon_path if os.path.exists(icon_path) else None
         )
     ],
 )
