@@ -1,0 +1,14 @@
+TG-Naladka v0.0.1.25 Release Notes
+==========================
+
+Fixes since v0.2.0
+------------------
+
+* Bugfixes
+  
+* Tweaks
+  
+  - Изменена версия ПО с X.X.X.X на X.X.X
+  - Осуществлен переход на MVC-патерн   
+
+* Documentation
