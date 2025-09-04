@@ -42,7 +42,6 @@ TODO
 9. Добавить тесты
 10. Поиск в списке сигналов (Qtablewidget) https://stackoverflow.com/questions/51613638/highlight-search-results-in-qtablewidgetselect-and-highlight-that-text-or-chara
 11. Портировать на Linux(Astra и Ubuntu)
-12. добавить The QProgressBar
 13. перейти на polars для версии по Win_11 для загрузки данных из csv
 14. перейти на uv
 
