@@ -418,8 +418,12 @@ class MainLogic:
             # Обновляем таблицу группы, добавляя новый сигнал к существующим
             self._update_qtable(group_box, dict_signals)
             self._update_qtable(self.ui.gb_signals, self.model.dict_all_signals)
+
+            # сохраняем  фокус на строчке
+            self.ui.gb_signals.qtable_axe.selectRow(current_row)
         else:
             self.ui.show_error("Не выбраны сигналы для построения графика")
+        
 
     def remove_signal(self, group_box: MyGroupBox, dict_signals: Dict[str, int]) -> None:
         """Удаляет сигнал из указанной группы"""
@@ -436,8 +440,13 @@ class MainLogic:
             
             self._update_qtable(group_box, dict_signals)
             self._update_qtable(self.ui.gb_signals, self.model.dict_all_signals)
+
+            # сохраняем  фокус на строчке
+            group_box.qtable_axe.selectRow(current_row-1)
         else:
             self.ui.show_error("Не выбраны сигналы для удаления сигналов")
+
+
 
     def plot_graph(self) -> None:
         """Строит график на основе выбранных данных"""
