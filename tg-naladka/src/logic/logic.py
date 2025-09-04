@@ -161,15 +161,20 @@ class PlotManager:
         # Получаем выбранные сигналы
         base_signals = self._get_signals_from_table(self.ui.gb_base_axe.qtable_axe, self.model.dict_base_signals)
         secondary_signals = self._get_signals_from_table(self.ui.gb_secondary_axe.qtable_axe, self.model.dict_secondary_signals)
-        # self._get_signals_from_table(self.ui.gb_x_axe.qtable_axe, self.model.dict_time_axe)
     
         if not base_signals and not secondary_signals:
             self.ui.show_error("Не выбраны сигналы для построения графика")
             return False
             
         self.model.step = int(self.ui.combobox_dot.currentText())
+        
+         # Запускаем прогресс-бар с количеством файлов 
+        self.ui.start_modal_progress(maximum=len(self.model.filenames))
+        
         self.model.df = self._load_data(base_signals + secondary_signals)
         self.model.ready_plot = True
+        
+        self.ui.stop_modal_progress()
         
         return True
         
@@ -214,14 +219,29 @@ class PlotManager:
             'decimal': self.model.decimal,
         }
 
-        dfs = [pd.read_csv(file, **read_kwargs) for file in self.model.filenames]
+        # dfs = [pd.read_csv(file, **read_kwargs) for file in self.model.filenames]
+
+        # if not dfs:
+        #     return pd.DataFrame(columns=pd.Index(list(usecols_set)))
+
+        # df = pd.concat(dfs, ignore_index=True)
+        
+        dfs = []
+        # total_files = len(self.model.filenames)
+        for i, file in enumerate(self.model.filenames, start=1):
+            df_part = pd.read_csv(file, **read_kwargs)
+            dfs.append(df_part)
+            
+            # обновляем прогресс
+            self.ui.set_modal_progress(i)
 
         if not dfs:
             return pd.DataFrame(columns=pd.Index(list(usecols_set)))
 
-        df = pd.concat(dfs, ignore_index=True)
-        
 
+        df = pd.concat(dfs, ignore_index=True)
+
+        # создаем Обобщенное время
         if self.model.is_ms:
             df[cfg.COMMON_TIME] = df[cfg.DEFAULT_TIME].astype(str) + "," + df[cfg.DEFAULT_MS].astype(str)
         
@@ -245,7 +265,7 @@ class MainLogic:
     def _setup_connections(self) -> None:
         """Настраивает соединения сигналов и слотов"""
         self.ui.gb_signals.btn_first.clicked.connect(self.load_and_prepare_data)    # кнопка Open files
-        self.ui.button_grath.clicked.connect(self.plot_graph)
+        self.ui.button_graph.clicked.connect(self.plot_graph)                       # кнопка Построить графики
         
         for group_box, dict_signal in zip(
             (self.ui.gb_base_axe, self.ui.gb_secondary_axe),
@@ -289,7 +309,7 @@ class MainLogic:
         """Очищает состояние приложения"""
         self.model.clear_state()
         self.ui.ql_info.setText("")
-        self.ui.button_grath.setEnabled(False)
+        self.ui.button_graph.setEnabled(False)
         
         for group_box in (
             self.ui.gb_base_axe,
@@ -303,7 +323,7 @@ class MainLogic:
         """Обновляет UI после загрузки данных"""
         self._update_qtable(self.ui.gb_signals, self.model.dict_all_signals)
         self._setup_time_axis()
-        self.ui.button_grath.setEnabled(True)
+        self.ui.button_graph.setEnabled(True)
         
     def _update_qtable(self, group_box: MyGroupBox, dict_signals: Dict[str, int]) -> None:
         """Обновляет Qtable таблицу сигналов"""
@@ -421,41 +441,45 @@ class MainLogic:
 
     def plot_graph(self) -> None:
         """Строит график на основе выбранных данных"""
-        if not self.plot_manager.prepare_plot_data():
-            return
+        try:
+            if not self.plot_manager.prepare_plot_data():
+                self.ui.stop_modal_progress()
+                return
 
-        if not self.model.ready_plot:
-            self._show_error("Данные для графика не подготовлены")
-            return
+            if not self.model.ready_plot:
+                self.ui.stop_modal_progress()
+                self._show_error("Данные для графика не подготовлены")
+                return
 
-        # Проверяем, что есть данные
-        if self.model.df is None or self.model.df.empty:
-            self._show_error("Нет данных для построения графика")
-            return
+            # Проверяем, что есть данные
+            if self.model.df is None or self.model.df.empty:
+                self.ui.stop_modal_progress()
+                self._show_error("Нет данных для построения графика")
+                return
 
-        # Проверяем количество точек
-        n_points = len(self.model.df)
-        if n_points == 0:
-            self._show_error("Нет точек для построения графика")
-            return
+            # Проверяем количество точек
+            n_points = len(self.model.df)
+            if n_points == 0:
+                self.ui.stop_modal_progress()
+                self._show_error("Нет точек для построения графика")
+                return
+                
+            self.ui.number_plot_point.setText(str(int(len(self.model.df) / self.model.step)))
+
+            self.graph_window = WindowGraph(
+                self.model.df,
+                base_signals=list(self.model.dict_base_signals.keys()),
+                secondary_signals=list(self.model.dict_secondary_signals.keys()),
+                # time_signals=next(iter(self.model.dict_time_axe.items()))[0],
+                time_signals=self.model.time_signal,
+                step=self.model.step,
+                filename=self.model.first_filename,
+            )
             
-        self.ui.number_plot_point.setText(str(int(len(self.model.df) / self.model.step)))
+            self.graph_window.show()
 
-        # print(f"{str(self.model.dict_time_axe.keys())=}")
-
-        self.graph_window = WindowGraph(
-            self.model.df,
-            base_signals=list(self.model.dict_base_signals.keys()),
-            secondary_signals=list(self.model.dict_secondary_signals.keys()),
-            # time_signals=next(iter(self.model.dict_time_axe.items()))[0],
-            time_signals=self.model.time_signal,
-            step=self.model.step,
-            filename=self.model.first_filename,
-        )
-        
-        self.graph_window.show()
-        # graph.raise_()      # <-- добавляем
-        # graph.activateWindow()
+        finally:
+            self.ui.stop_modal_progress()
 
     def _show_error(self, message: str) -> None:
         """Показывает сообщение об ошибке"""
