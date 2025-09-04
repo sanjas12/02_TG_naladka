@@ -275,13 +275,16 @@ class MainLogic:
 
     def _setup_connections(self) -> None:
         """Настраивает соединения сигналов и слотов"""
+        # кнопка Open files
         self.ui.gb_signals.btn_first.clicked.connect(
             self.load_and_prepare_data
-        )  # кнопка Open files
+        )
+        
+        # кнопка Построить графики
         self.ui.button_graph.clicked.connect(
             self.plot_graph
-        )  # кнопка Построить графики
-
+        )
+        
         for group_box, dict_signal in zip(
             (self.ui.gb_base_axe, self.ui.gb_secondary_axe),
             (self.model.dict_base_signals, self.model.dict_secondary_signals),

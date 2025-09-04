@@ -41,9 +41,9 @@ class Model:
         # self.is_time = False
         # self.is_ms = False
         self.df = None
-        self.dict_all_signals = {}
-        self.dict_base_signals = {}
-        self.dict_secondary_signals = {}
+        self.dict_all_signals.clear()
+        self.dict_base_signals.clear()
+        self.dict_secondary_signals.clear()
         # self.time_signal = None
         self.ready_plot = False
         self.step = None
