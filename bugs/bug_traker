@@ -42,3 +42,5 @@
     File "D:\My_work\Python\02_TG_naladka\tg-naladka\src\logic\logic.py", line 14, in <module>
         import src.config.config as cfg
     ModuleNotFoundError: No module named 'src'
+
+5. При повторорном открытии файлов не очищаются словари выбранных сигналов
