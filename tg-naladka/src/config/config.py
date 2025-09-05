@@ -39,3 +39,7 @@ TICK_MARK_COUNT_Y = 10
 
 # UI
 FONT_SIZE = 8
+
+# Analys
+ANALYS_AIM = "Значение развертки. Положение ГСМ"
+GSM_A_CUR = "ГСМ-А.Текущее положение"

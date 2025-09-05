@@ -1,3 +1,5 @@
+from pathlib import Path
+import sys
 import numpy as np
 from typing import Tuple
 from reportlab.lib.pagesizes import letter
@@ -7,13 +9,23 @@ from reportlab.pdfbase.ttfonts import TTFont
 from datetime import datetime
 import os
 
+PROJECT_ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+# import config.config as cfg
+from model.basemodel import Model
+
 # Если проблема сохраняется, попробуйте явно указать путь к шрифту:
 # pdfmetrics.registerFont(TTFont('ArialUnicode', 'C:/Windows/Fonts/arial.ttf'))
 
 
 class RegulatorAnalyzer:
     def __init__(
-        self, time_sim: np.ndarray, real_position: np.ndarray, aim_position: float
+        self,
+        time_sim: np.ndarray,
+        real_position: np.ndarray,
+        aim_position: float,
+        model: Model,
     ):
         """
         Анализатор данных регулятора
@@ -90,36 +102,40 @@ class RegulatorAnalyzer:
     def save_to_pdf(self, filename: str = "regulator_analysis.pdf"):
         """
         Сохранение отчета анализа в PDF файл с поддержкой Unicode
-        
+
         :param filename: имя файла для сохранения
         """
         # Регистрируем Unicode-шрифт (например, Arial Unicode MS или другой с поддержкой кириллицы)
         try:
-            pdfmetrics.registerFont(TTFont('ArialUnicode', 'arial.ttf'))
+            pdfmetrics.registerFont(TTFont("ArialUnicode", "arial.ttf"))
         except:
             # Если основной шрифт не найден, пробуем альтернативный
             try:
-                pdfmetrics.registerFont(TTFont('DejaVuSans', 'DejaVuSans.ttf'))
-                font_name = 'DejaVuSans'
+                pdfmetrics.registerFont(TTFont("DejaVuSans", "DejaVuSans.ttf"))
+                font_name = "DejaVuSans"
             except:
                 # Если нет Unicode-шрифтов, используем стандартный (может не поддерживать кириллицу)
-                font_name = 'Helvetica'
+                font_name = "Helvetica"
         else:
-            font_name = 'ArialUnicode'
+            font_name = "ArialUnicode"
 
         jumps_count = self.count_jumps()
         overshoot, settling_time = self.evaluate_regulator_quality()
-        
+
         # Создаем PDF документ
         c = canvas.Canvas(filename, pagesize=letter)
         width, height = letter
-        
+
         # Заголовок
         c.setFont(font_name, 16)
         c.drawString(100, height - 100, "Анализ работы регулятора")
         c.setFont(font_name, 12)
-        c.drawString(100, height - 130, f"Дата создания: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        
+        c.drawString(
+            100,
+            height - 130,
+            f"Дата создания: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        )
+
         # Основная информация
         y_position = height - 170
         c.drawString(100, y_position, f"Количество скачков задания: {jumps_count}")
@@ -128,11 +144,15 @@ class RegulatorAnalyzer:
         y_position -= 30
         c.drawString(100, y_position, f"Время установления: {settling_time:.2f} сек")
         y_position -= 30
-        
+
         # Оценка качества
-        quality = 'Хорошее' if overshoot < 10 and settling_time < 2 else 'Удовлетворительное' if overshoot < 20 else 'Плохое'
+        quality = (
+            "Хорошее"
+            if overshoot < 10 and settling_time < 2
+            else "Удовлетворительное" if overshoot < 20 else "Плохое"
+        )
         c.drawString(100, y_position, f"Качество регулятора: {quality}")
-        
+
         c.save()
         print(f"Отчет сохранен в файл: {os.path.abspath(filename)}")
 
@@ -144,6 +164,8 @@ if __name__ == "__main__":
     real_position = np.sin(time_sim) * 10 + 50  # Имитация сигнала
     aim_position = 50
 
-    analyzer = RegulatorAnalyzer(time_sim, real_position, aim_position)
+    model = Model()
+
+    analyzer = RegulatorAnalyzer(time_sim, real_position, aim_position, model)
     print(analyzer.get_analysis_report())
     analyzer.save_to_pdf()  # Сохраняем отчет в PDF

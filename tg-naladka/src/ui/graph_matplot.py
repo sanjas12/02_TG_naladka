@@ -44,6 +44,7 @@ class WindowGraph(QMainWindow):
         time_signals (str): Название столбца для оси X.
         step (int, optional): Шаг выборки данных. По умолчанию 10.
         filename (str, optional): Имя файла с данными для заголовка. По умолчанию None.
+        enable_button: Можно ли активировать кнопку "АНАЛИЗА"
     """
 
     def __init__(
@@ -54,6 +55,7 @@ class WindowGraph(QMainWindow):
         time_signals: str,
         step: int = 10,
         filename: Optional[str] = None,
+        enable_analys: bool = False,
     ) -> None:
         super().__init__()
         self.data = data
@@ -62,8 +64,9 @@ class WindowGraph(QMainWindow):
         self.time_signals = time_signals
         self.step = int(step)
         self.filename = filename
+        self.enable_analys = enable_analys
 
-        self.lines_list: list = []
+        self.lines_list: List = []
         self.checkboxes: dict[str, QCheckBox] = {}
         self.line_visibility: dict[str, bool] = {}
 
@@ -145,6 +148,7 @@ class WindowGraph(QMainWindow):
         regulator_group = QGroupBox("Анализ регулятора ГСМ")
         regulator_layout = QVBoxLayout()
         analyze_button = QPushButton("Анализ регулятора")
+        analyze_button.setEnabled(self.enable_analys)
         analyze_button.clicked.connect(self.analyze_regulator)
         regulator_layout.addWidget(analyze_button)
         regulator_group.setLayout(regulator_layout)
@@ -471,6 +475,7 @@ def main() -> None:
         secondary_signals=y2,
         time_signals=COMMON_TIME,
         filename="E:/ТГ41-2021-06-25_134810_14099.csv.gz",
+        enable_analys=True
     )
     window.show()
     sys.exit(app.exec())

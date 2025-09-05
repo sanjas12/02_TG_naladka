@@ -158,7 +158,16 @@ class PlotManager:
         self.ui = ui
 
     def prepare_plot_data(self) -> bool:
-        """Подготавливает данные для построения графиков и проихводит загрузку выбранных сигналов"""
+        """Подготавливает данные для построения графиков.
+
+        - Сбрасывает состояние модели данных.
+        - Загружает выбранные сигналы.
+        - Проверяет возможность анализа регулятора.
+        - Обновляет прогресс-бар.
+
+        Returns:
+            bool: True, если данные успешно подготовлены, иначе False.
+        """
 
         self.model.clear_state()
 
@@ -176,13 +185,22 @@ class PlotManager:
 
         self.model.step = int(self.ui.combobox_dot.currentText())
 
+        # Проверка, если среди выбранных сигналов есть дла АНАЛИЗА РЕГУлятора
+        all_signals = base_signals + secondary_signals
+
+        if (cfg.ANALYS_AIM in all_signals) and (cfg.GSM_A_CUR in all_signals):
+            print("Можно попробовать аналазировать")
+            self.model.ready_to_analysis = True
+        else:
+            print("Не получиться анализирвать")
+
         # Запускаем прогресс-бар с количеством файлов
         self.ui.start_modal_progress(maximum=len(self.model.filenames))
-
-        self.model.df = self._load_data(base_signals + secondary_signals)
-        self.model.ready_plot = True
-
-        self.ui.stop_modal_progress()
+        try:
+            self.model.df = self._load_data(all_signals)
+            self.model.ready_plot = True
+        finally:
+            self.ui.stop_modal_progress()
 
         return True
 
@@ -510,6 +528,7 @@ class MainLogic:
                 time_signals=self.model.time_signal,
                 step=self.model.step,
                 filename=self.model.first_filename,
+                enable_analys=self.model.ready_to_analysis,
             )
 
             self.graph_window.show()
