@@ -47,7 +47,6 @@ build_exe_options = {
     "zip_exclude_packages": [],
 }
 
-
 setup(
     name="TG-Naladka",
     version=version,
@@ -61,3 +60,21 @@ setup(
         )
     ],
 )
+
+# --- Автопост-обработка: удаляем мусор после сборки ---
+import shutil
+
+REMOVE_DIRS = [
+    "matplotlib/mpl-data/sample_data",
+    "matplotlib/mpl-data/stylelib",
+    "matplotlib/mpl-data/images",
+    "PyQt5/Qt5/translations",
+]
+
+build_path = os.path.join("build", f"exe.win-amd64-{sys.version_info.major}.{sys.version_info.minor}", "lib")
+
+for d in REMOVE_DIRS:
+    path = os.path.join(build_path, d)
+    if os.path.isdir(path):
+        shutil.rmtree(path)
+        print(f"[CLEAN] Удалено: {path}")
