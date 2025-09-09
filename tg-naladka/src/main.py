@@ -67,6 +67,7 @@ def setup_logging() -> None:
         level=cfg.LEVEL_LOG,
         format=cfg.FORMAT,
         filemode="a",
+        encoding="UTF-8",
     )
     logging.info("Запуск приложения")
 
