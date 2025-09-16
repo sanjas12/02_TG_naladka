@@ -23,6 +23,7 @@ from PyQt5.QtWidgets import (
     QScrollArea,
 )
 from PyQt5.QtCore import Qt, QPointF
+from PyQt5.QtGui import QColor
 
 import pyqtgraph as pg
 import pyqtgraph.exporters
@@ -171,13 +172,34 @@ class WindowGraph(QMainWindow):
 
         # GraphicsLayoutWidget позволяет иметь несколько ViewBox-ов
         self.plot_widget = pg.GraphicsLayoutWidget()
+        
+        # Устанавливаем белый фон для всего виджета
+        self.plot_widget.setBackground('w')
+        
         # Создаём PlotItem (ось X общая)
         self.plot_item = self.plot_widget.addPlot(row=0, col=0)
+        
+        # Устанавливаем белый фон для ViewBox графика
+        self.plot_item.getViewBox().setBackgroundColor('w')
+        
+        # Устанавливаем черный цвет для осей и текста
+        axis_pen = pg.mkPen('k')
+        text_pen = pg.mkPen('k')
+        
+        self.plot_item.getAxis('left').setPen(axis_pen)
+        self.plot_item.getAxis('bottom').setPen(axis_pen)
+        self.plot_item.getAxis('right').setPen(axis_pen)
+        self.plot_item.getAxis('left').setTextPen(text_pen)
+        self.plot_item.getAxis('bottom').setTextPen(text_pen)
+        self.plot_item.getAxis('right').setTextPen(text_pen)
+        
         self.plot_item.showGrid(x=True, y=True, alpha=0.6)
         self.plot_item.setLabel("bottom", self.time_signals)
 
         # Добавляем вторичный ViewBox для второй Y-оси
         self.secondary_view = pg.ViewBox()
+        # Устанавливаем белый фон для вторичного ViewBox
+        self.secondary_view.setBackgroundColor('w')
         # связываем вторичную ось справа
         self.plot_item.scene().addItem(self.secondary_view)
         self.plot_item.getAxis("right").linkToView(self.secondary_view)
@@ -189,7 +211,7 @@ class WindowGraph(QMainWindow):
         self.plot_item.addItem(self.vline)
         self.vline.hide()
 
-        self.annotation = pg.TextItem(anchor=(0, 1), border=pg.mkPen(0.5), fill=(255, 255, 255, 200))
+        self.annotation = pg.TextItem(anchor=(0, 1), border=pg.mkPen(0.5), fill=(255, 255, 255, 200), color='k')
         self.plot_item.addItem(self.annotation)
         self.annotation.hide()
 
@@ -244,16 +266,31 @@ class WindowGraph(QMainWindow):
         """Построение графиков данных с учетом видимости сигналов (pyqtgraph)."""
         # очистка предыдущих линий
         self.plot_item.clear()
+        
+        # Восстанавливаем настройки белого фона после очистки
+        self.plot_item.getViewBox().setBackgroundColor('w')
+        
+        axis_pen = pg.mkPen('k')
+        text_pen = pg.mkPen('k')
+        
+        self.plot_item.getAxis('left').setPen(axis_pen)
+        self.plot_item.getAxis('bottom').setPen(axis_pen)
+        self.plot_item.getAxis('right').setPen(axis_pen)
+        self.plot_item.getAxis('left').setTextPen(text_pen)
+        self.plot_item.getAxis('bottom').setTextPen(text_pen)
+        self.plot_item.getAxis('right').setTextPen(text_pen)
+        
         # помним, что мы добавляли vline и annotation отдельно — их нужно восстановить после clear
         # (clear удаляет все графические элементы из данного PlotItem)
         self.vline = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen("k", style=Qt.DashLine))
         self.plot_item.addItem(self.vline)
         self.vline.hide()
-        self.annotation = pg.TextItem(anchor=(0, 1), border=pg.mkPen(0.5), fill=(255, 255, 255, 200))
+        self.annotation = pg.TextItem(anchor=(0, 1), border=pg.mkPen(0.5), fill=(255, 255, 255, 200), color='k')
         self.plot_item.addItem(self.annotation)
         self.annotation.hide()
         # также надо связать secondary_view к plot_item снова (т.к. scene меняется)
         self.secondary_view = pg.ViewBox()
+        self.secondary_view.setBackgroundColor('w')
         self.plot_item.scene().addItem(self.secondary_view)
         self.plot_item.getAxis("right").linkToView(self.secondary_view)
         self.plot_item.showAxis("right")
@@ -261,7 +298,7 @@ class WindowGraph(QMainWindow):
 
         if self.data.empty:
             # показать текст вместо графика
-            label = pg.TextItem("Нет данных для отображения", anchor=(0.5, 0.5))
+            label = pg.TextItem("Нет данных для отображения", anchor=(0.5, 0.5), color='k')
             self.plot_item.addItem(label)
             return
 
@@ -318,7 +355,7 @@ class WindowGraph(QMainWindow):
             title = f"ШСП-{filename[2:3]}" if len(filename) > 3 else filename
         else:
             title = "Тестовый файл"
-        self.plot_item.setTitle(title)
+        self.plot_item.setTitle(title, color='k')
 
     def on_mouse_move(self, evt) -> None:
         """Обработчик перемещения мыши по графику (показывает вертикальную линию и аннотацию)."""
