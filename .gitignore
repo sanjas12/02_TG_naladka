@@ -56,3 +56,5 @@ DATA_out
 logs*
 build*
 *.pdf
+out*
+reports*

@@ -30,7 +30,8 @@ from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToo
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from config.config import COMMON_TIME, TICK_MARK_COUNT_X, TICK_MARK_COUNT_Y
+from config.config import *
+from logic.regulator_analyzer import RegulatorAnalyzer
 
 
 class WindowGraph(QMainWindow):
@@ -44,7 +45,10 @@ class WindowGraph(QMainWindow):
         time_signals (str): Название столбца для оси X.
         step (int, optional): Шаг выборки данных. По умолчанию 10.
         filename (str, optional): Имя файла с данными для заголовка. По умолчанию None.
+        enable_button: Можно ли активировать кнопку "АНАЛИЗА"
     """
+
+    
 
     def __init__(
         self,
@@ -52,18 +56,30 @@ class WindowGraph(QMainWindow):
         base_signals: List[str],
         secondary_signals: List[str],
         time_signals: str,
+        filenames: List[str],
         step: int = 10,
-        filename: Optional[str] = None,
+        enable_analys: bool = False,
     ) -> None:
         super().__init__()
+
+
         self.data = data
         self.base_signals = base_signals
         self.secondary_signals = secondary_signals
         self.time_signals = time_signals
         self.step = int(step)
-        self.filename = filename
+        self.filenames = filenames
+        self.enable_analys = enable_analys
+        
+        if self.enable_analys:
+            self.analyzer = RegulatorAnalyzer(self.data[COMMON_TIME].to_numpy(),
+                                            self.data[GSM_A_CUR].to_numpy(),
+                                            self.data[GSM_B_CUR].to_numpy(),
+                                            self.data[ANALYS_AIM].to_numpy(),
+                                            self.filenames,
+                                            )
 
-        self.lines_list: list = []
+        self.lines_list: List = []
         self.checkboxes: dict[str, QCheckBox] = {}
         self.line_visibility: dict[str, bool] = {}
 
@@ -94,6 +110,7 @@ class WindowGraph(QMainWindow):
 
         self.init_ui()
         self.plot_graphs()
+        self._save_plot()
 
     def init_ui(self) -> None:
         """Инициализация пользовательского интерфейса."""
@@ -145,6 +162,7 @@ class WindowGraph(QMainWindow):
         regulator_group = QGroupBox("Анализ регулятора ГСМ")
         regulator_layout = QVBoxLayout()
         analyze_button = QPushButton("Анализ регулятора")
+        analyze_button.setEnabled(self.enable_analys)
         analyze_button.clicked.connect(self.analyze_regulator)
         regulator_layout.addWidget(analyze_button)
         regulator_group.setLayout(regulator_layout)
@@ -208,6 +226,7 @@ class WindowGraph(QMainWindow):
         )
         self.plot_graphs()
         self.canvas.draw()
+        self._save_plot()
 
     def plot_graphs(self) -> None:
         """Построение графиков данных с учетом видимости сигналов."""
@@ -303,22 +322,24 @@ class WindowGraph(QMainWindow):
 
         if self.cid is not None:
             self.canvas.mpl_disconnect(self.cid)
-        self.cid = self.canvas.mpl_connect("motion_notify_event", self.on_mouse_move)
+        # self.cid = self.canvas.mpl_connect("motion_notify_event", self.on_mouse_move)
 
     def set_graph_title(self) -> None:
         """Установка заголовка графика на основе имени файла."""
-        if not self.filename:
+        filename = self.filenames[0]
+        if not filename:
             title = "Не выбран файл с данными"
-        elif "ШУР" in self.filename:
-            title = f"ТГ/ШУР, файл: {Path(self.filename).name}"
-        elif "ШСП" in self.filename:
-            title = f"ШСП, файл: {Path(self.filename).name}"
-        elif "ТГ" in self.filename:
-            title = f"ТГ, файл: {Path(self.filename).name}"
+        elif "ШУР" in filename: 
+            idx = filename.find("ШУР") 
+            title = f"ТГ-{filename[idx+3]}/ШУР-{filename[idx+4]}"
+        elif "ТГ" in filename:
+            idx = filename.find("ТГ") 
+            title = f"ТГ-{filename[idx+2]}/ШУР-{filename[idx+3]}"
+        elif "ШСП" in filename:
+            title = f"ШСП-{filename[2:3]}"
         else:
             title = "Тестовый файл"
 
-        title += f", Точки: {len(self.data) // self.step}"
         self.figure.suptitle(title, y=1.02)
 
     def on_mouse_move(self, event) -> None:
@@ -393,7 +414,23 @@ class WindowGraph(QMainWindow):
     def analyze_regulator(self) -> None:
         """Обработчик нажатия кнопки анализа регулятора."""
         print("Запуск анализа регулятора...")
+        # print(self.analyzer.get_analysis_report())
+        self.analyzer.save_to_pdf()
 
+    def _save_plot(self) -> None:
+        """Сохранение графика в PNG для вставки в PDF.
+
+        Сохраняет изображение в папку <PROJECT_ROOT>/reports по умолчанию.
+        Обновляет атрибут self.saved_plot_path с полным путём к сохранённому файлу.
+        """
+        try:
+            os.makedirs(REPORT_DIR, exist_ok=True)
+            # Сохраняем текущую фигуру
+            self.figure.savefig(PLOT_FILENAME, bbox_inches="tight", dpi=150)
+            print(f"Plot saved to {PLOT_FILENAME}")
+        except Exception as e:
+            # Простая обработка ошибок — вывести в консоль. GUI-логирование можно добавить позже.
+            print(f"Ошибка при сохранении графика: {e}")
 
 def main() -> None:
     df = pd.DataFrame()
@@ -444,10 +481,10 @@ def main() -> None:
     step_graph = np.zeros_like(x)
     for time, val in zip(jump_times, reference_jump_values):
         step_graph[x >= time] = val
-    df["Задание. ГСМ-Б"] = step_graph
+    df["ГСМ-А.Текущее положение"] = step_graph
 
     # Положение ГСМ (эмуляция)
-    df["Положение. ГСМ-Б"] = step_graph
+    df["Значение развертки. Положение ГСМ"] = step_graph
 
     # Дополнительные графики
     df["ОЗ-А"] = [5 + random.randint(-1, 1) for _ in x]
@@ -461,7 +498,7 @@ def main() -> None:
     ]
     df[COMMON_TIME] = timestamps
 
-    y1 = [first_signal, "ГСМ-Б", "Положение. ГСМ-Б"]
+    y1 = [first_signal, "ГСМ-А.Текущее положение", "Значение развертки. Положение ГСМ"]
     y2 = ["ОЗ-А", "ОЗ-Б"]
 
     app = QApplication(sys.argv)
@@ -470,7 +507,9 @@ def main() -> None:
         base_signals=y1,
         secondary_signals=y2,
         time_signals=COMMON_TIME,
-        filename="E:/ТГ41-2021-06-25_134810_14099.csv.gz",
+        enable_analys=False,
+        filenames=["E:/User/Temp/ТГ41-2021-06-25_134810_14099.csv.gz",
+                   "E:/User/Temp/ТГ41-2021-06-25_134914_14099.csv.gz"]
     )
     window.show()
     sys.exit(app.exec())

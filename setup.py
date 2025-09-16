@@ -34,14 +34,14 @@ include_files = get_smart_includes()
 build_exe_options = {
     "path": sys.path + [src_root],
     "excludes": [
-        "matplotlib.tests", "matplotlib.testing", "pandas.tests", "scipy.tests",
+        "matplotlib.tests", "matplotlib.testing", "pandas.tests", "scipy",
         "PyQt5.QtWebEngine", "PyQt5.QtNetwork", "PyQt5.QtSql",
         "PyQt5.QtScript", "PyQt5.QtSvg", "PyQt5.QtTest",
         "PyQt5.QtXml", "PyQt5.QtDesigner", "PyQt5.QtMultimedia",
         "PyQt5.QtMultimediaWidgets", "PyQt5.QtOpenGL", "PyQt5.QtPrintSupport",
-        "PyQt5.QtQml",
+        "PyQt5.QtQml", "debugpy",
     ],
-    "optimize": 0, # c 2 - 477 Mb (3.11), c 1 или 0 - 175 Mb (3.11) 
+    "optimize": 2, # c 2 - 477 Mb (3.11), c 1 или 0 - 175 Mb (3.11) 
     "include_files": include_files,
     # "zip_include_packages":["*"],  # c этими двумя опциями exe в build для python 3.8.10 не запускается  
     # "zip_exclude_packages":[], 
@@ -65,9 +65,9 @@ setup(
 import shutil
 
 REMOVE_DIRS = [
-    "matplotlib/mpl-data/sample_data",
-    "matplotlib/mpl-data/stylelib",
-    "matplotlib/mpl-data/images",
+    # "matplotlib/mpl-data/sample_data",
+    # "matplotlib/mpl-data/stylelib",
+    # "matplotlib/mpl-data/images",
     "PyQt5/Qt5/translations",
 ]
 

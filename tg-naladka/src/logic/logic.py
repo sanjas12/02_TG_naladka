@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 import chardet
 import pandas as pd
-from typing import List, Dict, Union
+from typing import List, Dict, Optional, Union
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QMessageBox, QFileDialog
 
@@ -158,7 +158,16 @@ class PlotManager:
         self.ui = ui
 
     def prepare_plot_data(self) -> bool:
-        """Подготавливает данные для построения графиков и проихводит загрузку выбранных сигналов"""
+        """Подготавливает данные для построения графиков.
+
+        - Сбрасывает состояние модели данных.
+        - Загружает выбранные сигналы.
+        - Проверяет возможность анализа регулятора.
+        - Обновляет прогресс-бар.
+
+        Returns:
+            bool: True, если данные успешно подготовлены, иначе False.
+        """
 
         self.model.clear_state()
 
@@ -176,13 +185,21 @@ class PlotManager:
 
         self.model.step = int(self.ui.combobox_dot.currentText())
 
+        # Проверка, если среди выбранных сигналов есть дла АНАЛИЗА РЕГУлятора
+        all_signals = base_signals + secondary_signals
+
+        if (cfg.ANALYS_AIM in all_signals) and (cfg.GSM_A_CUR in all_signals):
+            self.model.ready_to_analysis = True
+        else:
+            print("Данных для анализа регулятора ГСМ - нет")
+
         # Запускаем прогресс-бар с количеством файлов
         self.ui.start_modal_progress(maximum=len(self.model.filenames))
-
-        self.model.df = self._load_data(base_signals + secondary_signals)
-        self.model.ready_plot = True
-
-        self.ui.stop_modal_progress()
+        try:
+            self.model.df = self._load_data(all_signals)
+            self.model.ready_plot = True
+        finally:
+            self.ui.stop_modal_progress()
 
         return True
 
@@ -276,14 +293,10 @@ class MainLogic:
     def _setup_connections(self) -> None:
         """Настраивает соединения сигналов и слотов"""
         # кнопка Open files
-        self.ui.gb_signals.btn_first.clicked.connect(
-            self.load_and_prepare_data
-        )
+        self.ui.gb_signals.btn_first.clicked.connect(self.load_and_prepare_data)
         
         # кнопка Построить графики
-        self.ui.button_graph.clicked.connect(
-            self.plot_graph
-        )
+        self.ui.button_graph.clicked.connect(self.plot_graph)
         
         for group_box, dict_signal in zip(
             (self.ui.gb_base_axe, self.ui.gb_secondary_axe),
@@ -295,6 +308,19 @@ class MainLogic:
             group_box.btn_second.clicked.connect(
                 lambda _, gb=group_box, ds=dict_signal: self.remove_signal(gb, ds)
             )
+        self.ui.gb_base_axe.ch_analyzer.stateChanged.connect(self.on_checkbox_changed)
+
+    def on_checkbox_changed(self):
+        if self.ui.gb_base_axe.ch_analyzer.isChecked():
+            # Добавляем сигналы только если они существуют в общем списке
+            for signal_name in [cfg.ANALYS_AIM, cfg.GSM_A_CUR, cfg.GSM_B_CUR]:
+                if signal_name in self.model.dict_all_signals:
+                    self.add_signal(self.ui.gb_base_axe, self.model.dict_base_signals, signal_name)
+        else:
+            # Удаляем сигналы только если они есть в группе
+            for signal_name in [cfg.ANALYS_AIM, cfg.GSM_A_CUR, cfg.GSM_B_CUR]:
+                if signal_name in self.model.dict_base_signals:
+                    self.remove_signal(self.ui.gb_base_axe, self.model.dict_base_signals, signal_name)
 
     def load_and_prepare_data(self) -> None:
         """Основной метод загрузки и подготовки данных"""
@@ -332,6 +358,8 @@ class MainLogic:
         self.model.clear_state()
         self.ui.ql_info.setText("")
         self.ui.button_graph.setEnabled(False)
+        self.ui.gb_base_axe.ch_analyzer.setEnabled(False)
+        self.ui.gb_base_axe.ch_analyzer.setChecked(False)
 
         for group_box in (
             self.ui.gb_base_axe,
@@ -346,6 +374,8 @@ class MainLogic:
         self._update_qtable(self.ui.gb_signals, self.model.dict_all_signals)
         self._setup_time_axis()
         self.ui.button_graph.setEnabled(True)
+        if (cfg.ANALYS_AIM and cfg.GSM_A_CUR) in self.model.dict_all_signals.keys():
+            self.ui.gb_base_axe.ch_analyzer.setEnabled(True)
 
     def _update_qtable(
         self, group_box: MyGroupBox, dict_signals: Dict[str, int]
@@ -428,50 +458,73 @@ class MainLogic:
         if self.ui.gb_signals.qtable_axe.rowCount() > 0:
             self.ui.gb_signals.qtable_axe.selectRow(0)
 
-    def add_signal(self, group_box: MyGroupBox, dict_signals: Dict[str, int]) -> None:
-        """Добавляет выбранный сигнал в указанную группу, сохраняя уже имеющиеся"""
-        current_row = self.ui.gb_signals.qtable_axe.currentRow()
-
-        if current_row >= 0:
-
-            signal = self.ui.gb_signals.qtable_axe.item(current_row, 1).text()
+    def add_signal(self, group_box: MyGroupBox, dict_signals: Dict[str, int], 
+                signal_name: Optional[str] = None) -> None:
+        """Добавляет сигнал в указанную группу по названию сигнала 
+        или выбранному положению в таблице"""
+        
+        # Получаем данные сигнала  Определяем текущую строку 
+        if signal_name:
+            if signal_name not in self.model.dict_all_signals:
+                self.ui.show_error(f"Сигнал '{signal_name}' не найден в общем списке")
+                return
+            idx = self.model.dict_all_signals[signal_name]
+            signal_text = signal_name
+        else:
+            current_row = self.ui.gb_signals.qtable_axe.currentRow()
+            if current_row < 0:
+                self.ui.show_error("Не выбраны сигналы для построения графика")
+                return
+            signal_text = self.ui.gb_signals.qtable_axe.item(current_row, 1).text()
             idx = int(self.ui.gb_signals.qtable_axe.item(current_row, 0).text())
 
-            # Добавляем сигнал в словарь группы и удаляем из Всех сигналов
-            dict_signals[signal] = idx
-            self.model.dict_all_signals.pop(signal, None)
+        # Обновляем словари
+        dict_signals[signal_text] = idx
+        self.model.dict_all_signals.pop(signal_text, None)
 
-            # Обновляем таблицу группы, добавляя новый сигнал к существующим
-            self._update_qtable(group_box, dict_signals)
-            self._update_qtable(self.ui.gb_signals, self.model.dict_all_signals)
+        # Обновляем таблицы
+        self._update_qtable(group_box, dict_signals)
+        self._update_qtable(self.ui.gb_signals, self.model.dict_all_signals)
+        
+        # self.ui.gb_signals.qtable_axe.selectRow(current_row)
 
-            # сохраняем  фокус на строчке
-            self.ui.gb_signals.qtable_axe.selectRow(current_row)
-        else:
-            self.ui.show_error("Не выбраны сигналы для построения графика")
-
-    def remove_signal(
-        self, group_box: MyGroupBox, dict_signals: Dict[str, int]
-    ) -> None:
+    def remove_signal(self, group_box: MyGroupBox, dict_signals: Dict[str, int],
+                    signal_name: Optional[str] = None) -> None:
         """Удаляет сигнал из указанной группы"""
-        current_row = group_box.qtable_axe.currentRow()
 
-        if current_row >= 0:
-
-            signal = group_box.qtable_axe.item(current_row, 1).text()
+        # Определяем какой сигнал удалять
+        if signal_name:
+            # Удаляем по имени
+            if signal_name not in dict_signals:
+                self.ui.show_error(f"Сигнал '{signal_name}' не найден в группе")
+                return
+            signal_to_remove = signal_name
+            idx = dict_signals[signal_name]
+            
+        else:
+            # Удаляем по текущему выбору в таблице
+            current_row = group_box.qtable_axe.currentRow()
+            if current_row < 0:
+                self.ui.show_error("Не выбраны сигналы для удаления")
+                return
+                
+            signal_to_remove = group_box.qtable_axe.item(current_row, 1).text()
             idx = int(group_box.qtable_axe.item(current_row, 0).text())
 
-            # Добавляем сигнал в словарь Всех сигналов и удаляем из группы
-            self.model.dict_all_signals[signal] = idx
-            dict_signals.pop(signal, None)
+        # Обновляем словари
+        self.model.dict_all_signals[signal_to_remove] = idx
+        dict_signals.pop(signal_to_remove, None)
 
-            self._update_qtable(group_box, dict_signals)
-            self._update_qtable(self.ui.gb_signals, self.model.dict_all_signals)
+        # Обновляем таблицы
+        self._update_qtable(group_box, dict_signals)
+        self._update_qtable(self.ui.gb_signals, self.model.dict_all_signals)
 
-            # сохраняем  фокус на строчке
-            group_box.qtable_axe.selectRow(current_row - 1)
-        else:
-            self.ui.show_error("Не выбраны сигналы для удаления сигналов")
+        # # Восстанавливаем фокус (если удаляли по текущей строке)
+        # if signal_name is None:
+        #     current_row = group_box.qtable_axe.currentRow()
+        #     new_row = max(0, current_row - 1) if group_box.qtable_axe.rowCount() > 0 else 0
+        #     if new_row < group_box.qtable_axe.rowCount():
+        #         group_box.qtable_axe.selectRow(new_row)
 
     def plot_graph(self) -> None:
         """Строит график на основе выбранных данных"""
@@ -509,7 +562,8 @@ class MainLogic:
                 # time_signals=next(iter(self.model.dict_time_axe.items()))[0],
                 time_signals=self.model.time_signal,
                 step=self.model.step,
-                filename=self.model.first_filename,
+                filenames=self.model.filenames,
+                enable_analys=self.model.ready_to_analysis,
             )
 
             self.graph_window.show()

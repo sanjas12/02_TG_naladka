@@ -19,6 +19,7 @@ class Model:
     is_time: bool = False
     is_ms: bool = False
     ready_plot: bool = False
+    ready_to_analysis: bool = False
     
     # Данные
     df: Optional[pd.DataFrame] = None

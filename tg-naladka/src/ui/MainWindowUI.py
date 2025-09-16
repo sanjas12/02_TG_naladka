@@ -19,6 +19,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QAbstractItemView,
+    QCheckBox,
 )
 
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -71,13 +72,15 @@ class MainWindowUI(QMainWindow):
             title=AxeName.LIST_SIGNALS.value,
             name_first_button="Open files",
             enable_second_btn=False,
+            enable_analyzer=False,
         )
         self.gb_base_axe = MyGroupBox(title=AxeName.BASE_AXE.value)
-        self.gb_secondary_axe = MyGroupBox(title=AxeName.SECONDARY_AXE.value)
+        self.gb_secondary_axe = MyGroupBox(title=AxeName.SECONDARY_AXE.value, enable_analyzer=False)
         self.gb_x_axe = MyGroupBox(
             title=AxeName.TIME_AXE.value,
             enable_first_btn=False,
             enable_second_btn=False,
+            enable_analyzer=False,
         )
 
         # Первый горизонтальный слой
@@ -178,12 +181,16 @@ class MyGroupBox(QGroupBox):
         name_second_button: str = "Remove from Axe",
         enable_first_btn: bool = True,
         enable_second_btn: bool = True,
+        enable_analyzer: bool = True,
     ):
         super().__init__(title)
         self.dict_axe: Dict[str, int] = {}
         self.qtable_axe = CreateTable.create_table()
         self.btn_first = self._create_button(name_first_button, enable_first_btn)
         self.btn_second = self._create_button(name_second_button, enable_second_btn)
+        self.ch_analyzer = QCheckBox("Анализ регулятора ГСМ")
+        self.ch_analyzer.setEnabled(False)
+        self.ch_analyzer.setChecked(False)
 
         layout = QVBoxLayout()
         layout.addWidget(self.qtable_axe)
@@ -191,6 +198,8 @@ class MyGroupBox(QGroupBox):
             layout.addWidget(self.btn_first)
         if enable_second_btn:
             layout.addWidget(self.btn_second)
+        if enable_analyzer:
+            layout.addWidget(self.ch_analyzer)
         self.setLayout(layout)
 
     def _create_button(self, name: str, is_enabled: bool) -> QPushButton:
