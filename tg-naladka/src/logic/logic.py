@@ -183,15 +183,16 @@ class PlotManager:
             self.ui.show_error("Не выбраны сигналы для построения графика")
             return False
 
-        self.model.step = int(self.ui.combobox_dot.currentText())
+        self.model.step = 10
 
         # Проверка, если среди выбранных сигналов есть дла АНАЛИЗА РЕГУлятора
         all_signals = base_signals + secondary_signals
 
         if (cfg.ANALYS_AIM in all_signals) and (cfg.GSM_A_CUR in all_signals):
             self.model.ready_to_analysis = True
+            print("Среди выбранных сигналов есть данные для оценки качество регулятора ГСМ")
         else:
-            print("Данных для анализа регулятора ГСМ - нет")
+            print("Среди выбранных сигналов нет данных для оценки качество регулятора ГСМ")
 
         # Запускаем прогресс-бар с количеством файлов
         self.ui.start_modal_progress(maximum=len(self.model.filenames))
@@ -551,9 +552,9 @@ class MainLogic:
                 self._show_error("Нет точек для построения графика")
                 return
 
-            self.ui.number_plot_point.setText(
-                str(int(len(self.model.df) / self.model.step))
-            )
+            # self.ui.number_plot_point.setText(
+            #     str(int(len(self.model.df) / self.model.step))
+            # )
 
             self.graph_window = WindowGraph(
                 self.model.df,

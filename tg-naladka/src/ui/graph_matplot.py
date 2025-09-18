@@ -44,7 +44,7 @@ class WindowGraph(QMainWindow):
         secondary_signals (List[str]): Список сигналов для вторичной оси Y.
         time_signals (str): Название столбца для оси X.
         step (int, optional): Шаг выборки данных. По умолчанию 10.
-        filename (str, optional): Имя файла с данными для заголовка. По умолчанию None.
+        filename (str, optional): Имя файла с данными для заголовка.
         enable_button: Можно ли активировать кнопку "АНАЛИЗА"
     """
 
@@ -413,8 +413,6 @@ class WindowGraph(QMainWindow):
 
     def analyze_regulator(self) -> None:
         """Обработчик нажатия кнопки анализа регулятора."""
-        print("Запуск анализа регулятора...")
-        # print(self.analyzer.get_analysis_report())
         self.analyzer.save_to_pdf()
 
     def _save_plot(self) -> None:
