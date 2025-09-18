@@ -3,7 +3,7 @@ import sys
 import os
 import random
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Tuple, cast
+from typing import List, Optional, Dict, Any
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
@@ -21,8 +21,7 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QScrollArea,
 )
-from PyQt5.QtCore import Qt, QPointF
-from PyQt5.QtGui import QColor
+from PyQt5.QtCore import Qt
 
 import pyqtgraph as pg
 
