@@ -1,4 +1,3 @@
-# tg-naladka\src\ui\graph_matplot.py
 from __future__ import annotations
 import sys
 import os
@@ -42,29 +41,26 @@ class WindowGraph(QMainWindow):
 
     Args:
         data (pd.DataFrame): DataFrame с данными для построения графиков.
-        base_signals (List[str]): Список сигналов для основной оси Y.
-        secondary_signals (List[str]): Список сигналов для вторичной оси Y.
+        selected_signals (List[str]): Список сигналов для основной оси Y.
         time_signals (str): Название столбца для оси X.
         step (int, optional): Шаг выборки данных. По умолчанию 10.
-        filenames (List[str]): Список имён файлов с данными для заголовка.
+        filenames (List[str]): Список имён файлов с данными для вставки в отчет.
         enable_analys: Можно ли активировать кнопку "АНАЛИЗА"
     """
 
     def __init__(
         self,
         data: pd.DataFrame,
-        base_signals: List[str],
-        secondary_signals: List[str],
-        time_signals: str,
+        selected_signals: List[str],
+        time_signal: str,
         filenames: List[str],
         step: int = 10,
         enable_analys: bool = False,
     ) -> None:
         super().__init__()
         self.data = data
-        self.base_signals = base_signals
-        self.secondary_signals = secondary_signals
-        self.time_signals = time_signals
+        self.selected_signals = selected_signals
+        self.time_signal = time_signal
         self.step = int(step)
         self.filenames = filenames
         self.enable_analys = enable_analys
@@ -183,28 +179,26 @@ class WindowGraph(QMainWindow):
         self.plot_item.getViewBox().setBackgroundColor('w')
         
         # Устанавливаем черный цвет для осей и текста
-        axis_pen = pg.mkPen('k')
-        text_pen = pg.mkPen('k')
+        # axis_pen = pg.mkPen('k')
+        # text_pen = pg.mkPen('k')
         
-        self.plot_item.getAxis('left').setPen(axis_pen)
-        self.plot_item.getAxis('bottom').setPen(axis_pen)
-        self.plot_item.getAxis('right').setPen(axis_pen)
-        self.plot_item.getAxis('left').setTextPen(text_pen)
-        self.plot_item.getAxis('bottom').setTextPen(text_pen)
-        self.plot_item.getAxis('right').setTextPen(text_pen)
+        # self.plot_item.getAxis('left').setPen(axis_pen)
+        # self.plot_item.getAxis('bottom').setPen(axis_pen)
+        # self.plot_item.getAxis('right').setPen(axis_pen)
+        # self.plot_item.getAxis('left').setTextPen(text_pen)
+        # self.plot_item.getAxis('bottom').setTextPen(text_pen)
+        # self.plot_item.getAxis('right').setTextPen(text_pen)
         
         self.plot_item.showGrid(x=True, y=True, alpha=0.6)
-        self.plot_item.setLabel("bottom", self.time_signals)
+        self.plot_item.setLabel("bottom", self.time_signal)
 
         # Добавляем вторичный ViewBox для второй Y-оси
-        self.secondary_view = pg.ViewBox()
-        # Устанавливаем белый фон для вторичного ViewBox
-        self.secondary_view.setBackgroundColor('w')
-        # связываем вторичную ось справа
-        self.plot_item.scene().addItem(self.secondary_view)
-        self.plot_item.getAxis("right").linkToView(self.secondary_view)
-        self.plot_item.showAxis("right")
-        self.secondary_view.setXLink(self.plot_item)
+        # self.secondary_view = pg.ViewBox()
+        # self.secondary_view.setBackgroundColor('w')
+        # self.plot_item.scene().addItem(self.secondary_view)
+        # self.plot_item.getAxis("right").linkToView(self.secondary_view)
+        # self.plot_item.showAxis("right")
+        # self.secondary_view.setXLink(self.plot_item)
 
         # Инструменты аннотации
         self.vline = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen("k", style=Qt.DashLine))
@@ -226,18 +220,9 @@ class WindowGraph(QMainWindow):
 
     def _add_signal_checkboxes(self, layout: QVBoxLayout) -> None:
         """Добавляет чекбоксы для сигналов основной и вторичной осей."""
-        if self.base_signals:
-            layout.addWidget(QLabel("Основная ось:"))
-            for signal in self.base_signals:
-                cb = QCheckBox(signal)
-                cb.setChecked(True)
-                cb.stateChanged.connect(self.toggle_signal_visibility)
-                layout.addWidget(cb)
-                self.checkboxes[signal] = cb
-                self.line_visibility[signal] = True
-        if self.secondary_signals:
-            layout.addWidget(QLabel("\nВспомогательная ось:"))
-            for signal in self.secondary_signals:
+        if self.selected_signals:
+            layout.addWidget(QLabel("Сигналы:"))
+            for signal in self.selected_signals:
                 cb = QCheckBox(signal)
                 cb.setChecked(True)
                 cb.stateChanged.connect(self.toggle_signal_visibility)
@@ -289,12 +274,12 @@ class WindowGraph(QMainWindow):
         self.plot_item.addItem(self.annotation)
         self.annotation.hide()
         # также надо связать secondary_view к plot_item снова (т.к. scene меняется)
-        self.secondary_view = pg.ViewBox()
-        self.secondary_view.setBackgroundColor('w')
-        self.plot_item.scene().addItem(self.secondary_view)
-        self.plot_item.getAxis("right").linkToView(self.secondary_view)
-        self.plot_item.showAxis("right")
-        self.secondary_view.setXLink(self.plot_item)
+        # self.secondary_view = pg.ViewBox()
+        # self.secondary_view.setBackgroundColor('w')
+        # self.plot_item.scene().addItem(self.secondary_view)
+        # self.plot_item.getAxis("right").linkToView(self.secondary_view)
+        # self.plot_item.showAxis("right")
+        # self.secondary_view.setXLink(self.plot_item)
 
         if self.data.empty:
             # показать текст вместо графика
@@ -307,7 +292,7 @@ class WindowGraph(QMainWindow):
 
         # Основные сигналы
         self.lines.clear()
-        for i, signal in enumerate(self.base_signals):
+        for i, signal in enumerate(self.selected_signals):
             if signal in self.data.columns and self.line_visibility.get(signal, True):
                 y = pd.to_numeric(self.data[signal].iloc[:: self.step], errors="coerce").to_numpy()
                 pen = pg.mkPen(color=self.base_colors[i % len(self.base_colors)], width=2)
@@ -315,22 +300,22 @@ class WindowGraph(QMainWindow):
                 self.lines[signal] = plotdata
 
         # Настройки легенды / подписи осей
-        visible_main = [s for s in self.base_signals if self.line_visibility.get(s, False) and s in self.data.columns]
+        visible_main = [s for s in self.selected_signals if self.line_visibility.get(s, False) and s in self.data.columns]
         if visible_main:
             self.plot_item.getAxis("left").setLabel(", ".join(visible_main))
 
         # Вторичные сигналы рисуем во ViewBox справа
         # У secondary_view координаты по Y будут независимы
-        for i, signal in enumerate(self.secondary_signals):
-            if signal in self.data.columns and self.line_visibility.get(signal, True):
-                y = pd.to_numeric(self.data[signal].iloc[:: self.step], errors="coerce").to_numpy()
-                pen = pg.mkPen(color=self.secondary_colors[i % len(self.secondary_colors)], width=2, style=Qt.DotLine)
-                # Создаём PlotDataItem и добавляем в secondary_view
-                curve = pg.PlotDataItem(indices, y, pen=pen, name=signal)
-                self.secondary_view.addItem(curve)
-                # Подключаем масштабирование по X к основному PlotItem
-                curve.setPos(0, 0)
-                self.lines[signal] = curve
+        # for i, signal in enumerate(self.secondary_signals):
+        #     if signal in self.data.columns and self.line_visibility.get(signal, True):
+        #         y = pd.to_numeric(self.data[signal].iloc[:: self.step], errors="coerce").to_numpy()
+        #         pen = pg.mkPen(color=self.secondary_colors[i % len(self.secondary_colors)], width=2, style=Qt.DotLine)
+        #         # Создаём PlotDataItem и добавляем в secondary_view
+        #         curve = pg.PlotDataItem(indices, y, pen=pen, name=signal)
+        #         self.secondary_view.addItem(curve)
+        #         # Подключаем масштабирование по X к основному PlotItem
+        #         curve.setPos(0, 0)
+        #         self.lines[signal] = curve
 
         # Поворот меток X — pyqtgraph делает это в AxisItem через стилевые настройки; оставим дефолт
         # Подписываем title на основе файлов
@@ -385,7 +370,7 @@ class WindowGraph(QMainWindow):
         # формируем текст аннотации
         x_val = self.data[self.time_signals].iloc[idx]
         text_lines = [f"Время: {self.format_time(x_val)}"]
-        for signal in self.base_signals + self.secondary_signals:
+        for signal in self.selected_signals + self.secondary_signals:
             if signal in self.data.columns and self.line_visibility.get(signal, False):
                 try:
                     y_val = float(pd.to_numeric(self.data[signal].iloc[idx], errors="coerce"))
@@ -503,9 +488,8 @@ def main() -> None:
     app = QApplication(sys.argv)
     window = WindowGraph(
         data=df,
-        base_signals=y1,
-        secondary_signals=y2,
-        time_signals=COMMON_TIME,
+        selected_signals=y1+y2,
+        time_signal=COMMON_TIME,
         enable_analys=False,
         filenames=[
             "E:/User/Temp/ТГ41-2021-06-25_134810_14099.csv.gz",
