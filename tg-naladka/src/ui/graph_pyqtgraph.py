@@ -64,6 +64,7 @@ class WindowGraph(QMainWindow):
         self.step = int(step)
         self.filenames = filenames
         self.enable_analys = enable_analys
+        self.plot_items: List[Optional[pg.PlotItem]] = [] 
 
         if self.enable_analys:
             self.analyzer = RegulatorAnalyzer(
@@ -81,8 +82,8 @@ class WindowGraph(QMainWindow):
 
         # pyqtgraph элементы
         self.plot_widget: Optional[pg.GraphicsLayoutWidget] = None
-        self.plot_item: Optional[pg.PlotItem] = None  # основная PlotItem
-        self.secondary_view: Optional[pg.ViewBox] = None  # вторичный ViewBox
+        self.plot_item: Optional[pg.PlotItem] = None  # основной PlotItem
+        self.secondary_views: Dict[str, pg.ViewBox] = {}  # вторичные ViewBox
         self.vline: Optional[pg.InfiniteLine] = None
         self.annotation: Optional[pg.TextItem] = None
         self.saved_plot_path: Optional[str] = None
@@ -197,43 +198,33 @@ class WindowGraph(QMainWindow):
         return graph_panel
 
     def _setup_plot_widget(self) -> None:
-        """Настраивает виджет графика."""
-        if self.plot_widget is None:
+        """Настраивает основной виджет для отображения графиков с общей осью X."""
+        if not self.plot_widget:
             return
-            
-        self.plot_widget.setBackground('w')
-        
-        # Создаём PlotItem (ось X общая)
+        self.plot_widget.setBackground("w")
+        self.plot_widget.clear()
+
+        # создаем основной PlotItem для первой линии
         self.plot_item = self.plot_widget.addPlot(row=0, col=0)
-        
-        # Устанавливаем белый фон для ViewBox графика
-        if self.plot_item.getViewBox():
-            self.plot_item.getViewBox().setBackgroundColor('w')
-        
-        self.plot_item.showGrid(x=True, y=True, alpha=0.6)
         self.plot_item.setLabel("bottom", self.time_signal)
+        self.plot_item.showGrid(x=True, y=True, alpha=0.6)
+        self.plot_item.getViewBox().setBackgroundColor("w")
 
-        # Инструменты аннотации
-        self.vline = pg.InfiniteLine(
-            angle=90, movable=False, 
-            pen=pg.mkPen("k", style=Qt.DashLine)
-        )
-        self.plot_item.addItem(self.vline)
-        self.vline.hide()
-
-        self.annotation = pg.TextItem(
-            anchor=(0, 1), border=pg.mkPen(0.5), 
-            fill=(255, 255, 255, 200), color='k'
-        )
-        self.plot_item.addItem(self.annotation)
-        self.annotation.hide()
-
-        # подписка на события мыши
-        proxy = pg.SignalProxy(
-            self.plot_item.scene().sigMouseMoved, 
-            rateLimit=60, 
-            slot=self.on_mouse_move
-        )
+        # создаем вторичные оси для остальных сигналов
+        self.secondary_views.clear()
+        for i, signal in enumerate(self.selected_signals[1:], start=1):
+            vb = pg.ViewBox()
+            vb.setBackgroundColor("w")
+            color = self.secondary_colors[(i-1) % len(self.secondary_colors)]
+            axis = pg.AxisItem("left")
+            axis.setPen(color)
+            axis.setTextPen(color)
+            self.plot_item.showAxis("left")
+            self.plot_item.scene().addItem(axis)
+            axis.linkToView(vb)
+            vb.setXLink(self.plot_item)
+            self.plot_item.getViewBox().scene().addItem(vb)
+            self.secondary_views[signal] = vb
 
     def _add_signal_checkboxes(self, layout: QVBoxLayout) -> None:
         """Добавляет чекбоксы для сигналов основной и вторичной осей."""
@@ -265,50 +256,39 @@ class WindowGraph(QMainWindow):
         self._save_plot()
 
     def plot_graphs(self) -> None:
-        """Построение графиков данных с учетом видимости сигналов (pyqtgraph)."""
+        """Построение графиков с общей осью X и отдельными осями Y."""
         if self.plot_item is None:
             return
-            
-        # очистка предыдущих линий
+
         self.plot_item.clear()
-        self._setup_plot_style()
-        
+        for vb in self.secondary_views.values():
+            vb.clear()
+
         if self.data.empty:
-            # показать текст вместо графика
-            label = pg.TextItem(
-                "Нет данных для отображения", 
-                anchor=(0.5, 0.5), color='k'
-            )
+            label = pg.TextItem("Нет данных для отображения", anchor=(0.5, 0.5), color='k')
             self.plot_item.addItem(label)
             return
 
-        # X используем индекс
         indices = np.arange(0, len(self.data), self.step, dtype=int)
-
-        # Основные сигналы
         self.lines.clear()
-        for i, signal in enumerate(self.selected_signals):
+
+        # первая линия — основная
+        signal = self.selected_signals[0]
+        if signal in self.data.columns and self.line_visibility.get(signal, True):
+            y_data = pd.to_numeric(self.data[signal].iloc[::self.step], errors="coerce").to_numpy()
+            pen = pg.mkPen(color=self.base_colors[0], width=2)
+            self.lines[signal] = self.plot_item.plot(indices, y_data, pen=pen, name=signal)
+
+        # остальные линии — вторичные
+        for i, signal in enumerate(self.selected_signals[1:], start=1):
             if signal in self.data.columns and self.line_visibility.get(signal, True):
-                y_data = self._get_signal_data(signal)
-                pen = pg.mkPen(
-                    color=self.base_colors[i % len(self.base_colors)], 
-                    width=2
-                )
-                plotdata = self.plot_item.plot(indices, y_data, pen=pen, name=signal)
-                self.lines[signal] = plotdata
+                y_data = pd.to_numeric(self.data[signal].iloc[::self.step], errors="coerce").to_numpy()
+                pen = pg.mkPen(color=self.secondary_colors[(i-1) % len(self.secondary_colors)], width=2)
+                vb = self.secondary_views[signal]
+                curve = pg.PlotDataItem(indices, y_data, pen=pen, name=signal)
+                vb.addItem(curve)
+                self.lines[signal] = curve
 
-        # Настройки легенды / подписи осей
-        visible_main = [
-            s for s in self.selected_signals 
-            if self.line_visibility.get(s, False) and s in self.data.columns
-        ]
-        if visible_main:
-            self.plot_item.getAxis("left").setLabel(", ".join(visible_main))
-
-        # Подписываем title на основе файлов
-        self.set_graph_title()
-
-        # tight layout эквивалент — можно чуть подвинуть viewbox
         self.plot_item.enableAutoRange()
 
     def _setup_plot_style(self) -> None:
@@ -381,67 +361,6 @@ class WindowGraph(QMainWindow):
         else:
             title = "Тестовый файл"
         self.plot_item.setTitle(title, color='k')
-
-    def on_mouse_move(self, evt: Any) -> None:
-        """Обработчик перемещения мыши по графику."""
-        if self.plot_item is None:
-            return
-            
-        pos = evt[0]  # SignalProxy передаёт список, где первый элемент — QPointF
-        if not self.plot_item.sceneBoundingRect().contains(pos):
-            self.vline.hide()
-            self.annotation.hide()
-            return
-            
-        mouse_point = self.plot_item.vb.mapSceneToView(pos)
-        x = mouse_point.x()
-        if x is None:
-            self.vline.hide()
-            self.annotation.hide()
-            return
-            
-        # индекс ближайшего значения
-        idx = int(round(x))
-        if idx < 0 or idx >= len(self.data):
-            self.vline.hide()
-            self.annotation.hide()
-            return
-
-        # показать вертикальную линию на позиции idx
-        x_disp = idx
-        self.vline.setValue(x_disp)
-        self.vline.show()
-
-        # формируем текст аннотации
-        x_val = self.data[self.time_signal].iloc[idx]  # Исправлено: time_signal вместо time_signals
-        text_lines = [f"Время: {self.format_time(x_val)}"]
-        
-        for signal in self.selected_signals + self.secondary_signals:
-            if signal in self.data.columns and self.line_visibility.get(signal, False):
-                try:
-                    y_val = float(pd.to_numeric(
-                        self.data[signal].iloc[idx], errors="coerce"
-                    ))
-                    text_lines.append(f"{signal}: {y_val:.2f}")
-                except Exception:
-                    text_lines.append(f"{signal}: -")
-                    
-        self.annotation.setText("\n".join(text_lines))
-        
-        # позиционируем аннотацию: справа вверху графика
-        view_rect = self.plot_item.vb.viewRect()
-        ann_x = view_rect.left() + 0.02 * view_rect.width()
-        ann_y = view_rect.top() - 0.02 * view_rect.height()
-        self.annotation.setPos(ann_x, ann_y)
-        self.annotation.show()
-
-    def format_time(self, timestamp: Any) -> str:
-        """Форматирует время для отображения в аннотации."""
-        if isinstance(timestamp, pd.Timestamp):
-            return timestamp.strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
-        if isinstance(timestamp, (int, float)):
-            return str(timedelta(seconds=float(timestamp)))
-        return str(timestamp)
 
     def analyze_regulator(self) -> None:
         """Обработчик нажатия кнопки анализа регулятора."""
