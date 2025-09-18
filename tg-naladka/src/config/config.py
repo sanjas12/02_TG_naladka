@@ -19,7 +19,7 @@ os.makedirs(LOGS_DIR, exist_ok=True)
 LOG_FILE = Path(LOGS_DIR, 'app.log')
 
 REPORT_DIR = Path(BASE_DIR.parent, "reports")
-os.makedirs(REPORT_DIR, exist_ok=True)
+
 
 # OUT_DIR = Path(BASE_DIR, "DATA_out")
 # OUT_DIR.mkdir(parents=True, exist_ok=True)
