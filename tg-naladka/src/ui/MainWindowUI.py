@@ -103,22 +103,14 @@ class MainWindowUI(QMainWindow):
         self.second_group.setLayout(second_layout)
 
         # Третий слой
-        self.number_raw_point = QLabel()
-        self.number_plot_point = QLabel()
-        self.combobox_dot = QComboBox()
-        self.combobox_dot.addItems(["1", "10", "100", "1000", "10000"])
-        self.combobox_dot.setCurrentIndex(1)
         self.button_graph = QPushButton("Построить графики")
         self.button_graph.setEnabled(False)
 
         third_layout = QGridLayout()
-        third_layout.addWidget(QLabel("Количество исходных данных:"), 0, 0)
-        third_layout.addWidget(self.number_raw_point, 0, 1)
-        third_layout.addWidget(QLabel("Выборка, каждые:"), 1, 0)
-        third_layout.addWidget(self.combobox_dot, 1, 1)
-        third_layout.addWidget(QLabel("Количество отображаемых данных:"), 2, 0)
-        third_layout.addWidget(self.number_plot_point, 2, 1)
-        third_layout.addWidget(self.button_graph, 2, 5)
+        third_layout.addWidget(QLabel(), 0, 1)
+        third_layout.addWidget(QLabel(), 0, 2)
+        third_layout.addWidget(QLabel(), 0, 3)
+        third_layout.addWidget(self.button_graph, 0, 5)
 
         third_group = QGroupBox()
         third_group.setLayout(third_layout)
