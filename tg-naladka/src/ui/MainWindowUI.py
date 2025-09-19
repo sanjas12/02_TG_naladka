@@ -2,7 +2,6 @@ import sys
 import time
 from pathlib import Path
 from typing import Dict, Optional, Callable, Union
-
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtWidgets import (
     QApplication,
@@ -20,6 +19,8 @@ from PyQt5.QtWidgets import (
     QWidget,
     QAbstractItemView,
     QCheckBox,
+    QLineEdit,
+    QHeaderView,
 )
 
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -30,7 +31,6 @@ from config.config import AxeName
 
 class WorkerThread(QThread):
     """Поток для имитации длительной загрузки данных."""
-
     progress = pyqtSignal(int)
     finished = pyqtSignal()
 
@@ -73,6 +73,7 @@ class MainWindowUI(QMainWindow):
             name_first_button="Open files",
             enable_second_btn=False,
             enable_analyzer=False,
+            enable_filter=True,   # включаем фильтр
         )
         self.gb_base_axe = MyGroupBox(title=AxeName.BASE_AXE.value)
         self.gb_secondary_axe = MyGroupBox(title=AxeName.SECONDARY_AXE.value, enable_analyzer=False)
@@ -105,13 +106,11 @@ class MainWindowUI(QMainWindow):
         # Третий слой
         self.button_graph = QPushButton("Построить графики")
         self.button_graph.setEnabled(False)
-
         third_layout = QGridLayout()
         third_layout.addWidget(QLabel(), 0, 1)
         third_layout.addWidget(QLabel(), 0, 2)
         third_layout.addWidget(QLabel(), 0, 3)
         third_layout.addWidget(self.button_graph, 0, 5)
-
         third_group = QGroupBox()
         third_group.setLayout(third_layout)
 
@@ -155,16 +154,8 @@ class MainWindowUI(QMainWindow):
 
 class MyGroupBox(QGroupBox):
     """
-    Кастомный QGroupBox с кнопками добавления и удаления.
-    
-    Аргументы:
-        title (str, optional): Заголовок группы. Defaults to None.
-        name_first_button (str, optional): Текст первой кнопки. Defaults to "Add to Axe".
-        name_second_button (str, optional): Текст второй кнопки. Defaults to "Remove from Axe".
-        enable_first_btn (bool, optional): Включена ли первая кнопка. Defaults to True.
-        enable_second_btn (bool, optional): Включена ли вторая кнопка. Defaults to True.
+    Кастомный QGroupBox с кнопками добавления, удаления и фильтрацией.
     """
-
 
     def __init__(
         self,
@@ -174,10 +165,18 @@ class MyGroupBox(QGroupBox):
         enable_first_btn: bool = True,
         enable_second_btn: bool = True,
         enable_analyzer: bool = True,
+        enable_filter: bool = False,
     ):
         super().__init__(title)
         self.dict_axe: Dict[str, int] = {}
         self.qtable_axe = CreateTable.create_table()
+
+        self.filter_input: Optional[QLineEdit] = None
+        if enable_filter:
+            self.filter_input = QLineEdit()
+            self.filter_input.setPlaceholderText("Фильтр по имени...")
+            self.filter_input.textChanged.connect(self._apply_filter)
+
         self.btn_first = self._create_button(name_first_button, enable_first_btn)
         self.btn_second = self._create_button(name_second_button, enable_second_btn)
         self.ch_analyzer = QCheckBox("Анализ регулятора ГСМ")
@@ -185,6 +184,8 @@ class MyGroupBox(QGroupBox):
         self.ch_analyzer.setChecked(False)
 
         layout = QVBoxLayout()
+        if self.filter_input:
+            layout.addWidget(self.filter_input)
         layout.addWidget(self.qtable_axe)
         if enable_first_btn:
             layout.addWidget(self.btn_first)
@@ -202,7 +203,7 @@ class MyGroupBox(QGroupBox):
 
     # Определяем тип для функции, которая может принимать 2 параметра или не принимать параметры
     FuncType = Union[Callable[[], None], Callable[[QTableWidget, Dict[str, int]], None]]
-    
+
     def add_func_to_btn(self, btn: QPushButton, func: FuncType) -> None:
         """Добавляет функцию к кнопке."""
         if func:
@@ -210,33 +211,29 @@ class MyGroupBox(QGroupBox):
         else:
             btn.clicked.connect(lambda: print("Функция не определена"))
 
+    def _apply_filter(self, text: str) -> None:
+        """Фильтрует строки таблицы по имени сигнала."""
+        text = text.lower()
+        for row in range(self.qtable_axe.rowCount()):
+            item = self.qtable_axe.item(row, 1)  # предполагаем, что имя сигнала во 2-й колонке
+            if item and text in item.text().lower():
+                self.qtable_axe.setRowHidden(row, False)
+            else:
+                self.qtable_axe.setRowHidden(row, True)
+
+
 # для тестирования 3-x myGroupBox
 class TestMyGroupBox(QMainWindow):
     def __init__(self):
         super().__init__()
-
         self.setWindowTitle("My App")
 
-        # self.layout = QVBoxLayout()
-        # for _ in range(3):
-        #     btn = QPushButton(str(_))
-        #     self.layout.addWidget(btn)
-
         self.layout = QHBoxLayout()
-
-        # self.my_group = MyGroupBox("test", "какая-то ось")
-        # self.layout.addWidget(self.my_group)
-        # for axe in AxeName:
-        #     _ = MyGroupBox(title=axe.value)
-        #     self.layout.addWidget(_)
-
         self.gb_base_axe = MyGroupBox("Base Axe")
         self.gb_secondary_axe = MyGroupBox("Secondary Axe")
         self.gb_x_axe = MyGroupBox("X Axe")
-
         for box in [self.gb_base_axe, self.gb_secondary_axe, self.gb_x_axe]:
             self.layout.addWidget(box)
-
         container = QWidget()
         container.setLayout(self.layout)
         self.setCentralWidget(container)
@@ -248,26 +245,21 @@ class TestMyGroupBox(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    # для тестирования 3-x myGroupBox создан класс TestMyGroupBox
-    # window = TestMyGroupBox()    # для тестирования 3-x myGroupBox создан класс MainWindow
-    # window.show()             # для тестирования 3-x myGroupBox
-
-    # для тестирования одного myGroupBox
-    # box = MyGroupBox(button_add_name="1 кнопка", title="заголовок", enable_btns=True)
-    # box.add_func_to_btn(box.btn_first, lambda: test("add"))
-    # box.add_func_to_btn(box.btn_second, lambda: test("remove"))
-    # box.show()
-    # def test(text):
-    #    print(text + "  some text")
-
-    # для тестирования главного окна
     main_window = MainWindowUI("Test")
-    main_window.gb_base_axe.add_func_to_btn(main_window.gb_base_axe.btn_first, lambda: test("add to base axe"))
-    main_window.gb_base_axe.add_func_to_btn(main_window.gb_base_axe.btn_second, lambda: test("remove from base axe"))
-    main_window.gb_signals.add_func_to_btn(main_window.gb_signals.btn_first, lambda: test("add func to parser all sugnals"))
-    
+
     def test(text: str):
-       print(text + "  some text")
-    
+        print(text + "  some text")
+
+    main_window.gb_base_axe.add_func_to_btn(
+        main_window.gb_base_axe.btn_first, lambda: test("add to base axe")
+    )
+    main_window.gb_base_axe.add_func_to_btn(
+        main_window.gb_base_axe.btn_second, lambda: test("remove from base axe")
+    )
+    main_window.gb_signals.add_func_to_btn(
+        main_window.gb_signals.btn_first,
+        lambda: test("add func to parser all signals"),
+    )
+
     main_window.show()
     app.exec()
