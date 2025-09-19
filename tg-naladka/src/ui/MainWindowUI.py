@@ -175,6 +175,7 @@ class MyGroupBox(QGroupBox):
         if enable_filter:
             self.filter_input = QLineEdit()
             self.filter_input.setPlaceholderText("Фильтр по имени...")
+            self.filter_input.setClearButtonEnabled(True)
             self.filter_input.textChanged.connect(self._apply_filter)
 
         self.btn_first = self._create_button(name_first_button, enable_first_btn)
