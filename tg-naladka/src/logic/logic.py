@@ -383,18 +383,19 @@ class MainLogic:
     ) -> None:
         """Обновляет Qtable таблицу сигналов"""
         group_box.qtable_axe.setRowCount(0)
-
         if not dict_signals:
             return
-
         for signal, idx in sorted(dict_signals.items(), key=lambda x: x[1]):
             row = group_box.qtable_axe.rowCount()
             group_box.qtable_axe.insertRow(row)
-
             group_box.qtable_axe.setItem(row, 0, QTableWidgetItem(str(idx)))
             item = QTableWidgetItem(signal)
             item.setToolTip(f"Название сигнала: {signal}")
             group_box.qtable_axe.setItem(row, 1, item)
+
+        if group_box.filter_input:
+            current_filter = group_box.filter_input.text()
+            group_box._apply_filter(current_filter)
 
     def _setup_time_axis(self) -> None:
         """
