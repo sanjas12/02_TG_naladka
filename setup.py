@@ -1,4 +1,4 @@
-#0.2.1
+#0.3.0
 import sys
 import os
 from cx_Freeze import setup, Executable
