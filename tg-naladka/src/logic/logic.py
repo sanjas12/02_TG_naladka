@@ -169,7 +169,7 @@ class PlotManager:
             bool: True, если данные успешно подготовлены, иначе False.
         """
 
-        self.model.clear_state()
+        # self.model.clear_state()
 
         # Получаем выбранные сигналы
         base_signals = self._get_signals_from_table(
