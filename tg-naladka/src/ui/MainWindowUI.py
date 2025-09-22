@@ -185,6 +185,10 @@ class MyGroupBox(QGroupBox):
             self.filter_input.setClearButtonEnabled(True)
             self.filter_input.textChanged.connect(self._apply_filter)
 
+        # Сохраняем исходные состояния
+        self._enable_first_btn = enable_first_btn
+        self._enable_second_btn = enable_second_btn
+        
         self.btn_first = self._create_button(name_first_button, enable_first_btn)
         self.btn_second = self._create_button(name_second_button, enable_second_btn)
         self.ch_analyzer = QCheckBox("Анализ регулятора ГСМ")
@@ -195,10 +199,8 @@ class MyGroupBox(QGroupBox):
         if self.filter_input:
             layout.addWidget(self.filter_input)
         layout.addWidget(self.qtable_axe)
-        if enable_first_btn:
-            layout.addWidget(self.btn_first)
-        if enable_second_btn:
-            layout.addWidget(self.btn_second)
+        layout.addWidget(self.btn_first)
+        layout.addWidget(self.btn_second)
         if enable_analyzer:
             layout.addWidget(self.ch_analyzer)
         self.setLayout(layout)
@@ -209,7 +211,25 @@ class MyGroupBox(QGroupBox):
         btn.setVisible(is_enabled)
         return btn
 
-    # Определяем тип для функции, которая может принимать 2 параметра или не принимать параметры
+    # Свойства для управления видимостью кнопок
+    @property
+    def enable_first_btn(self) -> bool:
+        return self._enable_first_btn
+
+    @enable_first_btn.setter
+    def enable_first_btn(self, value: bool) -> None:
+        self._enable_first_btn = value
+        self.btn_first.setVisible(value)
+
+    @property
+    def enable_second_btn(self) -> bool:
+        return self._enable_second_btn
+
+    @enable_second_btn.setter
+    def enable_second_btn(self, value: bool) -> None:
+        self._enable_second_btn = value
+        self.btn_second.setVisible(value)
+
     FuncType = Union[Callable[[], None], Callable[[QTableWidget, Dict[str, int]], None]]
 
     def add_func_to_btn(self, btn: QPushButton, func: FuncType) -> None:
@@ -223,7 +243,7 @@ class MyGroupBox(QGroupBox):
         """Фильтрует строки таблицы по имени сигнала."""
         text = text.lower()
         for row in range(self.qtable_axe.rowCount()):
-            item = self.qtable_axe.item(row, 1)  # предполагаем, что имя сигнала во 2-й колонке
+            item = self.qtable_axe.item(row, 1)
             if item and text in item.text().lower():
                 self.qtable_axe.setRowHidden(row, False)
             else:
@@ -252,6 +272,7 @@ class TestMyGroupBox(QMainWindow):
         self.gb_base_axe = MyGroupBox("Base Axe")
         self.gb_secondary_axe = MyGroupBox("Secondary Axe")
         self.gb_x_axe = MyGroupBox("X Axe")
+        self.gb_x_axe.enable_first_btn = False
         for box in [self.gb_base_axe, self.gb_secondary_axe, self.gb_x_axe]:
             self.layout.addWidget(box)
         container = QWidget()
@@ -283,6 +304,9 @@ if __name__ == "__main__":
     def test(text: str):
         print(text + "  some text")
 
+    def disable_button(gb: MyGroupBox) -> None:
+        gb.enable_first_btn = True 
+
     main_window.gb_base_axe.add_func_to_btn(
         main_window.gb_base_axe.btn_first, lambda: test("add to base axe")
     )
@@ -291,7 +315,7 @@ if __name__ == "__main__":
     )
     main_window.gb_signals.add_func_to_btn(
         main_window.gb_signals.btn_first,
-        lambda: test("add func to parser all signals"),
+        lambda: disable_button(main_window.gb_x_axe),
     )
 
     main_window.show()

@@ -72,7 +72,7 @@ class WindowGraph(QMainWindow):
         self.enable_analys = enable_analys
         
         if self.enable_analys:
-            self.analyzer = RegulatorAnalyzer(self.data[COMMON_TIME].to_numpy(),
+            self.analyzer = RegulatorAnalyzer(self.data[COMBINED_TIME].to_numpy(),
                                             self.data[GSM_A_CUR].to_numpy(),
                                             self.data[GSM_B_CUR].to_numpy(),
                                             self.data[ANALYS_AIM].to_numpy(),
@@ -247,6 +247,9 @@ class WindowGraph(QMainWindow):
         ax1 = self.figure.add_subplot()
         self.lines_list = []
         ax2 = None
+
+        # При больших данных, который не родные QP
+        self.step = len(self.data)//1000 if len(self.data) > 1_000_000 else self.step
 
         # Основные сигналы
         for signal in self.base_signals:
@@ -494,7 +497,7 @@ def main() -> None:
         (start_time + timedelta(seconds=float(i))).strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
         for i in np.linspace(0, 100, number_data)
     ]
-    df[COMMON_TIME] = timestamps
+    df[COMBINED_TIME] = timestamps
 
     y1 = [first_signal, "ГСМ-А.Текущее положение", "Значение развертки. Положение ГСМ"]
     y2 = ["ОЗ-А", "ОЗ-Б"]
@@ -504,7 +507,7 @@ def main() -> None:
         data=df,
         base_signals=y1,
         secondary_signals=y2,
-        time_signals=COMMON_TIME,
+        time_signals=COMBINED_TIME,
         enable_analys=False,
         filenames=["E:/User/Temp/ТГ41-2021-06-25_134810_14099.csv.gz",
                    "E:/User/Temp/ТГ41-2021-06-25_134914_14099.csv.gz"]

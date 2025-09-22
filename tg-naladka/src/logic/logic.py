@@ -145,7 +145,7 @@ class SignalManager:
         self.model.is_ms = cfg.DEFAULT_MS in self.model.dict_all_signals
 
         if self.model.is_time and self.model.is_ms:
-            self.model.dict_all_signals[cfg.COMMON_TIME] = (
+            self.model.dict_all_signals[cfg.COMBINED_TIME] = (
                 len(self.model.dict_all_signals) + 1
             )
 
@@ -179,6 +179,9 @@ class PlotManager:
             self.ui.gb_secondary_axe.qtable_axe, self.model.dict_secondary_signals
         )
 
+        # Если архивы не сожержат колонки "дата время" берем из Qtable_time
+        self.model.time_signal = self.ui.gb_x_axe.qtable_axe.item(0,1).text()
+
         if not base_signals and not secondary_signals:
             self.ui.show_error("Не выбраны сигналы для построения графика")
             return False
@@ -186,7 +189,7 @@ class PlotManager:
         self.model.step = 10
 
         # Проверка, если среди выбранных сигналов есть дла АНАЛИЗА РЕГУлятора
-        all_signals = base_signals + secondary_signals
+        all_signals : List[str] = base_signals + secondary_signals + [self.model.time_signal]
 
         if (cfg.ANALYS_AIM in all_signals) and (cfg.GSM_A_CUR in all_signals):
             self.model.ready_to_analysis = True
@@ -270,7 +273,7 @@ class PlotManager:
 
         # создаем Обобщенное время
         if self.model.is_ms:
-            df[cfg.COMMON_TIME] = (
+            df[cfg.COMBINED_TIME] = (
                 df[cfg.DEFAULT_TIME].astype(str) + "," + df[cfg.DEFAULT_MS].astype(str)
             )
 
@@ -293,6 +296,7 @@ class MainLogic:
 
     def _setup_connections(self) -> None:
         """Настраивает соединения сигналов и слотов"""
+        
         # кнопка Open files
         self.ui.gb_signals.btn_first.clicked.connect(self.load_and_prepare_data)
         
@@ -300,8 +304,8 @@ class MainLogic:
         self.ui.button_graph.clicked.connect(self.plot_graph)
         
         for group_box, dict_signal in zip(
-            (self.ui.gb_base_axe, self.ui.gb_secondary_axe),
-            (self.model.dict_base_signals, self.model.dict_secondary_signals),
+            (self.ui.gb_base_axe, self.ui.gb_secondary_axe, self.ui.gb_x_axe),
+            (self.model.dict_base_signals, self.model.dict_secondary_signals, dict()),
         ):
             group_box.btn_first.clicked.connect(
                 lambda _, gb=group_box, ds=dict_signal: self.add_signal(gb, ds)
@@ -361,6 +365,8 @@ class MainLogic:
         self.ui.button_graph.setEnabled(False)
         self.ui.gb_base_axe.ch_analyzer.setEnabled(False)
         self.ui.gb_base_axe.ch_analyzer.setChecked(False)
+        self.ui.gb_x_axe.enable_first_btn = False
+        self.ui.gb_x_axe.enable_second_btn = False
 
         for group_box in (
             self.ui.gb_base_axe,
@@ -371,7 +377,11 @@ class MainLogic:
             group_box.qtable_axe.setRowCount(0)
 
     def _update_ui(self) -> None:
-        """Обновляет UI после загрузки данных"""
+        """
+        1. Обновляет UI после загрузки данных
+        2. Определяемся с данными для оси Времени
+        3. 
+        """
         self._update_qtable(self.ui.gb_signals, self.model.dict_all_signals)
         self._setup_time_axis()
         self.ui.button_graph.setEnabled(True)
@@ -406,7 +416,7 @@ class MainLogic:
         Если данных нет — показывает ошибку и завершает работу.
         2. Очищает таблицу оси X.
         3. Выбирает сигнал времени:
-        - cfg.COMMON_TIME ('Время'), если данные в миллисекундах (self.model.is_ms) и время self.model.is_time
+        - cfg.COMBINED_TIME ('Время'), если данные в миллисекундах (self.model.is_ms) и время self.model.is_time
         - cfg.DEFAULT_TIME ('дата/время'), иначе.
         4. Проверяет наличие выбранного сигнала в модели (self.model.dict_all_signals).
         Если сигнала нет — показывает ошибку и завершает работу.
@@ -417,7 +427,9 @@ class MainLogic:
         """
 
         if not self.model.is_time:
-            self._show_error("Данные для времени не найдены")
+            self._show_error("Данные для времени не найдены.\nДобавьте источник времени самостоятельно")
+            self.ui.gb_x_axe.enable_first_btn = True
+            self.ui.gb_x_axe.enable_second_btn = True
             return
 
         # Очищаем таблицу оси X перед добавлением
@@ -425,7 +437,7 @@ class MainLogic:
 
         # Определяем сигнал времени в зависимости от доступных данных
         if self.model.is_ms:
-            self.model.time_signal = cfg.COMMON_TIME
+            self.model.time_signal = cfg.COMBINED_TIME
         else:
             self.model.time_signal = cfg.DEFAULT_TIME
 

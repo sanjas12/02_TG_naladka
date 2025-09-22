@@ -29,7 +29,7 @@ os.makedirs(REPORT_DIR, exist_ok=True)
 FORMAT = '%(asctime)s:%(levelname)s:%(message)s'
 LEVEL_LOG = logging.INFO
 
-COMMON_TIME = 'Время'
+COMBINED_TIME = 'Время'
 DEFAULT_TIME = 'дата/время'
 DEFAULT_MS = 'миллисекунды'
 
