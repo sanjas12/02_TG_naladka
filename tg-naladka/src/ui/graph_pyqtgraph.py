@@ -88,16 +88,6 @@ class WindowGraph(QMainWindow):
         self.annotation: Optional[pg.TextItem] = None
         self.saved_plot_path: Optional[str] = None
 
-        # Цвета (hex) — подбираются для pyqtgraph
-        self.base_colors = [
-            "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", 
-            "#9467bd", "#8c564b", "#e377c2"
-        ]
-        self.secondary_colors = [
-            "#17becf", "#bcbd22", "#7f7f7f", 
-            "#aec7e8", "#ffbb78", "#98df8a"
-        ]
-
         self.init_ui()
         self.plot_graphs()
         self._save_plot()
@@ -193,6 +183,7 @@ class WindowGraph(QMainWindow):
         
         # GraphicsLayoutWidget позволяет иметь несколько ViewBox-ов
         self.plot_widget = pg.GraphicsLayoutWidget()
+        self.plot_widget.setBackground("w")
         self._setup_plot_widget()
         
         return graph_panel
@@ -201,30 +192,69 @@ class WindowGraph(QMainWindow):
         """Настраивает основной виджет для отображения графиков с общей осью X."""
         if not self.plot_widget:
             return
-        self.plot_widget.setBackground("w")
+        
         self.plot_widget.clear()
 
-        # создаем основной PlotItem для первой линии
-        self.plot_item = self.plot_widget.addPlot(row=0, col=0)
-        self.plot_item.setLabel("bottom", self.time_signal)
-        self.plot_item.showGrid(x=True, y=True, alpha=0.6)
-        self.plot_item.getViewBox().setBackgroundColor("w")
+        secondary_viewboxes = []
+        main_viewbox = None
+        previous_viewbox = None
+        plot_item = None
+        main_layout = None
 
-        # создаем вторичные оси для остальных сигналов
-        self.secondary_views.clear()
-        for i, signal in enumerate(self.selected_signals[1:], start=1):
-            vb = pg.ViewBox()
-            vb.setBackgroundColor("w")
-            color = self.secondary_colors[(i-1) % len(self.secondary_colors)]
-            axis = pg.AxisItem("left")
-            axis.setPen(color)
-            axis.setTextPen(color)
-            self.plot_item.showAxis("left")
-            self.plot_item.scene().addItem(axis)
-            axis.linkToView(vb)
-            vb.setXLink(self.plot_item)
-            self.plot_item.getViewBox().scene().addItem(vb)
-            self.secondary_views[signal] = vb
+        base_colors = [
+            "#1f77b4", "#ff7f0e", "#2ca02c", 
+            "#9467bd", "#8c564b", "#e377c2"
+            "#17becf", "#bcbd22", "#7f7f7f", 
+            "#aec7e8", "#ffbb78", "#98df8a"
+        ]
+
+        for i, signal in enumerate(self.selected_signals):
+            print(i, signal)
+            pen = pg.mkPen(width=2, color=base_colors[i])
+            column = len(self.selected_signals) - i
+            curve = pg.PlotDataItem(self.data[self.time_signal][:: 1],
+                                    self.data[signal][:: 1],
+                                    pen=pen, name=signal, autoDownsample=True)
+
+            if i == 0:  # main plot
+                plot_item = pg.PlotItem()
+                plot_item.showGrid(x=True, y=True, alpha=0.6)
+                main_y_axis = plot_item.getAxis("left")
+                main_y_axis.setTextPen(pen)
+                main_y_axis.setLabel(signal)
+                main_x_axis = plot_item.getAxis("bottom")
+                main_viewbox = plot_item.vb
+                main_viewbox.setMouseMode(pg.ViewBox.RectMode)
+
+                main_layout = plot_item.layout
+                main_layout.removeItem(main_y_axis)
+                main_layout.removeItem(main_x_axis)
+                main_layout.removeItem(main_viewbox)
+                main_layout.addItem(main_y_axis, 2, column)
+                main_layout.addItem(main_x_axis, 3, column + 1)
+                main_layout.addItem(main_viewbox, 2, column + 1)
+                main_layout.setColumnStretchFactor(column + 1, 100)
+                main_layout.setColumnStretchFactor(1, 0)
+
+                self.plot_widget.addItem(plot_item, row=0, col=column + 1)
+                viewbox = previous_viewbox = main_viewbox
+                viewbox.setMouseEnabled(x=False, y=False)
+            else:  # secondary axes
+                axis = pg.AxisItem("left")
+                axis.setTextPen(pen)
+                axis.setLabel(signal)
+                main_layout.addItem(axis, 2, column)
+
+                viewbox = pg.ViewBox()
+                viewbox.setXLink(previous_viewbox)
+                previous_viewbox = viewbox
+                axis.linkToView(viewbox)
+                self.plot_widget.scene().addItem(viewbox)
+                viewbox.enableAutoRange(axis=pg.ViewBox.XYAxes, enable=True)
+                viewbox.setMouseEnabled(x=False, y=False)
+                secondary_viewboxes.append(viewbox)
+
+            viewbox.addItem(curve)
 
     def _add_signal_checkboxes(self, layout: QVBoxLayout) -> None:
         """Добавляет чекбоксы для сигналов основной и вторичной осей."""
@@ -324,16 +354,6 @@ class WindowGraph(QMainWindow):
         )
         self.plot_item.addItem(self.annotation)
         self.annotation.hide()
-
-    def _get_signal_data(self, signal: str) -> np.ndarray:
-        """Возвращает данные сигнала с обработкой ошибок."""
-        try:
-            return pd.to_numeric(
-                self.data[signal].iloc[:: self.step], 
-                errors="coerce"
-            ).to_numpy()
-        except Exception:
-            return np.array([])
 
     def set_graph_title(self) -> None:
         """Установка заголовка графика на основе имени файла."""
@@ -437,6 +457,7 @@ def main() -> None:
     ]
     y2 = ["ОЗ-А", "ОЗ-Б"]
     
+
     app = QApplication(sys.argv)
     window = WindowGraph(
         data=df,
