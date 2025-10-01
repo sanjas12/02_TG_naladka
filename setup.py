@@ -40,6 +40,7 @@ build_exe_options = {
         "PyQt5.QtXml", "PyQt5.QtDesigner", "PyQt5.QtMultimedia",
         "PyQt5.QtMultimediaWidgets", "PyQt5.QtOpenGL", "PyQt5.QtPrintSupport",
         "PyQt5.QtQml", "debugpy",
+        "distutils",  # 164 - 3.8.10       
     ],
     "optimize": 2, # c 2 - 477 Mb (3.11), c 1 или 0 - 175 Mb (3.11) 
     "include_files": include_files,
