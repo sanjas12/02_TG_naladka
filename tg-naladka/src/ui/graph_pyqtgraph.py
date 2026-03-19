@@ -745,12 +745,14 @@ def main() -> None:
     for t, val in zip(jump_times, reference_values):
         step_graph[x >= t] = val
 
+    # список из 10 000 строк-меток времени, равномерно распределённых на интервале 100 секунд 
+    # начиная с 2018-03-09 14:29:18,560 с шагом 10 мс
     start_time = datetime.strptime("2018-03-09 14:29:18,560", "%Y-%m-%d %H:%M:%S,%f")
     timestamps = [
         (start_time + timedelta(seconds=float(s))).strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
         for s in np.linspace(0, 100, number_data)
     ]
-
+    
     df = pd.DataFrame({
         first_signal: noisy_signal,
         "ГСМ-А.Текущее положение": step_graph,
