@@ -1,7 +1,7 @@
 import logging
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional, Dict
 
 from PyQt5.QtWidgets import QApplication
 
@@ -61,16 +61,19 @@ def get_version() -> Optional[str]:
 
 
 def setup_logging() -> None:
-    """Настраивает систему логирования."""
-    logging.basicConfig(
-        filename=cfg.LOG_FILE,
-        level=cfg.LEVEL_LOG,
-        format=cfg.FORMAT,
-        filemode="a",
-        # encoding="UTF-8", # для версии python 3.8.10
-    )
-    logging.info("Запуск приложения")
+    """Настраиваем систему логирования."""
+    kwargs: Dict[str, Any] = {
+        "filename": cfg.LOG_FILE,
+        "level": cfg.LEVEL_LOG,
+        "format": cfg.FORMAT,
+        "filemode": "a",
+    }
 
+    if sys.version_info >= (3, 9):
+        kwargs["encoding"] = "utf-8"
+
+    logging.basicConfig(**kwargs)
+    logging.info("Запуск приложения")
 
 def main() -> None:
     """Точка входа в приложение."""
