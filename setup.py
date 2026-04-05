@@ -1,7 +1,8 @@
 #0.3.0
-import sys
 import os
-from cx_Freeze import setup, Executable
+import sys
+
+from cx_Freeze import Executable, setup
 
 # Получаем текущую версию из первой строки файла
 version = open(__file__, 'r', encoding='utf-8').readline().strip('#').strip()

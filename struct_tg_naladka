@@ -1,0 +1,36 @@
+02_TG_naladka
+ ┣ tg-naladka
+ ┃ ┣ bugs
+ ┃ ┃ ┗ bug_traker
+ ┃ ┣ Documentation
+ ┃ ┃ ┃ ┗ 0.3.0.txt
+ ┃ ┣ logs
+ ┃ ┃ ┗ app.log
+ ┃ ┣ reports
+ ┃ ┃ ┣ regulator_analysis.pdf
+ ┃ ┃ ┗ regulator_plot.png
+ ┃ ┣ src
+ ┃ ┃ ┣ config
+ ┃ ┃ ┃ ┗ config.py
+ ┃ ┃ ┣ DATA_in
+ ┃ ┃ ┃ ┣ qp.txt
+ ┃ ┃ ┃ ┣ test+ms.csv.gz
+ ┃ ┃ ┃ ┗ test.csv.gz
+ ┃ ┃ ┣ logic
+ ┃ ┃ ┃ ┣ logic.py
+ ┃ ┃ ┃ ┗ regulator_analyzer.py
+ ┃ ┃ ┣ model
+ ┃ ┃ ┃ ┗ basemodel.py
+ ┃ ┃ ┣ scripts
+ ┃ ┃ ┃ ┗ venv_pip.sh
+ ┃ ┃ ┣ ui
+ ┃ ┃ ┃ ┣ graph_matplot.py
+ ┃ ┃ ┃ ┗ MainWindowUI.py
+ ┃ ┃ ┗ main.py
+ ┃ ┗ struct_tg_naladka
+ ┣ .gitignore
+ ┣ pyproject.toml
+ ┣ Readme.md
+ ┣ requirements.txt
+ ┣ setup.py
+ ┗ toexe.sh
