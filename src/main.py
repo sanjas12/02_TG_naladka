@@ -1,20 +1,32 @@
 import logging
+import os
 import sys
+import traceback
 from pathlib import Path
-from typing import Any, Optional, Dict
+from typing import Any, Dict, Optional
 
 from PyQt5.QtWidgets import QApplication
-
-try:
-    from win32api import GetFileVersionInfo, error as win32_error
-    WIN32_AVAILABLE = True
-except ImportError:
-    WIN32_AVAILABLE = False
-    win32_error = Exception
+from win32api import GetFileVersionInfo
+from win32api import error as win32_error
 
 import config.config as cfg
 from logic.logic import MainLogic
 from ui.MainWindowUI import MainWindowUI
+
+
+# блок перехвата необработанных исключений (которые не были поймано try-except)
+def excepthook(exc_type, exc_value, exc_tb):
+    error_text = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+    # Пишем в файл рядом с exe
+    log_path = os.path.join(os.path.dirname(sys.executable), "crash.log")
+    with open(log_path, "w", encoding="utf-8") as f:
+        f.write(error_text)
+    # И показываем в консоли
+    print(error_text)
+    input("Press Enter to exit...")  # чтобы окно не закрылось
+
+
+sys.excepthook = excepthook
 
 
 def _get_version_from_frozen_exe() -> Optional[str]:
@@ -39,8 +51,8 @@ def _get_version_from_frozen_exe() -> Optional[str]:
 def _get_version_from_setup() -> Optional[str]:
     """Получение версии из корневого `setup.py` (первая строка вида `#0.1.26`)."""
     try:
-        # main.py находится в `tg-naladka/src/main.py`, поэтому корень репо — на два уровня выше
-        setup_path = Path(__file__).resolve().parents[2] / "setup.py"
+        # main.py находится в /src/main.py`, поэтому корень репо — на уровень выше
+        setup_path = Path(__file__).resolve().parents[1] / "setup.py"
         if not setup_path.exists():
             return None
         first_line = setup_path.read_text(encoding="utf-8").splitlines()[0].strip()
@@ -75,6 +87,7 @@ def setup_logging() -> None:
     logging.basicConfig(**kwargs)
     logging.info("Запуск приложения")
 
+
 def main() -> None:
     """Точка входа в приложение."""
     setup_logging()
@@ -97,4 +110,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
- 
