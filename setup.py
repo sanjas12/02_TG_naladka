@@ -9,7 +9,7 @@ version = open(__file__, 'r', encoding='utf-8').readline().strip('#').strip()
 
 # Определяем базовые пути
 project_root = os.path.dirname(os.path.abspath(__file__))
-src_root = os.path.join(project_root, 'tg-naladka', 'src')
+src_root = os.path.join(project_root, 'src')
 
 # Функция для умного включения файлов
 def get_smart_includes():
@@ -21,7 +21,7 @@ def get_smart_includes():
         include_files.append((config_path, 'config/config.py'))
     
     # Добавляем каталог с релизными заметками, если он существует
-    doc_dir = os.path.join(project_root, 'tg-naladka', 'Documentation')
+    doc_dir = os.path.join(project_root, 'Documentation')
     relnote_dir = os.path.join(doc_dir, 'RelNote')
     if os.path.isdir(relnote_dir):
         include_files.append((relnote_dir, 'Documentation/RelNote'))

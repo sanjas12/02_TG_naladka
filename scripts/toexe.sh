@@ -2,6 +2,9 @@
 set -e
 set -u
 
+# поднимаемся на уровень 02_TG_NALADKA
+cd ../
+
 # Определяем директорию скрипта (где лежит этот run.sh и setup.py)
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # echo $SCRIPT_DIR
