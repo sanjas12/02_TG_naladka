@@ -1,22 +1,26 @@
 # TG-Naladka
 
 Программа для визуализации(matplotlib) и анализа данных.  
+
 GUI: Qt5.
+
 Поддерживает форматы CSV, GZ, TXT. 
 
 
 ## Usage (Repository)
 
-### Prerequisites ()
-Python >= 3.8.10 
-0S >= Windows 7
+### Prerequisites:
+1. Python >= 3.8.10 
+
+2. 0S >= Windows 7
 
 
 ## Ugage (Windows - exe)
 
-### Prerequisites ()
-Visual C++ 2015-2022
-0S >= Windows 7
+### Prerequisites:
+1. Visual C++ 2015-2022
+
+2. 0S >= Windows 7
 
 
 ## help
