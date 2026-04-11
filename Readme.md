@@ -1,34 +1,30 @@
-## Prerequisites ()
->=Python 3.8.10
-https://learn.microsoft.com/en-US/cpp/windows/latest-supported-vc-redist?view=msvc-170#visual-studio-2015-2017-2019-and-2022   - for exe
+# TG-Naladka
 
-### Usage
-main.py - текущая версия программы (GUI-QT5) выбора любых данный из файлов (csv, gz, txt)
-grath_matplot.py - модуль построения графиков на matplotlib
+Программа для визуализации(matplotlib) и анализа данных.  
+GUI: Qt5.
+Поддерживает форматы CSV, GZ, TXT. 
 
 
+## Usage (Repository)
 
-1.  RBMK_naladka.py(grath_from_tg_static_8.py - в предыдущих версиях) - текущая версия программы для работы на РБМК -> скачки, смещения и т.д.(GUI-tkinter) 
-    
-    grath_from_tg_static_9.py - аналог main.py только под(GUI-tkinter), для Xp - последняя версия питона 3.4.2, PyQT5 ставиться на 3.5 и выше
-    grath_from_tg_static_9(Qt4).py - аналог read_csv_3_any только под(Qt4) через anaconda, для Xp - последняя версия питона 3.4.2, PyQT5 ставиться на 3.5 и выше
-
-
-### help
-2.  Создание exe (второй вариант)
-    1. https://stackoverflow.com/questions/41570359/how-can-i-convert-a-py-to-exe-for-python
-    1. setup.py - для создания exe через cx_Freeze
-    2. в командной строке         python setup.py build
+### Prerequisites ()
+Python >= 3.8.10 
+0S >= Windows 7
 
 
-3. конвертирование ui в py (через терминал) ------ python -m PyQt5.uic.pyuic -x qt_des.ui -o qt_des.py
+## Ugage (Windows - exe)
+
+### Prerequisites ()
+Visual C++ 2015-2022
+0S >= Windows 7
 
 
-4. PyCharm 
+## help
+PyCharm 
 Help -> Run->Edit Configurations -> Emulate terminal in output console* (для расшифровки ошибок  pyqt5)
 
-5. Запуск программы невозможен, так как на компьютере отсутствует
-api-ms-win-core-path-l1-1-0.dll. -> Установить Visual C++ 2015-2022
+python -m pip  install -r requirements.txt --no-index -f d:\\temp\\python_Library
+
 
 TODO
 1. Узнать сколько памяти использует программа (memory_profiler и psutil)
@@ -45,8 +41,12 @@ TODO
 13. перейти на polars для версии по Win_11 для загрузки данных из csv
 14. перейти на uv
 
-help:
-python -m pip  install -r requirements.txt --no-index -f d:\\temp\\python_Library
 
-### Ugage (Windows)
-1. source build.bat -> создание текущеко билда
+## old
+main.py - текущая версия программы (GUI-QT5) выбора любых данный из файлов (csv, gz, txt)
+grath_matplot.py - модуль построения графиков на matplotlib
+
+RBMK_naladka.py(grath_from_tg_static_8.py - в предыдущих версиях) - текущая версия программы для работы на РБМК -> скачки, смещения и т.д.(GUI-tkinter) 
+
+grath_from_tg_static_9.py - аналог main.py только под(GUI-tkinter), для Xp - последняя версия питона 3.4.2, PyQT5 ставиться на 3.5 и выше
+grath_from_tg_static_9(Qt4).py - аналог read_csv_3_any только под(Qt4) через anaconda, для Xp - последняя версия питона 3.4.2, PyQT5 ставиться на 3.5 и выше
