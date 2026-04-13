@@ -40,4 +40,4 @@ python setup.py build
 
 # Показываем путь к exe (ищем подпапку с exe.*)
 echo "Build completed successfully."
-find "$BUILD_DIR" -type d -name "exe.win*" -print
+find "$BUILD_DIR" -type d -name "TG_NALADKA.win*" -print

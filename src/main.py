@@ -2,12 +2,9 @@ import logging
 import os
 import sys
 import traceback
-from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from PyQt5.QtWidgets import QApplication
-from win32api import GetFileVersionInfo
-from win32api import error as win32_error
 
 import config.config as cfg
 from logic.logic import MainLogic
@@ -27,49 +24,6 @@ def excepthook(exc_type, exc_value, exc_tb):
 
 
 sys.excepthook = excepthook
-
-
-def _get_version_from_frozen_exe() -> Optional[str]:
-    """
-    Возвращает номер версии из исполняемого файла или setup.py.
-
-    Returns:
-        Optional[str]: Номер версии в формате '#X.Y.Z' или None при ошибке
-    """
-    try:
-        version_info = GetFileVersionInfo(sys.argv[0], "\\")  # type: ignore
-        version = (
-            version_info["FileVersionMS"] // 65536,
-            version_info["FileVersionMS"] % 65536,
-            version_info["FileVersionLS"] // 65536,
-        )
-        return f"#{'.'.join(map(str, version))}"
-    except (win32_error, KeyError, Exception):
-        return None
-
-
-def _get_version_from_setup() -> Optional[str]:
-    """Получение версии из корневого `setup.py` (первая строка вида `#0.1.26`)."""
-    try:
-        # main.py находится в /src/main.py`, поэтому корень репо — на уровень выше
-        setup_path = Path(__file__).resolve().parents[1] / "setup.py"
-        if not setup_path.exists():
-            return None
-        first_line = setup_path.read_text(encoding="utf-8").splitlines()[0].strip()
-        if first_line.startswith("#") and len(first_line) > 1:
-            return f"#{first_line.lstrip('#').strip()}"
-    except Exception:
-        return None
-    return None
-
-
-def get_version() -> Optional[str]:
-    """Возвращает версию приложения из exe, затем из setup.py"""
-    if getattr(sys, "frozen", False):
-        v = _get_version_from_frozen_exe()
-        if v:
-            return v
-    return _get_version_from_setup() or None
 
 
 def setup_logging() -> None:
@@ -96,7 +50,7 @@ def main() -> None:
         app = QApplication(sys.argv)
         app.setStyleSheet(f"* {{ font-size: {cfg.FONT_SIZE}pt; font-family: Arial; }}")
 
-        main_window = MainWindowUI(get_version() or "Неизвестно")
+        main_window = MainWindowUI()
         MainLogic(main_window)  # Инъекция зависимости
 
         main_window.show()

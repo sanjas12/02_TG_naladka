@@ -1,32 +1,34 @@
 import sys
 import time
 from pathlib import Path
-from typing import Dict, Optional, Callable, Union
+from typing import Callable, Dict, Optional, Union
+
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtWidgets import (
+    QAbstractItemView,
     QApplication,
+    QCheckBox,
     QComboBox,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
+    QLineEdit,
     QMainWindow,
     QMessageBox,
-    QPushButton,
     QProgressDialog,
+    QPushButton,
     QTableWidget,
     QVBoxLayout,
     QWidget,
-    QAbstractItemView,
-    QCheckBox,
-    QLineEdit,
-    QHeaderView,
 )
 
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from config.config import AxeName
+from version import __revision__, __version__
 
 
 class WorkerThread(QThread):
@@ -58,7 +60,7 @@ class CreateTable:
 
 
 class MainWindowUI(QMainWindow):
-    def __init__(self, version: str):
+    def __init__(self, version: str = f"{__version__}{__revision__}" or "Неизвестно"):
         super().__init__()
         self.progress_dialog: Optional[QProgressDialog] = None
         self.worker_thread: Optional[WorkerThread] = None
