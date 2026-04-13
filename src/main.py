@@ -1,26 +1,56 @@
 import logging
 import os
 import sys
+import time
 import traceback
 from typing import Any, Dict
 
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QMessageBox
 
 import config.config as cfg
 from logic.logic import MainLogic
 from ui.MainWindowUI import MainWindowUI
+from version import __full_version__
+
+logger = logging.getLogger(__name__)
 
 
-# блок перехвата необработанных исключений (которые не были поймано try-except)
+# Перехват необработанных исключений 
+
 def excepthook(exc_type, exc_value, exc_tb):
+    """Перехват исключений, не пойманных try-except."""
+    # KeyboardInterrupt не считаем крашем
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_tb)
+        return
+
     error_text = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
-    # Пишем в файл рядом с exe
-    log_path = os.path.join(os.path.dirname(sys.executable), "crash.log")
-    with open(log_path, "w", encoding="utf-8") as f:
-        f.write(error_text)
-    # И показываем в консоли
-    print(error_text)
-    input("Press Enter to exit...")  # чтобы окно не закрылось
+
+    # Пишем в тот же каталог, что и основной лог
+    log_dir = os.path.dirname(os.path.abspath(cfg.LOG_FILE))
+    crash_path = os.path.join(log_dir, "crash.log")
+
+    try:
+        with open(crash_path, "w", encoding="utf-8") as f:
+            f.write(error_text)
+    except OSError:
+        pass  # если не можем записать — не падаем повторно
+
+    # Логируем через стандартный логгер (попадёт в основной лог)
+    logger.critical("Необработанное исключение:\n%s", error_text)
+
+    # Показываем пользователю — только если есть QApplication
+    app = QApplication.instance()
+    if app is not None:
+        QMessageBox.critical(
+            None,
+            "Критическая ошибка",
+            f"Приложение завершилось с ошибкой.\n\nПодробности: {crash_path}",
+        )
+    else:
+        print(error_text, file=sys.stderr)
+
+    sys.exit(1)
 
 
 sys.excepthook = excepthook
@@ -34,32 +64,67 @@ def setup_logging() -> None:
         "format": cfg.FORMAT,
         "filemode": "a",
     }
-
     if sys.version_info >= (3, 9):
         kwargs["encoding"] = "utf-8"
 
     logging.basicConfig(**kwargs)
-    logging.info("Запуск приложения")
 
+
+def log_startup_begin() -> None:
+    """Отбивка старта — что запустилось, в каком окружении."""
+    sep = "=" * 55
+    logger.info(sep)
+    logger.info(f"{__full_version__} — запуск")
+    logger.info(sep)
+    logger.info("PID:        %d", os.getpid())
+    logger.info("Python:     %s", sys.version.split()[0])
+    logger.info("Платформа:  %s", sys.platform)
+    logger.info("Лог-файл:   %s", os.path.abspath(cfg.LOG_FILE))
+    logger.info("Уровень лога: %s", logging.getLevelName(cfg.LEVEL_LOG))
+
+
+def log_startup_done(elapsed: float) -> None:
+    sep = "=" * 55
+    logger.info(sep)
+    logger.info("  Приложение запущено  (%.2f с)", elapsed)
+    logger.info(sep)
+
+
+# ─── Точка входа ──────────────────────────────────────────────────────────────
 
 def main() -> None:
-    """Точка входа в приложение."""
     setup_logging()
+    log_startup_begin()
+
+    exit_code = 0
+    t0 = time.monotonic()
 
     try:
         app = QApplication(sys.argv)
-        app.setStyleSheet(f"* {{ font-size: {cfg.FONT_SIZE}pt; font-family: Arial; }}")
+        app.setStyleSheet(
+            f"* {{ font-size: {cfg.FONT_SIZE}pt; font-family: Arial; }}"
+        )
 
         main_window = MainWindowUI()
-        MainLogic(main_window)  # Инъекция зависимости
-
+        MainLogic(main_window)
         main_window.show()
-        sys.exit(app.exec_())
-    except Exception as e:
-        logging.critical("Критическая ошибка", exc_info=True)
+
+        log_startup_done(time.monotonic() - t0)
+
+        exit_code = app.exec_()
+
+    except Exception:
+        exit_code = 1
+        logger.critical("Критическая ошибка при запуске", exc_info=True)
         raise
+
     finally:
-        logging.info("Приложение завершено")
+        if exit_code == 0:
+            logger.info("Приложение завершено штатно (код %d)", exit_code)
+        else:
+            logger.warning("Приложение завершено с ошибкой (код %d)", exit_code)
+
+    sys.exit(exit_code)
 
 
 if __name__ == "__main__":
