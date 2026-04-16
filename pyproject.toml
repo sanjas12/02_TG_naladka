@@ -36,6 +36,10 @@ dependencies = [
     "zipp==3.13.0",
 ]
 
+[build-system]
+requires = ["cx_Freeze==7.2.5", "setuptools"]
+build-backend = "cx_Freeze.dist:_setup_legacy"
+
 [tool.ruff]
 line-length = 88
 
