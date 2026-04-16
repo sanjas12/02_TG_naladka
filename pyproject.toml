@@ -37,8 +37,8 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["cx_Freeze==7.2.5", "setuptools"]
-build-backend = "cx_Freeze.dist:_setup_legacy"
+requires = ["setuptools", "cx_Freeze==7.2.5"]
+build-backend = "setuptools.build_meta"
 
 [tool.ruff]
 line-length = 88
