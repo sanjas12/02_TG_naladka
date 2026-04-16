@@ -18,7 +18,6 @@ if _sys == "darwin":
     _sys = "macos"
 elif _sys == "windows":
     _sys = "win"
-
 _arch = platform.machine().lower()
 _py = f"{sys.version_info.major}.{sys.version_info.minor}"
 
@@ -31,15 +30,12 @@ build_dir = os.path.join("build", output_name)
 
 def get_include_files() -> List[Tuple[str, str]]:
     files: List[Tuple[str, str]] = []
-
     config_path = os.path.join(src_root, "config", "config.py")
     if os.path.exists(config_path):
         files.append((config_path, "config/config.py"))
-
     relnote_dir = os.path.join(project_root, "Documentation", "RelNote")
     if os.path.isdir(relnote_dir):
         files.append((relnote_dir, "Documentation/RelNote"))
-
     return files
 
 
@@ -82,21 +78,30 @@ setup(
         Executable(
             os.path.join(src_root, "main.py"),
             target_name=exe_name,
+            # base="Win32GUI",  # раскомментировать чтобы скрыть консоль на Windows
         )
     ],
 )
 
-# ─── Пост-обработка ───────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Пост-обработка: удаляем мусор после сборки
+# ---------------------------------------------------------------------------
 REMOVE_DIRS = [
-    "PyQt5/Qt5/translations",
+    "lib/PyQt5/Qt5/translations",
+    # "matplotlib/mpl-data/sample_data",
+    # "matplotlib/mpl-data/stylelib",
 ]
 
-lib_path = os.path.join(build_dir, "lib")
-
 for rel in REMOVE_DIRS:
-    path = os.path.join(lib_path, rel)
+    path = os.path.join(build_dir, rel)
     if os.path.isdir(path):
         shutil.rmtree(path)
         print(f"[CLEAN] Удалено: {path}")
     else:
         print(f"[SKIP]  Не найдено: {path}")
+
+# cx_Freeze 7.x создаёт служебную папку build/lib — удаляем её
+cx_lib_dir = os.path.join("build", "lib")
+if os.path.isdir(cx_lib_dir):
+    shutil.rmtree(cx_lib_dir)
+    print(f"[CLEAN] Удалено: {cx_lib_dir}")

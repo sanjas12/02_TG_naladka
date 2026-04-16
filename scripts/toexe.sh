@@ -9,13 +9,13 @@ cd ../
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # echo $SCRIPT_DIR
 
-# Путь к setup.py
-SETUP_FILE="$SCRIPT_DIR/setup.py"
+# Путь к build.py
+SETUP_FILE="$SCRIPT_DIR/build.py"
 # echo $SETUP_FILE
 
-# Проверка наличия setup.py
+# Проверка наличия build.py
 if [ ! -f "$SETUP_FILE" ]; then
-    echo "[ERROR] setup.py не найден в $SCRIPT_DIR"
+    echo "[ERROR] build.py не найден в $SCRIPT_DIR"
     exit 1
 fi
 
