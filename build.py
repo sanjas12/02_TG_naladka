@@ -46,8 +46,12 @@ build_options = {
     "excludes": [
         "matplotlib.tests",
         "matplotlib.testing",
+        "matplotlib.sphinxext",
         "pandas.tests",
         "scipy",
+        "setuptools",
+        "wheel",
+        "fontTools",
         "PyQt5.QtWebEngine",
         "PyQt5.QtNetwork",
         "PyQt5.QtSql",
@@ -63,6 +67,9 @@ build_options = {
         "PyQt5.QtQml",
         "debugpy",
         "distutils",
+        "unittest",
+        "xmlrpc",
+        "curses",
     ],
     "optimize": 2,
     "include_files": get_include_files(),
@@ -86,14 +93,33 @@ setup(
 # ---------------------------------------------------------------------------
 # Пост-обработка: удаляем мусор после сборки
 # ---------------------------------------------------------------------------
+
+# Папки внутри build_dir/lib
 REMOVE_DIRS = [
-    "lib/PyQt5/Qt5/translations",
-    # "matplotlib/mpl-data/sample_data",
-    # "matplotlib/mpl-data/stylelib",
+    # PyQt5
+    "PyQt5/Qt5/translations",
+    # matplotlib — данные которые не нужны в рантайме
+    "matplotlib/mpl-data/sample_data",
+    "matplotlib/mpl-data/stylelib",
+    "matplotlib/backends/web_backend",
+    "matplotlib/sphinxext",
+    # fontTools — используется только matplotlib при установке, не в рантайме
+    "fontTools",
+    # setuptools и wheel — инструменты сборки, не нужны в exe
+    "setuptools",
+    "wheel",
+    # тесты
+    "importlib_resources/tests",
+    "mpl_toolkits/axes_grid1/tests",
+    "mpl_toolkits/axisartist/tests",
+    "mpl_toolkits/mplot3d/tests",
+    "ctypes/test",
+    "unittest/test",
 ]
 
+lib_dir = os.path.join(build_dir, "lib")
 for rel in REMOVE_DIRS:
-    path = os.path.join(build_dir, rel)
+    path = os.path.join(lib_dir, rel)
     if os.path.isdir(path):
         shutil.rmtree(path)
         print(f"[CLEAN] Удалено: {path}")
