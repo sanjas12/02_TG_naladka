@@ -23,14 +23,14 @@ def git_revision() -> str:
             timeout=2,
         ).strip()
         if not count.isdigit():
-            return "r0"
-        return f"r{count}"
+            return "rev0"
+        return f"rev{count}"
     except (
         subprocess.CalledProcessError,
         FileNotFoundError,
         subprocess.TimeoutExpired,
     ):
-        return "r0"
+        return "rev0"
 
 
 __revision__ = git_revision()

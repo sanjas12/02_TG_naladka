@@ -36,7 +36,7 @@ rm -rf "$BUILD_DIR"
 # Запуск сборки
 echo "Building package..."
 cd "$SCRIPT_DIR"
-python setup.py build
+python build.py build
 
 # Показываем путь к exe (ищем подпапку с exe.*)
 echo "Build completed successfully."

@@ -28,7 +28,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from config.config import AxeName
-from version import __revision__, __version__
+from _version import __revision__, __version__
 
 
 class WorkerThread(QThread):

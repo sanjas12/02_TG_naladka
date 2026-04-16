@@ -1,3 +1,7 @@
+"""
+Сборка cx_Freeze.
+Запуск: python build.py build_exe
+"""
 import os
 import platform
 import shutil
@@ -6,27 +10,25 @@ from typing import List, Tuple
 
 from cx_Freeze import Executable, setup  # type: ignore
 
-from _version import __app_name__, __revision__, __version__
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
+from _version import __app_name__, __revision__, __version__  # noqa: E402
 
 _sys = platform.system().lower()
 if _sys == "darwin":
     _sys = "macos"
 elif _sys == "windows":
     _sys = "win"
-_arch = platform.machine().lower()
 
+_arch = platform.machine().lower()
 _py = f"{sys.version_info.major}.{sys.version_info.minor}"
 
-# TG-Naladka.win-amd64-3.11-0.3.1r42
 output_name = f"{__app_name__}.{_sys}-{_arch}-{_py}-{__version__}{__revision__}"
 
 project_root = os.path.dirname(os.path.abspath(__file__))
 src_root = os.path.join(project_root, "src")
-build_dir = os.path.join("build", output_name)          # ← единый источник пути сборки
+build_dir = os.path.join("build", output_name)
 
-# ---------------------------------------------------------------------------
-# Файлы для включения
-# ---------------------------------------------------------------------------
+
 def get_include_files() -> List[Tuple[str, str]]:
     files: List[Tuple[str, str]] = []
 
@@ -40,11 +42,10 @@ def get_include_files() -> List[Tuple[str, str]]:
 
     return files
 
-# Имя исполняемого файла: с .exe на Windows, без — на остальных
+
 exe_name = __app_name__ + (".exe" if sys.platform == "win32" else "")
 
-# Сборка
-build_options = { # type: ignore
+build_options = {
     "path": sys.path + [src_root],
     "excludes": [
         "matplotlib.tests",
@@ -69,7 +70,7 @@ build_options = { # type: ignore
     ],
     "optimize": 2,
     "include_files": get_include_files(),
-    "build_exe": build_dir,           # ← используем переменную
+    "build_exe": build_dir,
 }
 
 setup(
@@ -80,22 +81,17 @@ setup(
     executables=[
         Executable(
             os.path.join(src_root, "main.py"),
-            target_name=exe_name,    # ← без жёсткого .exe
-            # base="Win32GUI",       # раскомментировать чтобы скрыть консоль на Windows
+            target_name=exe_name,
         )
     ],
 )
 
-# ---------------------------------------------------------------------------
-# Пост-обработка: удаляем мусор после сборки
-# ---------------------------------------------------------------------------
+# ─── Пост-обработка ───────────────────────────────────────────────────────────
 REMOVE_DIRS = [
     "PyQt5/Qt5/translations",
-    # "matplotlib/mpl-data/sample_data",
-    # "matplotlib/mpl-data/stylelib",
 ]
 
-lib_path = os.path.join(build_dir, "lib")   # ← теперь совпадает с реальным путём
+lib_path = os.path.join(build_dir, "lib")
 
 for rel in REMOVE_DIRS:
     path = os.path.join(lib_path, rel)

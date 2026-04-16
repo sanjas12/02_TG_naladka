@@ -1,74 +1,128 @@
 #!/bin/bash
 
-# Скрипт для создания venv и настройки VSCode в существующем проекте
+# Создание venv через стандартный pip или uv
 
-# поднимаемся на уровень 02_TG_NALADKA
-cd ../
+# Переходим в корень проекта (на уровень выше от scripts/)
+cd "$(dirname "$0")/.." || exit 1
 
-# Чистим старое окружение
+# ── Проверка интернета ────────────────────────────────────────────────────────
+
+check_internet() {
+    # Проверяем через curl/wget (более надежно)
+    if command -v curl &>/dev/null; then
+        curl -s --connect-timeout 3 --max-time 5 https://www.google.com >/dev/null 2>&1
+        return $?
+    elif command -v wget &>/dev/null; then
+        wget -q --timeout=3 --tries=1 https://www.google.com -O /dev/null 2>&1
+        return $?
+    fi
+}
+
+# ── Интернет отсутствует — только локальная установка через pip ───────────────
+
+LOCAL_PACKAGES_DIR="f:\\temp\\python_Library"
+
+# В секции без интернета
+if ! check_internet; then
+    echo "❌ Интернет недоступен — устанавливаем локально через pip"
+    
+    echo "Cleaning previous venv..."
+    rm -rf .venv
+    
+    python -m venv .venv
+    
+    # Активация
+    if [[ -f ".venv/Scripts/activate" ]]; then
+        source .venv/Scripts/activate
+    else
+        source .venv/bin/activate
+    fi
+    
+    if [ ! -f "requirements.txt" ]; then
+        echo "❌ Файл requirements.txt не найден"
+        exit 1
+    fi
+    
+    
+    # # Проверяем наличие всех пакетов
+    # echo "Проверяем наличие пакетов в $LOCAL_PACKAGES_DIR..."
+    # missing_packages=()
+    
+    # while IFS= read -r package; do
+    #     # Пропускаем пустые строки и комментарии
+    #     [[ -z "$package" || "$package" =~ ^# ]] && continue
+        
+    #     # Извлекаем имя пакета (без версии)
+    #     package_name=$(echo "$package" | sed -E 's/([a-zA-Z0-9_-]+).*/\1/')
+        
+    #     # Ищем файл пакета
+    #     if ! ls "$LOCAL_PACKAGES_DIR" | grep -i "$package_name" >/dev/null 2>&1; then
+    #         missing_packages+=("$package_name")
+    #     fi
+    # done < requirements.txt
+    
+    # if [ ${#missing_packages[@]} -gt 0 ]; then
+    #     echo "❌ Отсутствуют пакеты:"
+    #     printf '%s\n' "${missing_packages[@]}"
+    #     echo ""
+    #     echo "Скачайте недостающие пакеты на машине с интернетом:"
+    #     echo "pip download -r requirements.txt -d $LOCAL_PACKAGES_DIR"
+    #     exit 1
+    # fi
+    
+    echo "Все пакеты найдены. Устанавливаем..."
+    pip install -r requirements.txt --no-index -f "$LOCAL_PACKAGES_DIR" --no-deps
+    # pip install -r requirements.txt --no-index -f f:\\temp\\python_Library --no-deps
+    
+    echo "✅ .venv создан через pip (локальная установка)"
+    exit 0
+
+fi
+
+# ── Интернет есть ─────────────────────────────────────────────────────────────
+
+echo "✅ Интернет доступен"
+
+# ── Предпочтительно: uv (быстрее, читает pyproject.toml) ──────────────────────
+
+if command -v uv &>/dev/null; then
+    echo "Найден uv — используем его"
+    rm -rf .venv
+    uv sync
+
+    # Активация окружения
+    if [[ -f ".venv/Scripts/activate" ]]; then
+        source .venv/Scripts/activate   # Windows Git Bash
+    else
+        source .venv/bin/activate       # Linux / macOS
+    fi
+    
+    echo "✅ .venv создан через uv (uv sync)  и активирован"
+    exit 0
+fi
+
+# ── Fallback: стандартный pip (интернет есть, но uv нет) ──────────────────────
+
+echo "uv не найден — используем pip"
+
 echo "Cleaning previous venv..."
-SCRIPT_DIR="$(dirname "$(realpath "$0")")"
-VENV_DIR="$SCRIPT_DIR/.venv"
-rm -rf "$VENV_DIR"
+rm -rf .venv
 
-# Создаем виртуальное окружение
 python -m venv .venv
 
-# Активируем venv
-source .venv/Scripts/activate
-
+# Активация (Windows Git Bash / WSL / Linux / macOS)
+if [[ -f ".venv/Scripts/activate" ]]; then
+    source .venv/Scripts/activate   # Windows Git Bash
+else
+    source .venv/bin/activate       # Linux / macOS
+fi
 
 if [ ! -f "requirements.txt" ]; then
     echo "❌ Файл requirements.txt не найден. Убедитесь, что вы в корне проекта."
     exit 1
 fi
 
+python -m pip install --upgrade pip
+pip install -r requirements.txt
 
-check_internet() {
-    # Определяем "чёрную дыру" для вывода
-    if [[ "$OS" == "Windows_NT" && -z "$BASH_VERSION" ]]; then
-        # cmd.exe или PowerShell
-        NULL_DEV="nul"
-    else
-        # bash (Linux, macOS, Git Bash, WSL и т.д.)
-        NULL_DEV="/dev/null"
-    fi
-
-    if [[ "$OS" == "Windows_NT" ]]; then
-        ping -n 2 -w 3000 8.8.8.8 >"$NULL_DEV" 2>&1
-    else
-        ping -q -c 2 -W 3 8.8.8.8 >"$NULL_DEV" 2>&1
-    fi
-    return $?
-}
-
-if check_internet; then
-    echo "Интернет соединение доступно, устанавливаем зависимости из интернета"
-    python.exe -m pip install --upgrade pip
-    pip install -r requirements.txt
-else
-    echo "Интернет соединение недоступно, устанавливаем зависимости локально"
-    pip install -r requirements.txt --no-index -f d:\\temp\\python_Library
-fi
-
-
-# Создаем/обновляем файл настроек VSCode
-# mkdir -p .vscode
-# cat > .vscode/settings.json <<EOL
-# {
-#     "python.pythonPath": ".venv/bin/python",
-#     "python.linting.enabled": true,
-#     "python.linting.pylintEnabled": true,
-#     "python.formatting.autopep8Path": ".venv/bin/autopep8",
-#     "python.formatting.blackPath": ".venv/bin/black",
-#     "python.formatting.yapfPath": ".venv/bin/yapf",
-#     "python.linting.banditPath": ".venv/bin/bandit",
-#     "python.linting.flake8Path": ".venv/bin/flake8",
-#     "python.linting.mypyPath": ".venv/bin/mypy",
-#     "python.linting.pycodestylePath": ".venv/bin/pycodestyle",
-#     "python.linting.pydocstylePath": ".venv/bin/pydocstyle",
-#     "python.linting.pylintPath": ".venv/bin/pylint"
-# }
-# EOL
-
-echo "✅ Виртуальное окружение создано в .venv"
+echo "✅ .venv создан через pip"

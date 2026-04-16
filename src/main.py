@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import QApplication, QMessageBox
 import config.config as cfg
 from logic.logic import MainLogic
 from ui.MainWindowUI import MainWindowUI
-from version import __full_version__
+from _version import __full_version__
 
 logger = logging.getLogger(__name__)
 

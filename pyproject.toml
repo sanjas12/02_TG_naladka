@@ -1,10 +1,40 @@
 [project]
 name = "tg-naladka"
-version = "0.3.0"
+dynamic = ["version"]
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.8"
-dependencies = []
+dependencies = [
+    "chardet==5.2.0",
+    "contourpy==1.0.7",
+    "cx-freeze==7.2.5",
+    "cx-logging==3.1.0",
+    "cycler==0.11.0",
+    "fonttools==4.38.0",
+    "importlib-metadata==6.0.0",
+    "importlib-resources==5.9.0",
+    "kiwisolver==1.4.4",
+    "lief==0.13.2",
+    "matplotlib==3.7.2",
+    "numpy==1.24.4",
+    "packaging==25.0",
+    "pandas==2.0.3",
+    "pillow==9.4.0",
+    "py-cpuinfo==9.0.0",
+    "pyparsing==3.0.9",
+    "pyqt5==5.15.11",
+    "pyqt5-qt5==5.15.2",
+    "pyqt5-sip==12.15.0",
+    "python-dateutil==2.8.2",
+    "pytz==2025.2",
+    "pywin32==310",
+    "reportlab==3.6.12",
+    "six==1.16.0",
+    "tomli==2.0.2",
+    "typing-extensions==4.12.2",
+    "tzdata==2025.2",
+    "zipp==3.13.0",
+]
 
 [tool.ruff]
 line-length = 88
