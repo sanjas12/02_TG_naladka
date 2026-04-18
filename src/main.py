@@ -8,15 +8,14 @@ from typing import Any, Dict
 from PyQt5.QtWidgets import QApplication, QMessageBox
 
 import config.config as cfg
+from _version import __full_version__
 from logic.logic import MainLogic
 from ui.MainWindowUI import MainWindowUI
-from _version import __full_version__
 
 logger = logging.getLogger(__name__)
 
 
-# Перехват необработанных исключений 
-
+# Перехват необработанных исключений
 def excepthook(exc_type, exc_value, exc_tb):
     """Перехват исключений, не пойманных try-except."""
     # KeyboardInterrupt не считаем крашем
@@ -90,8 +89,6 @@ def log_startup_done(elapsed: float) -> None:
     logger.info(sep)
 
 
-# ─── Точка входа ──────────────────────────────────────────────────────────────
-
 def main() -> None:
     setup_logging()
     log_startup_begin()
@@ -101,9 +98,7 @@ def main() -> None:
 
     try:
         app = QApplication(sys.argv)
-        app.setStyleSheet(
-            f"* {{ font-size: {cfg.FONT_SIZE}pt; font-family: Arial; }}"
-        )
+        app.setStyleSheet(f"* {{ font-size: {cfg.FONT_SIZE}pt; font-family: Arial; }}")
 
         main_window = MainWindowUI()
         MainLogic(main_window)
