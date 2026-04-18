@@ -5,7 +5,10 @@ import shutil
 import sys
 from typing import List, Tuple
 
-from cx_Freeze import Executable, setup  # type: ignore
+# ── Убеждаемся, что CWD совпадает с расположением build.py ──────────────────
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+from cx_Freeze import Executable, setup  # type: ignore  # noqa: E402
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 from _version import __app_name__, __revision__, __version__  # noqa: E402
@@ -18,7 +21,8 @@ elif _sys == "windows":
 _arch = platform.machine().lower()
 _py = f"{sys.version_info.major}.{sys.version_info.minor}"
 
-output_name = f"{__app_name__}.{_sys}-{_arch}-{_py}-{__version__}{__revision__}"
+# TG-Naladka-0.3.1+rev379-win_amd64-py38
+output_name = f"{__app_name__}-{__version__}+{__revision__}-{_sys}_{_arch}-py{_py}"
 
 project_root = os.path.dirname(os.path.abspath(__file__))
 src_root = os.path.join(project_root, "src")
@@ -30,9 +34,14 @@ def get_include_files() -> List[Tuple[str, str]]:
     config_path = os.path.join(src_root, "config", "config.py")
     if os.path.exists(config_path):
         files.append((config_path, "config/config.py"))
-    relnote_dir = os.path.join(project_root, "Documentation", "RelNote")
-    if os.path.isdir(relnote_dir):
-        files.append((relnote_dir, "Documentation/RelNote"))
+
+    relnote = os.path.join(project_root, "doc", "RelNote.txt")
+    if os.path.isfile(relnote):
+        files.append((relnote, "doc/RelNote.txt"))
+
+    revision = os.path.join(src_root, "_revision.py")
+    if os.path.isfile(revision):
+        files.append((revision, "doc/_revision.py"))
     return files
 
 
@@ -87,22 +96,16 @@ setup(
     ],
 )
 
-# Пост-обработка: удаляем мусор после сборки
-# Папки внутри build_dir/lib
+# ── Пост-обработка: удаляем мусор после сборки ──────────────────────────────
 REMOVE_DIRS = [
-    # PyQt5
     "PyQt5/Qt5/translations",
-    # matplotlib — данные которые не нужны в рантайме
     "matplotlib/mpl-data/sample_data",
     "matplotlib/mpl-data/stylelib",
     "matplotlib/backends/web_backend",
     "matplotlib/sphinxext",
-    # fontTools — используется только matplotlib при установке, не в рантайме
     "fontTools",
-    # setuptools и wheel — инструменты сборки, не нужны в exe
     "setuptools",
     "wheel",
-    # тесты
     "importlib_resources/tests",
     "mpl_toolkits/axes_grid1/tests",
     "mpl_toolkits/axisartist/tests",

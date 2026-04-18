@@ -59,6 +59,7 @@ class MainWindowUI(QMainWindow):
         super().__init__()
         self.progress_dialog: Optional[QProgressDialog] = None
         self.worker_thread: Optional[WorkerThread] = None
+        print(version)
         self.setup_ui(version)
 
     def setup_ui(self, version: str) -> None:
