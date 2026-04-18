@@ -1,7 +1,4 @@
-"""
-Сборка cx_Freeze.
-Запуск: python build.py build_exe
-"""
+import glob
 import os
 import platform
 import shutil
@@ -90,10 +87,7 @@ setup(
     ],
 )
 
-# ---------------------------------------------------------------------------
 # Пост-обработка: удаляем мусор после сборки
-# ---------------------------------------------------------------------------
-
 # Папки внутри build_dir/lib
 REMOVE_DIRS = [
     # PyQt5
@@ -131,3 +125,8 @@ cx_lib_dir = os.path.join("build", "lib")
 if os.path.isdir(cx_lib_dir):
     shutil.rmtree(cx_lib_dir)
     print(f"[CLEAN] Удалено: {cx_lib_dir}")
+
+# Удаляем .egg-info после сборки
+for egg_info in glob.glob(os.path.join(project_root, "src", "*.egg-info")):
+    shutil.rmtree(egg_info)
+    print(f"[CLEAN] Удалено: {egg_info}")
