@@ -1,6 +1,5 @@
 import sys
 import time
-from pathlib import Path
 from typing import Callable, Dict, Optional, Union
 
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
@@ -8,11 +7,9 @@ from PyQt5.QtWidgets import (
     QAbstractItemView,
     QApplication,
     QCheckBox,
-    QComboBox,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
-    QHeaderView,
     QLabel,
     QLineEdit,
     QMainWindow,
@@ -24,15 +21,13 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
-PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
-
-from config.config import AxeName
 from _version import __revision__, __version__
+from config.config import AxeName
 
 
 class WorkerThread(QThread):
     """Поток для имитации длительной загрузки данных."""
+
     progress = pyqtSignal(int)
     finished = pyqtSignal()
 
@@ -75,10 +70,12 @@ class MainWindowUI(QMainWindow):
             name_first_button="Open files",
             enable_second_btn=False,
             enable_analyzer=False,
-            enable_filter=True,   # включаем фильтр
+            enable_filter=True,  # включаем фильтр
         )
         self.gb_base_axe = MyGroupBox(title=AxeName.BASE_AXE.value)
-        self.gb_secondary_axe = MyGroupBox(title=AxeName.SECONDARY_AXE.value, enable_analyzer=False)
+        self.gb_secondary_axe = MyGroupBox(
+            title=AxeName.SECONDARY_AXE.value, enable_analyzer=False
+        )
         self.gb_x_axe = MyGroupBox(
             title=AxeName.TIME_AXE.value,
             enable_first_btn=False,
@@ -157,7 +154,7 @@ class MainWindowUI(QMainWindow):
 class MyGroupBox(QGroupBox):
     """
     Кастомный QGroupBox с кнопками добавления и удаления.
-    
+
     Аргументы:
         title (str, optional): Заголовок группы. Defaults to None.
         name_first_button (str, optional): Текст первой кнопки. Defaults to "Add to Axe".
@@ -190,7 +187,7 @@ class MyGroupBox(QGroupBox):
         # Сохраняем исходные состояния
         self._enable_first_btn = enable_first_btn
         self._enable_second_btn = enable_second_btn
-        
+
         self.btn_first = self._create_button(name_first_button, enable_first_btn)
         self.btn_second = self._create_button(name_second_button, enable_second_btn)
         self.ch_analyzer = QCheckBox("Анализ регулятора ГСМ")
@@ -301,13 +298,13 @@ if __name__ == "__main__":
     #    print(text + "  some text")
 
     # для тестирования главного окна
-    main_window = MainWindowUI("Test")
+    main_window = MainWindowUI()
 
     def test(text: str):
         print(text + "  some text")
 
     def disable_button(gb: MyGroupBox) -> None:
-        gb.enable_first_btn = True 
+        gb.enable_first_btn = True
 
     main_window.gb_base_axe.add_func_to_btn(
         main_window.gb_base_axe.btn_first, lambda: test("add to base axe")
