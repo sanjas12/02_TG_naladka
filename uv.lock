@@ -18,14 +18,13 @@ wheels = [
 
 [[package]]
 name = "contourpy"
-version = "1.0.7"
+version = "1.1.1"
 source = { registry = "D:/temp/python_Library" }
 dependencies = [
     { name = "numpy", marker = "sys_platform == 'win32'" },
 ]
 wheels = [
-    { path = "D:/temp/python_Library/contourpy-1.0.7-cp38-cp38-win32.whl" },
-    { path = "D:/temp/python_Library/contourpy-1.0.7-cp38-cp38-win_amd64.whl" },
+    { path = "D:/temp/python_Library/contourpy-1.1.1-cp38-cp38-win_amd64.whl" },
 ]
 
 [[package]]
@@ -313,7 +312,7 @@ build = [
 [package.metadata]
 requires-dist = [
     { name = "chardet", specifier = "==5.2.0" },
-    { name = "contourpy", specifier = "==1.0.7" },
+    { name = "contourpy", specifier = "==1.1.1" },
     { name = "cycler", specifier = "==0.11.0" },
     { name = "fonttools", specifier = "==4.38.0" },
     { name = "importlib-metadata", specifier = "==6.0.0" },

@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.8, <3.9"
 dependencies = [
     "chardet==5.2.0",
-    "contourpy==1.0.7",
+    "contourpy==1.1.1",
     "cycler==0.11.0",
     "fonttools==4.38.0",
     "importlib-metadata==6.0.0",
@@ -44,8 +44,10 @@ build = [
 ]
 
 [tool.uv]
-environments = ["sys_platform == 'win32'"]
-
+environments = [
+    "sys_platform == 'win32'",
+    # "sys_platform == 'linux'",  # раскоментить если будет в linux собираться
+]
 [tool.setuptools.packages.find]
 where = ["src"]
 
