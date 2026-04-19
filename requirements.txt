@@ -1,7 +1,5 @@
 chardet==5.2.0
 contourpy==1.0.7
-cx-freeze==7.2.5
-cx-logging==3.1.0
 cycler==0.11.0
 fonttools==4.38.0
 importlib-metadata==6.0.0
@@ -22,8 +20,8 @@ python-dateutil==2.8.2
 pytz==2025.2
 pywin32==310
 reportlab==3.6.12
-setuptools==68.2.2
 six==1.16.0
+-e file:///D:/My_work/Python/02_TG_naladka
 tomli==2.0.2
 typing-extensions==4.12.2
 tzdata==2025.2

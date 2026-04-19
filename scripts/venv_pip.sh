@@ -1,128 +1,142 @@
 #!/bin/bash
 
-# Создание venv через стандартный pip или uv
+# uv + интернет → uv sync (если есть pyproject.toml) или uv pip install -r requirements.txt
+# uv + офлайн → uv sync --no-index --find-links=... или uv pip install --no-index
+# нет uv + интернет → fallback на pip install -r requirements.txt
+# нет uv + офлайн → fallback на pip install --no-index -f ...
+
 
 # Переходим в корень проекта (на уровень выше от scripts/)
 cd "$(dirname "$0")/.." || exit 1
 
-# ── Проверка интернета ────────────────────────────────────────────────────────
+LOCAL_PACKAGES_DIR="d:\\temp\\python_Library"
+
 
 check_internet() {
-    # Проверяем через curl/wget (более надежно)
-    if command -v curl &>/dev/null; then
-        curl -s --connect-timeout 3 --max-time 5 https://www.google.com >/dev/null 2>&1
-        return $?
+    local result=0
+
+    if command -v uv &>/dev/null; then
+        echo "🌐 Проверка интернета через uv..."
+        #  --refresh принудительно обращается к PyPI, игнорируя кэш
+        uv pip install pip --dry-run --refresh --quiet 2>/dev/null
+        result=$?
+    elif command -v curl &>/dev/null; then
+        echo "🌐 Проверка интернета через curl → pypi.org..."
+        curl -s --connect-timeout 3 --max-time 5 https://pypi.org >/dev/null 2>&1
+        result=$?
     elif command -v wget &>/dev/null; then
-        wget -q --timeout=3 --tries=1 https://www.google.com -O /dev/null 2>&1
-        return $?
+        echo "🌐 Проверка интернета через wget → pypi.org..."
+        wget -q --timeout=3 --tries=1 https://pypi.org -O /dev/null 2>&1
+        result=$?
+    else
+        echo "⚠️  Нет доступных инструментов для проверки (uv/curl/wget)"
+        return 1
+    fi
+
+    if [ $result -eq 0 ]; then
+        echo "✅ Интернет доступен"
+    else
+        echo "❌ Интернет недоступен (код: $result)"
+    fi
+
+    return $result
+}
+
+
+activate_venv() {
+    if [[ -f ".venv/Scripts/activate" ]]; then
+        source .venv/Scripts/activate   # Windows Git Bash
+    elif [[ -f ".venv/bin/activate" ]]; then
+        source .venv/bin/activate       # Linux / macOS
+    else
+        echo "❌ Не удалось найти activate в .venv"
+        exit 1
     fi
 }
 
-# ── Интернет отсутствует — только локальная установка через pip ───────────────
+# ── Проверка наличия uv ───────────────────────────────────────────────────────
 
-LOCAL_PACKAGES_DIR="f:\\temp\\python_Library"
+if ! command -v uv &>/dev/null; then
+    echo "⚠️  uv не найден — используем fallback на pip"
 
-# В секции без интернета
-if ! check_internet; then
-    echo "❌ Интернет недоступен — устанавливаем локально через pip"
-    
-    echo "Cleaning previous venv..."
-    rm -rf .venv
-    
-    python -m venv .venv
-    
-    # Активация
-    if [[ -f ".venv/Scripts/activate" ]]; then
-        source .venv/Scripts/activate
+    if ! check_internet; then
+        echo "❌ Интернет недоступен и uv не установлен — локальная установка через pip"
+        rm -rf .venv
+        python -m venv .venv
+        activate_venv
+
+        if [ ! -f "requirements.txt" ]; then
+            echo "❌ Файл requirements.txt не найден"
+            exit 1
+        fi
+
+        pip install -r requirements.txt --no-index -f "$LOCAL_PACKAGES_DIR" --no-deps
+        echo "✅ .venv создан через pip (локально, без uv)"
     else
-        source .venv/bin/activate
+        echo "Интернет доступен — устанавливаем через pip"
+        rm -rf .venv
+        python -m venv .venv
+        activate_venv
+
+        if [ ! -f "requirements.txt" ]; then
+            echo "❌ Файл requirements.txt не найден"
+            exit 1
+        fi
+
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        echo "✅ .venv создан через pip (uv не найден)"
     fi
-    
-    if [ ! -f "requirements.txt" ]; then
-        echo "❌ Файл requirements.txt не найден"
+
+    exit 0
+fi
+
+# ── uv найден ─────────────────────────────────────────────────────────────────
+
+echo "✅ uv найден: $(uv --version)"
+
+# ── Офлайн-режим ─────────────────────────────────────────────────────────────
+if ! check_internet; then
+    echo "❌ PyPi.org недоступен — офлайн-установка через uv"
+
+    if [ ! -d "$LOCAL_PACKAGES_DIR" ] && [[ "$LOCAL_PACKAGES_DIR" != /* ]]; then
+        # Windows-путь передан — uv понимает его только в нативном виде
+        UV_CACHE_FLAG="--find-links=$(cygpath -u "$LOCAL_PACKAGES_DIR" 2>/dev/null || echo "$LOCAL_PACKAGES_DIR")"
+    else
+        UV_CACHE_FLAG="--find-links=$LOCAL_PACKAGES_DIR"
+    fi
+
+    rm -rf .venv
+
+    if [ -f "pyproject.toml" ]; then
+        uv sync --no-index $UV_CACHE_FLAG
+    elif [ -f "requirements.txt" ]; then
+        uv venv
+        uv pip install -r requirements.txt --no-index $UV_CACHE_FLAG
+    else
+        echo "❌ Не найден ни pyproject.toml, ни requirements.txt"
         exit 1
     fi
-    
-    
-    # # Проверяем наличие всех пакетов
-    # echo "Проверяем наличие пакетов в $LOCAL_PACKAGES_DIR..."
-    # missing_packages=()
-    
-    # while IFS= read -r package; do
-    #     # Пропускаем пустые строки и комментарии
-    #     [[ -z "$package" || "$package" =~ ^# ]] && continue
-        
-    #     # Извлекаем имя пакета (без версии)
-    #     package_name=$(echo "$package" | sed -E 's/([a-zA-Z0-9_-]+).*/\1/')
-        
-    #     # Ищем файл пакета
-    #     if ! ls "$LOCAL_PACKAGES_DIR" | grep -i "$package_name" >/dev/null 2>&1; then
-    #         missing_packages+=("$package_name")
-    #     fi
-    # done < requirements.txt
-    
-    # if [ ${#missing_packages[@]} -gt 0 ]; then
-    #     echo "❌ Отсутствуют пакеты:"
-    #     printf '%s\n' "${missing_packages[@]}"
-    #     echo ""
-    #     echo "Скачайте недостающие пакеты на машине с интернетом:"
-    #     echo "pip download -r requirements.txt -d $LOCAL_PACKAGES_DIR"
-    #     exit 1
-    # fi
-    
-    echo "Все пакеты найдены. Устанавливаем..."
-    pip install -r requirements.txt --no-index -f "$LOCAL_PACKAGES_DIR" --no-deps
-    # pip install -r requirements.txt --no-index -f f:\\temp\\python_Library --no-deps
-    
-    echo "✅ .venv создан через pip (локальная установка)"
-    exit 0
 
-fi
-
-# ── Интернет есть ─────────────────────────────────────────────────────────────
-
-echo "✅ Интернет доступен"
-
-# ── Предпочтительно: uv (быстрее, читает pyproject.toml) ──────────────────────
-
-if command -v uv &>/dev/null; then
-    echo "Найден uv — используем его"
-    rm -rf .venv
-    uv sync
-
-    # Активация окружения
-    if [[ -f ".venv/Scripts/activate" ]]; then
-        source .venv/Scripts/activate   # Windows Git Bash
-    else
-        source .venv/bin/activate       # Linux / macOS
-    fi
-    
-    echo "✅ .venv создан через uv (uv sync)  и активирован"
+    activate_venv
+    echo "✅ .venv создан через uv (офлайн)"
     exit 0
 fi
 
-# ── Fallback: стандартный pip (интернет есть, но uv нет) ──────────────────────
-
-echo "uv не найден — используем pip"
-
-echo "Cleaning previous venv..."
+# ── Онлайн-режим: uv есть, интернет есть ─────────────────────────────────────
 rm -rf .venv
 
-python -m venv .venv
-
-# Активация (Windows Git Bash / WSL / Linux / macOS)
-if [[ -f ".venv/Scripts/activate" ]]; then
-    source .venv/Scripts/activate   # Windows Git Bash
+if [ -f "pyproject.toml" ]; then
+    echo "Найден pyproject.toml — используем uv sync"
+    uv sync
+elif [ -f "requirements.txt" ]; then
+    echo "Найден requirements.txt — используем uv pip install"
+    uv venv
+    uv pip install -r requirements.txt
 else
-    source .venv/bin/activate       # Linux / macOS
-fi
-
-if [ ! -f "requirements.txt" ]; then
-    echo "❌ Файл requirements.txt не найден. Убедитесь, что вы в корне проекта."
+    echo "❌ Не найден ни pyproject.toml, ни requirements.txt"
     exit 1
 fi
 
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-
-echo "✅ .venv создан через pip"
+activate_venv
+echo "✅ .venv создан и активирован через uv"
