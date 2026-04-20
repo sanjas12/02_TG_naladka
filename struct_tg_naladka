@@ -1,13 +1,9 @@
 tg_naladka
  ┣ bugs
  ┃ ┣ bug-006.md
- ┣ Documentation
- ┃ ┗ RelNote
- ┃ ┃ ┗ 0.3.0.txt
+ ┣ doc
+ ┃ ┗ RelNote.txt
  ┣ input
- ┃ ┣ bruk
- ┃ ┃ ┗ ТГ22 2020-08-18 105117_2.csv.gz
- ┃ ┣ qp.txt
  ┃ ┣ test+ms.csv.gz
  ┃ ┗ test.csv.gz
  ┣ scripts
@@ -25,5 +21,11 @@ tg_naladka
  ┃ ┃ ┣ graph_matplot.py
  ┃ ┃ ┗ MainWindowUI.py
  ┃ ┗ main.py
+ ┃ ┗ _version.py
+ ┣ .gitignore
+ ┣ .python-version
+ ┣ build.py
  ┣ pyproject.toml
- ┣ setup.py
+ ┣ Readme.md
+ ┣ requrements.txt
+ ┣ uv.lock

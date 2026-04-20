@@ -10,24 +10,30 @@ GUI: Qt5.
 ## Usage (Repository)
 
 ### Prerequisites:
-1. Python >= 3.8.10 
+- Python >= 3.8.10 
 
-2. 0S >= Windows 7
+- 0S >= Windows 7
 
+### Installation
+С uv (рекомендуется):
+    uv sync
 
-## Ugage (Windows - exe)
+Без uv:
+    pip install -r requirements.txt
+    # requirements.txt сгенерирован из pyproject.toml, не редактировать вручную
+
+## Usage (Windows - exe)
 
 ### Prerequisites:
-1. Visual C++ 2015-2022
+- Visual C++ 2015-2022
 
-2. 0S >= Windows 7
+- 0S >= Windows 7
 
 
 ## help
 PyCharm 
 Help -> Run->Edit Configurations -> Emulate terminal in output console* (для расшифровки ошибок  pyqt5)
 
-python -m pip  install -r requirements.txt --no-index -f d:\\temp\\python_Library
 
 
 TODO
