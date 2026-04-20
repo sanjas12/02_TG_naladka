@@ -1,9 +1,14 @@
 [project]
 name = "tg-naladka"
 dynamic = ["version"]
-description = "Add your description here"
+description = "Программа для визуализации(matplotlib) и анализа данных"
 readme = "README.md"
+license = { text = "MIT" }
 requires-python = ">=3.8, <3.9"
+authors = [
+    {name = "sanja_s", email = "sanja100v@gmail.com"}
+]
+
 dependencies = [
     "chardet==5.2.0",
     "contourpy==1.1.1",
@@ -34,8 +39,11 @@ dependencies = [
     "zipp==3.13.0",
 ]
 
+[project.urls]
+Repository = "https://github.com/sanjas12/02_TG_naladka.git"
+
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [dependency-groups]
@@ -48,11 +56,27 @@ environments = [
     "sys_platform == 'win32'",
     # "sys_platform == 'linux'",  # раскоментить если будет в linux собираться
 ]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# ─── Ruff: линтер + форматер ─────────────────────────────────────────────────
 [tool.ruff]
 line-length = 88
+target-version = "py38"
 
 [tool.ruff.lint]
-select = ["E", "F", "I"]
+select = [
+    "E",
+    "F",
+    "I",
+    "UP",
+    "B",
+    "N",
+    "SIM",  
+]
+ignore = ["E501"] 
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
