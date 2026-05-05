@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+import re
+
 
 from datetime import datetime, timedelta
 from PyQt5.QtWidgets import (
@@ -330,19 +332,26 @@ class WindowGraph(QMainWindow):
     def set_graph_title(self) -> None:
         """Установка заголовка графика на основе имени файла."""
         filename = self.filenames[0]
+        
+        patterns = [
+            # "ШУР41" -> ТГ-4/ШУР-1
+            (r'ШУР(\d)(\d)', lambda m: f"ТГ-{m.group(1)}/ШУР-{m.group(2)}"),
+            # "ТГ41" -> ТГ-4/ШУР-1  
+            (r'ТГ(\d)(\d)',  lambda m: f"ТГ-{m.group(1)}/ШУР-{m.group(2)}"),
+            # "ШСП1" -> ШСП-1
+            (r'ШСП(\d+)',    lambda m: f"ШСП-{m.group(1)}"),
+        ]
+        
         if not filename:
             title = "Не выбран файл с данными"
-        elif "ШУР" in filename: 
-            idx = filename.find("ШУР") 
-            title = f"ТГ-{filename[idx+3]}/ШУР-{filename[idx+4]}"
-        elif "ТГ" in filename:
-            idx = filename.find("ТГ") 
-            title = f"ТГ-{filename[idx+2]}/ШУР-{filename[idx+3]}"
-        elif "ШСП" in filename:
-            title = f"ШСП-{filename[2:3]}"
         else:
-            title = "Тестовый файл"
-
+            for pattern, formatter in patterns:
+                if match := re.search(pattern, filename):
+                    title = formatter(match)
+                    break
+            else:
+                title = "Тестовый файл"
+        
         self.figure.suptitle(title, y=1.02)
 
     def on_mouse_move(self, event) -> None:
