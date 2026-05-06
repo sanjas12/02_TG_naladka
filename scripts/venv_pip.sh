@@ -6,108 +6,110 @@
 # нет uv + офлайн → fallback на pip install --no-index -f ...
 set -e
 
-# Переходим в корень проекта (на уровень выше от scripts/)
 cd "$(dirname "$0")/.." || exit 1
 
-LOCAL_PACKAGES_DIR="d:\\temp\\python_Library"
+# --- CONFIG ---
+LOCAL_PACKAGES_DIR="/d/temp/python_Library"
+PIP_VERSION="25.0.1"
 
 # ── Активация venv ────────────────────────────────────────────────────────────
 activate_venv() {
     if [[ -f ".venv/Scripts/activate" ]]; then
-        source .venv/Scripts/activate   # Windows Git Bash
-        echo " activate .venv"
+        source .venv/Scripts/activate
     elif [[ -f ".venv/bin/activate" ]]; then
-        source .venv/bin/activate       # Linux / macOS
+        source .venv/bin/activate
     else
-        echo "❌ Не удалось найти activate в .venv"
+        echo "❌ activate не найден"
         exit 1
     fi
 }
 
-# удаление старого окружения
-echo "удаляем старый .venv"
+log() {
+    echo -e "$1"
+}
+
+# --- CLEAN ---
+log "🧹 удаляем .venv"
 rm -rf .venv
 
-echo "=== Проверка окружения ==="
-
-# проверка на наличие uv
-if command -v uv >/dev/null 2>&1; then
-    HAS_UV=1
-    echo "✔ uv найден"
-else
-    HAS_UV=0
-    echo "✖ uv не найден"
-fi
-
+# --- DETECT UV ---
+command -v uv >/dev/null 2>&1 && HAS_UV=1 || HAS_UV=0
 # интернет
 set +e
 python - <<EOF 2>/dev/null
 import urllib.request
 urllib.request.urlopen("https://pypi.org/simple/", timeout=3)
 EOF
-HAS_NET=$?
+NET_OK=$?
 set -e
 
-if [ $HAS_NET -eq 0 ]; then
-    echo "✔ Интернет доступен"
-else
-    echo "✖ Интернет недоступен"
-fi
+[ -f "pyproject.toml" ] && USE_PYPROJECT=1 || USE_PYPROJECT=0
 
-# проверка файлов зависимостей
-if [ -f "pyproject.toml" ]; then
-    USE_PYPROJECT=1
-elif [ -f "requirements.txt" ]; then
-    USE_PYPROJECT=0
-else
-    echo "❌  Файл requirements.txt или pyproject.toml не найден"
+if [ $USE_PYPROJECT -eq 0 ] && [ ! -f "requirements.txt" ]; then
+    echo "❌ нет зависимостей"
     exit 1
 fi
 
-echo "=== Установка зависимостей ==="
+if [ $NET_OK -ne 0 ] && [ ! -d "$LOCAL_PACKAGES_DIR" ]; then
+    echo "❌ нет офлайн-каталога: $LOCAL_PACKAGES_DIR"
+    exit 1
+fi
 
+# --- MODE FLAGS ---
+USE_OFFLINE=0
+[ $NET_OK -ne 0 ] && USE_OFFLINE=1
 
+# --- COMMON ARGS ---
+PIP_ARGS=()
+[ $USE_OFFLINE -eq 1 ] && PIP_ARGS+=(--no-index --find-links="$LOCAL_PACKAGES_DIR")
 
-if [ $HAS_UV -eq 1 ]; then
-    echo "→ Используем uv"
+# --- INSTALL FUNCS ---
 
-    if [ $HAS_NET -eq 0 ]; then
-        if [ $USE_PYPROJECT -eq 1 ]; then
-            uv sync --group build
-        else
-            uv venv
-            uv pip install -r requirements.txt
-        fi
+install_with_uv() {
+    log "⚡ uv режим"
+
+    uv venv
+
+    if [ $USE_PYPROJECT -eq 1 ]; then
+        UV_ARGS=(--group build)
+        [ $USE_OFFLINE -eq 1 ] && UV_ARGS+=(--no-index --find-links="$LOCAL_PACKAGES_DIR" --frozen)
+
+        uv sync "${UV_ARGS[@]}"
     else
-        if [ $USE_PYPROJECT -eq 1 ]; then
-            uv sync --group build --no-index --find-links="$LOCAL_PACKAGES_DIR"
-            echo "✅ .venv создан и обновлен через uv (онлайн)"
-        else
-            uv venv
-            uv pip install --no-index --find-links="$LOCAL_PACKAGES_DIR" -r requirements.txt
-            echo "✅ .venv создан и обновлен через uv (офлайн / локальная папка)"
-        fi
+        # dry-run
+        uv pip install "${PIP_ARGS[@]}" -r requirements.txt --dry-run
+        # install
+        uv pip install "${PIP_ARGS[@]}" -r requirements.txt
     fi
+}
 
-
-else
-    echo "→ Используем pip"
+install_with_pip() {
+    log "🐍 pip режим"
 
     python -m venv .venv
     activate_venv
 
-    echo "обновляем pip до 25 версии"
-    python -m pip install --no-index --find-links="$LOCAL_PACKAGES_DIR" pip==25.0.1
+    # обновление pip
+    python -m pip install "${PIP_ARGS[@]}" --upgrade pip=="$PIP_VERSION"
 
-    if [ $HAS_NET -eq 0 ]; then
-        pip install -r requirements.txt
-        echo "✅ .venv создан и обновлен через pip (онлайн)"
-    else
-        # проверка
-        pip install --no-index --find-links="$LOCAL_PACKAGES_DIR" -r requirements.txt --dry-run
-        # установка
-        pip install --no-index --find-links="$LOCAL_PACKAGES_DIR" -r requirements.txt
-        echo "✅ .venv создан и обновлен через pip (офлайн / локальная папка)"
+    if [ $USE_PYPROJECT -eq 1 ]; then
+        echo "❌ pyproject без uv не поддержан"
+        exit 1
     fi
-    
-fi
+
+    # dry-run (если доступен)
+    if python -m pip install --help | grep -q -- "--dry-run"; then
+        pip install "${PIP_ARGS[@]}" -r requirements.txt --dry-run
+    else
+        log "⚠ pip без --dry-run, пропускаем проверку"
+    fi
+
+    pip install "${PIP_ARGS[@]}" -r requirements.txt
+}
+
+# --- RUN ---
+log "=== START ==="
+
+[ $HAS_UV -eq 1 ] && install_with_uv || install_with_pip
+
+log "✅ ГОТОВО"
