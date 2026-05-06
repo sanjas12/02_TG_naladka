@@ -15,28 +15,42 @@ LOCAL_PACKAGES_DIR="d:\\temp\\python_Library"
 check_internet() {
     local result=0
 
+    echo "🌐 Проверка доступности PyPI..."
+
     if command -v uv &>/dev/null; then
-        echo "🌐 Проверка интернета через uv..."
-        #  --refresh принудительно обращается к PyPI, игнорируя кэш
+        # uv сам умеет проверять соединение с PyPI через HTTPS
         uv pip install pip --dry-run --refresh --quiet 2>/dev/null
         result=$?
+
+    elif command -v python &>/dev/null || command -v python3 &>/dev/null; then
+        # Проверяем через pip — он использует те же SSL-настройки, что и при реальной установке
+        local py
+        py=$(command -v python3 2>/dev/null || command -v python)
+        "$py" -m pip install --dry-run pip --quiet 2>/dev/null
+        result=$?
+
     elif command -v curl &>/dev/null; then
-        echo "🌐 Проверка интернета через curl → pypi.org..."
-        curl -s --connect-timeout 3 --max-time 5 https://pypi.org >/dev/null 2>&1
+        # curl: проверяем именно HTTPS-handshake, смотрим на HTTP-код ответа
+        local http_code
+        http_code=$(curl -s --connect-timeout 5 --max-time 8 \
+                         -o /dev/null -w "%{http_code}" \
+                         https://pypi.org/simple/ 2>/dev/null)
+        [[ "$http_code" =~ ^[23] ]]
         result=$?
+
     elif command -v wget &>/dev/null; then
-        echo "🌐 Проверка интернета через wget → pypi.org..."
-        wget -q --timeout=3 --tries=1 https://pypi.org -O /dev/null 2>&1
+        wget -q --timeout=5 --tries=1 https://pypi.org/simple/ -O /dev/null 2>/dev/null
         result=$?
+
     else
-        echo "⚠️  Нет доступных инструментов для проверки (uv/curl/wget)"
+        echo "⚠️  Нет доступных инструментов для проверки (uv / python / curl / wget)"
         return 1
     fi
 
     if [ $result -eq 0 ]; then
-        echo "✅ Интернет доступен"
+        echo "✅ PyPI доступен"
     else
-        echo "❌ Интернет недоступен (код: $result)"
+        echo "❌ PyPI недоступен (SSL-прокси, firewall или нет сети)"
     fi
 
     return $result
