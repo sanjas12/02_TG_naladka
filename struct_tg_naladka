@@ -1,12 +1,13 @@
 tg_naladka
  ┣ bugs
  ┃ ┣ bug-006.md
- ┣ doc
+ ┣ docs
  ┃ ┗ RelNote.txt
  ┣ input
  ┃ ┣ test+ms.csv.gz
  ┃ ┗ test.csv.gz
  ┣ scripts
+ ┃ ┣ run.sh
  ┃ ┣ toexe.sh
  ┃ ┗ venv_pip.sh
  ┣ src

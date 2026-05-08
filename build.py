@@ -35,13 +35,13 @@ def get_include_files() -> List[Tuple[str, str]]:
     if os.path.exists(config_path):
         files.append((config_path, "config/config.py"))
 
-    relnote = os.path.join(project_root, "doc", "RelNote.txt")
+    relnote = os.path.join(project_root, "docs", "RelNote.txt")
     if os.path.isfile(relnote):
-        files.append((relnote, "doc/RelNote.txt"))
+        files.append((relnote, "docs/RelNote.txt"))
 
     revision = os.path.join(src_root, "_revision.py")
     if os.path.isfile(revision):
-        files.append((revision, "doc/_revision.py"))
+        files.append((revision, "docs/_revision.py"))
     return files
 
 

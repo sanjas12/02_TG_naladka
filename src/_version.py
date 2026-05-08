@@ -13,13 +13,13 @@ def _revision_from_baked() -> str | None:
     """
     Читает ревизию из файла _revision.py, запечённого во время сборки.
 
-    В exe-окружении файл лежит по пути doc/_revision.py → import doc._revision
+    В exe-окружении файл лежит по пути docs/_revision.py → import docs._revision
     При сборке (build.py) файл кладётся в src/_revision.py → import _revision
     Возвращает None, если ни один вариант не найден (режим разработки без сборки).
     """
-    # Вариант 1: exe-окружение — doc/_revision.py
+    # Вариант 1: exe-окружение — docs/_revision.py
     try:
-        from doc._revision import __revision__  # type: ignore[import]
+        from docs._revision import __revision__  # type: ignore[import]
         return __revision__
     except ImportError:
         pass
@@ -40,7 +40,7 @@ def git_revision() -> str:
     Возвращает строку ревизии (например, «rev123»).
 
     Приоритет:
-      1. Запечённый файл (doc/_revision.py или _revision.py)
+      1. Запечённый файл (docs/_revision.py или _revision.py)
       2. Живой вызов git (режим разработки)
       3. Фоллбэк «rev0»
     """
