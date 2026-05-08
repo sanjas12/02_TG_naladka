@@ -16,6 +16,7 @@ PIP_VERSION="25.0.1"
 activate_venv() {
     if [[ -f ".venv/Scripts/activate" ]]; then
         source .venv/Scripts/activate
+        echo "venv актививарона"
     elif [[ -f ".venv/bin/activate" ]]; then
         source .venv/bin/activate
     else
@@ -33,7 +34,14 @@ log "🧹 удаляем .venv"
 rm -rf .venv
 
 # --- DETECT UV ---
-command -v uv >/dev/null 2>&1 && HAS_UV=1 || HAS_UV=0
+if command -v uv >/dev/null 2>&1; then
+    HAS_UV=1
+    log "uv найден"
+else
+    HAS_UV=0
+    log "uv  не найден -> fallback на pip"
+fi 
+
 # интернет
 set +e
 python - <<EOF 2>/dev/null
@@ -92,10 +100,6 @@ install_with_pip() {
     # обновление pip
     python -m pip install "${PIP_ARGS[@]}" --upgrade pip=="$PIP_VERSION"
 
-    if [ $USE_PYPROJECT -eq 1 ]; then
-        echo "❌ pyproject без uv не поддержан"
-        exit 1
-    fi
 
     # dry-run (если доступен)
     if python -m pip install --help | grep -q -- "--dry-run"; then

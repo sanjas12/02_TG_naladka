@@ -50,7 +50,7 @@ mkdir -p "$BUILD_DIR"
 # Запуск сборки
 echo "Building package..."
 cd "$PROJECT_ROOT"
-python build.py build -q
+"$PROJECT_ROOT/.venv/Scripts/python.exe" build.py build -q
 
 if [ -f "$REVISION_FILE" ]; then
     rm "$REVISION_FILE"
