@@ -1,0 +1,189 @@
+У тебя в конфиге смешаны два типа данных:
+
+| Тип | Примеры | Пользователь меняет? |
+|---|---|---|
+| **Пути/инфраструктура** | `LOGS_DIR`, `REPORT_DIR`, `LOG_FILE` | ❌ |
+| **Пользовательские настройки** | `FONT_SIZE`, `TICK_MARK_COUNT_X/Y`, `LEVEL_LOG`, `ANALYS_AIM`, `GSM_A_CUR`, `GSM_B_CUR` | ✅ |
+
+---
+
+**Решение — разделить на два файла:**
+
+**`settings.json`** — рядом с `.exe`, редактируется пользователем:
+```json
+{
+  "FONT_SIZE": 8,
+  "TICK_MARK_COUNT_X": 15,
+  "TICK_MARK_COUNT_Y": 10,
+  "LEVEL_LOG": "INFO",
+  "ANALYS_AIM": "Значение развертки. Положение ГСМ",
+  "GSM_A_CUR": "ГСМ-А.Текущее положение",
+  "GSM_B_CUR": "ГСМ-Б.Текущее положение"
+}
+```
+
+**`config.py`** — остаётся внутри билда, читает `settings.json`:
+```python
+import logging
+import os
+import json
+import sys
+from pathlib import Path
+from enum import Enum
+
+
+class AxeName(Enum):
+    LIST_SIGNALS = "Список сигналов"
+    BASE_AXE = "Основная Ось"
+    SECONDARY_AXE = "Вспомогательная Ось"
+    TIME_AXE = "Ось Времени"
+
+
+# --- Пути ---
+def get_base_path() -> Path:
+    """Корень рядом с .exe в билде, или корень проекта при разработке."""
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).parent
+    return Path(__file__).parent.parent.absolute()
+
+
+BASE_DIR = Path(__file__).parent.parent.absolute()
+CONFIG_DIR = Path(BASE_DIR, "config")
+ROOT_DIR = get_base_path()  # рядом с .exe
+
+LOGS_DIR = ROOT_DIR / "logs"
+LOGS_DIR.mkdir(exist_ok=True)
+LOG_FILE = LOGS_DIR / "app.log"
+
+REPORT_DIR = ROOT_DIR / "reports"
+REPORT_DIR.mkdir(exist_ok=True)
+
+PLOT_FILENAME = REPORT_DIR / "regulator_plot.png"
+PDF_FILENAME = REPORT_DIR / "regulator_analysis.pdf"
+
+# --- Константы (не меняются пользователем) ---
+FORMAT = '%(asctime)s:%(levelname)s:%(message)s'
+COMBINED_TIME = 'Время'
+DEFAULT_TIME = 'дата/время'
+DEFAULT_MS = 'миллисекунды'
+
+# --- Пользовательские настройки ---
+_SETTINGS_FILE = ROOT_DIR / "settings.json"
+
+_DEFAULTS = {
+    "FONT_SIZE": 8,
+    "TICK_MARK_COUNT_X": 15,
+    "TICK_MARK_COUNT_Y": 10,
+    "LEVEL_LOG": "INFO",
+    "ANALYS_AIM": "Значение развертки. Положение ГСМ",
+    "GSM_A_CUR": "ГСМ-А.Текущее положение",
+    "GSM_B_CUR": "ГСМ-Б.Текущее положение",
+}
+
+def _load_settings() -> dict:
+    if _SETTINGS_FILE.exists():
+        with open(_SETTINGS_FILE, encoding="utf-8") as f:
+            user = json.load(f)
+        return {**_DEFAULTS, **user}  # дефолты + перекрытие пользователем
+    # Если файла нет — создаём с дефолтами
+    _save_settings(_DEFAULTS)
+    return _DEFAULTS.copy()
+
+def _save_settings(data: dict) -> None:
+    with open(_SETTINGS_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+_S = _load_settings()
+
+# Экспортируем как обычные переменные — остальной код не меняется
+FONT_SIZE: int           = _S["FONT_SIZE"]
+TICK_MARK_COUNT_X: int   = _S["TICK_MARK_COUNT_X"]
+TICK_MARK_COUNT_Y: int   = _S["TICK_MARK_COUNT_Y"]
+LEVEL_LOG: int           = getattr(logging, _S["LEVEL_LOG"].upper(), logging.INFO)
+ANALYS_AIM: str          = _S["ANALYS_AIM"]
+GSM_A_CUR: str           = _S["GSM_A_CUR"]
+GSM_B_CUR: str           = _S["GSM_B_CUR"]
+```
+
+---
+
+**`setup.py`** — копируем `settings.json` в билд:
+```python
+from cx_Freeze import setup, Executable
+
+build_options = {
+    "packages": ["src"],
+    "include_files": [
+        ("settings.json", "settings.json"),
+    ],
+}
+
+setup(
+    name="YourApp",
+    options={"build_exe": build_options},
+    executables=[Executable("src/main.py")]
+)
+```
+
+---
+
+**Главное преимущество** — весь остальной код (`graph_matplot.py`, `MainWindowUI.py`) не меняется, они продолжают импортировать как раньше:
+
+```python
+from src.config.config import FONT_SIZE, TICK_MARK_COUNT_X
+```
+**До:**
+```
+project/
+├── src/
+│   ├── config/
+│   │   └── config.py
+│   ├── logic/
+│   │   ├── logic.py
+│   │   └── regulator_analyzer.py
+│   ├── model/
+│   │   └── basemodel.py
+│   ├── ui/
+│   │   ├── graph_matplot.py
+│   │   └── MainWindowUI.py
+│   └── main.py
+```
+
+**После:**
+```
+project/
+├── src/
+│   ├── config/
+│   │   └── config.py
+│   ├── logic/
+│   │   ├── logic.py
+│   │   └── regulator_analyzer.py
+│   ├── model/
+│   │   └── basemodel.py
+│   ├── ui/
+│   │   ├── graph_matplot.py
+│   │   └── MainWindowUI.py
+│   └── main.py
+├── settings.json       ← новый файл (рядом с main.py / .exe)
+└── setup.py            ← если ещё не было
+```
+
+**После сборки (`python setup.py build`):**
+```
+project/
+├── src/
+├── settings.json
+├── setup.py
+└── build/
+    └── exe.win-amd64-3.x/
+        ├── yourapp.exe
+        ├── settings.json   ← скопирован сюда автоматически
+        ├── logs/           ← создаётся при первом запуске
+        ├── reports/        ← создаётся при первом запуске
+        └── lib/
+            └── ...
+```
+
+---
+
+Пользователь получает папку `exe.win-amd64-3.x/` и редактирует `settings.json` рядом с `.exe` — всё остальное его не касается.
