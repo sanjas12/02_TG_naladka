@@ -50,6 +50,7 @@ TODO
 11. Портировать на Linux(Astra и Ubuntu)
 13. перейти на polars для версии по Win_11 для загрузки данных из csv
 14. перейти на uv
+15. добавить pre commit.yaml
 
 
 ## old
