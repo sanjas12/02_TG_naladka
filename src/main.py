@@ -91,7 +91,10 @@ def log_startup_done(elapsed: float) -> None:
 
 def main() -> None:
     setup_logging()
+    
     log_startup_begin()
+
+    cfg.load_runtime_settings()
 
     exit_code = 0
     t0 = time.monotonic()

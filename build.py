@@ -31,9 +31,9 @@ build_dir = os.path.join("build", output_name)
 
 def get_include_files() -> List[Tuple[str, str]]:
     files: List[Tuple[str, str]] = []
-    config_path = os.path.join(src_root, "config", "config.py")
+    config_path = os.path.join(project_root, "settings.json")
     if os.path.exists(config_path):
-        files.append((config_path, "config/config.py"))
+        files.append((config_path, "settings.json"))
 
     relnote = os.path.join(project_root, "docs", "RelNote.txt")
     if os.path.isfile(relnote):

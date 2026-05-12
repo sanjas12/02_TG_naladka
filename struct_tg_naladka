@@ -1,10 +1,15 @@
-tg_naladka
+02_TG_naladka
  ┣ bugs
+ ┃ ┣ 04.png
  ┃ ┣ bug-006.md
+ ┃ ┗ bug_traker
  ┣ docs
  ┃ ┗ RelNote.txt
  ┣ input
- ┃ ┣ test+ms.csv.gz
+ ┃ ┣ analys
+ ┃ ┃ ┗ out_merge.csv.gz
+ ┃ ┣ bruk
+ ┃ ┃ ┗ ТГ22 2020-08-18 105117_2.csv.gz
  ┃ ┗ test.csv.gz
  ┣ scripts
  ┃ ┣ run.sh
@@ -16,17 +21,22 @@ tg_naladka
  ┃ ┣ logic
  ┃ ┃ ┣ logic.py
  ┃ ┃ ┗ regulator_analyzer.py
+ ┃ ┣ logs
+ ┃ ┃ ┗ app.log
  ┃ ┣ model
  ┃ ┃ ┗ basemodel.py
  ┃ ┣ ui
  ┃ ┃ ┣ graph_matplot.py
  ┃ ┃ ┗ MainWindowUI.py
- ┃ ┗ main.py
+ ┃ ┣ main.py
+ ┃ ┣ settings.json
  ┃ ┗ _version.py
  ┣ .gitignore
  ┣ .python-version
  ┣ build.py
  ┣ pyproject.toml
  ┣ Readme.md
- ┣ requrements.txt
- ┣ uv.lock
+ ┣ requirements.txt
+ ┣ settings.json
+ ┣ struct_tg_naladka
+ ┗ uv.lock
