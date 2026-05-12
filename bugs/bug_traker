@@ -4,7 +4,7 @@
                 btn_base_axe_add.clicked.connect(lambda: self.add_signal(self.qlist_base_axe, self.dict_base_axe))
             File "h:/My_Works/Python/02_TG_naladka/main.py", line 242, in add_signal
                 remove_row = self.dict_all_signals.pop(add_signal)
-            KeyError: 'фрЄр/тЁхь 
+            KeyError: 'фрЄр/тЁхь
 2. Нельзя добавить сигнал в QTable (Ось X):
             Traceback (most recent call last):
             File "h:/My_Works/Python/02_TG_naladka/main.py", line 80, in <lambda>
@@ -14,11 +14,11 @@
             KeyError: 'фрЄр/тЁхь '
 3. При добавлении любого сигнала в QTable (вспомогательная ОСь):
     branch -> master
-    file -> "e:\2023_12_04 - слетает референс_ТГ6\Новая папка\ТГ61-2023-05-15_141720_26926_.csv" 
-            
+    file -> "e:\2023_12_04 - слетает референс_ТГ6\Новая папка\ТГ61-2023-05-15_141720_26926_.csv"
+
             Traceback (most recent call last):
             File "d:\My_work\Python\02_TG_naladka\main.py", line 322, in plot_grath
-                self.grath = WindowGrath(self.df, self.base_signals, self.secondary_signals, *self.x_axe, 
+                self.grath = WindowGrath(self.df, self.base_signals, self.secondary_signals, *self.x_axe,
                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
             File "d:\My_work\Python\02_TG_naladka\grath_matplot.py", line 42, in __init__
                 self.ui()
@@ -28,8 +28,8 @@
                 ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
                     ^^^
             UnboundLocalError: cannot access local variable 'ax1' where it is not associated with a value
-            (base) 
-4. Запуск build 
+            (base)
+4. Запуск build
         cx_Freeze: Python error in main script
 
     Traceback (most recent call last):
@@ -45,5 +45,5 @@
 
 5. При повторорном открытии файлов не очищаются словари выбранных сигналов
 
-6. Открываем архивы -> Выбираем сигналы для построения либо галочку анализ регулятора либо "Add to Axe" -> строим графики 
+6. Открываем архивы -> Выбираем сигналы для построения либо галочку анализ регулятора либо "Add to Axe" -> строим графики
 -> снимаем галочку анализ регулятора или удаляем сигнал из "Remove from Axe" -> пропадают все сигналы из Списка Сигналов

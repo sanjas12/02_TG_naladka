@@ -50,6 +50,9 @@ build-backend = "setuptools.build_meta"
 build = [
     "cx-freeze==7.2.10 ; sys_platform == 'win32'",
 ]
+dev = [
+    "pre-commit>= 2.0.0, < 3.0.0",
+]
 
 [tool.uv]
 environments = [
@@ -73,9 +76,9 @@ select = [
     "UP",
     "B",
     "N",
-    "SIM",  
+    "SIM",
 ]
-ignore = ["E501"] 
+ignore = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"

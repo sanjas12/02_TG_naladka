@@ -1,16 +1,16 @@
 # TG-Naladka
 
-Программа для визуализации(matplotlib) и анализа данных.  
+Программа для визуализации(matplotlib) и анализа данных.
 
 GUI: Qt5.
 
-Поддерживает форматы CSV, GZ, TXT. 
+Поддерживает форматы CSV, GZ, TXT.
 
 
 ## Usage (Repository)
 
 ### Prerequisites:
-- Python >= 3.8.10 
+- Python >= 3.8.10
 
 - 0S >= Windows 7
 
@@ -28,12 +28,6 @@ GUI: Qt5.
 - Visual C++ 2015-2022
 
 - 0S >= Windows 7
-
-
-## help
-PyCharm 
-Help -> Run->Edit Configurations -> Emulate terminal in output console* (для расшифровки ошибок  pyqt5)
-
 
 
 TODO
@@ -57,7 +51,7 @@ TODO
 main.py - текущая версия программы (GUI-QT5) выбора любых данный из файлов (csv, gz, txt)
 grath_matplot.py - модуль построения графиков на matplotlib
 
-RBMK_naladka.py(grath_from_tg_static_8.py - в предыдущих версиях) - текущая версия программы для работы на РБМК -> скачки, смещения и т.д.(GUI-tkinter) 
+RBMK_naladka.py(grath_from_tg_static_8.py - в предыдущих версиях) - текущая версия программы для работы на РБМК -> скачки, смещения и т.д.(GUI-tkinter)
 
 grath_from_tg_static_9.py - аналог main.py только под(GUI-tkinter), для Xp - последняя версия питона 3.4.2, PyQT5 ставиться на 3.5 и выше
 grath_from_tg_static_9(Qt4).py - аналог read_csv_3_any только под(Qt4) через anaconda, для Xp - последняя версия питона 3.4.2, PyQT5 ставиться на 3.5 и выше

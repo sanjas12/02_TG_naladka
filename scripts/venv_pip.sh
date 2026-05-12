@@ -40,7 +40,7 @@ if command -v uv >/dev/null 2>&1; then
 else
     HAS_UV=0
     log "uv  не найден -> fallback на pip"
-fi 
+fi
 
 # интернет
 set +e

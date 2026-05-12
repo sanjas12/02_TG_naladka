@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 class AxeName(Enum):
     """Названия осей графика."""
+
     LIST_SIGNALS = "Список сигналов"
     BASE_AXE = "Основная Ось"
     SECONDARY_AXE = "Вспомогательная Ось"
@@ -30,6 +31,7 @@ def get_base_path() -> Path:
             return parent
 
     return current.parent.parent
+
 
 # --- Пути ---
 BASE_DIR: Final[Path] = Path(__file__).resolve().parent.parent
@@ -133,8 +135,7 @@ def load_runtime_settings() -> None:
         return
 
     overridden = [
-        k for k in _SETTINGS
-        if k in _DEFAULTS and _SETTINGS[k] != _DEFAULTS[k]
+        k for k in _SETTINGS if k in _DEFAULTS and _SETTINGS[k] != _DEFAULTS[k]
     ]
 
     if overridden:

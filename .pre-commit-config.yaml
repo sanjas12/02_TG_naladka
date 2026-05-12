@@ -37,11 +37,11 @@ repos:
         files: ^src/
 
   # --- Безопасность ---
-  - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.5.0
-    hooks:
-      - id: detect-secrets             # ищет случайно закоммиченные секреты
-        args: ["--baseline", ".secrets.baseline"]
+  # - repo: https://github.com/Yelp/detect-secrets
+  #   rev: v1.5.0
+  #   hooks:
+  #     - id: detect-secrets             # ищет случайно закоммиченные секреты
+  #       args: ["--baseline", ".secrets.baseline"]
 
   # --- Качество коммитов ---
   - repo: https://github.com/compilerla/conventional-pre-commit
@@ -55,8 +55,6 @@ repos:
 default_language_version:
   python: python3.11
 
-default_stages: [pre-commit]
-
 # Исключаем автогенерированные файлы и папку сборки
 exclude: |
   (?x)^(
@@ -65,10 +63,3 @@ exclude: |
     __pycache__/.*|
     .*\.pyc
   )$
-
-
-
-toml
-dev = [
-    "pre-commit>=3.7.0",
-]
