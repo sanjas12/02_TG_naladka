@@ -1,39 +1,45 @@
 from __future__ import annotations
 
-import sys
 import random
+import re
+import sys
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Optional
 
-import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-import re
-
-
-from datetime import datetime, timedelta
+import numpy as np
+import pandas as pd
+from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from PyQt5.QtWidgets import (
     QApplication,
+    QCheckBox,
     QComboBox,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
-    QGroupBox,
+    QMainWindow,
+    QPushButton,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
-    QPushButton,
-    QMainWindow,
-    QCheckBox,
-    QScrollArea,
 )
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
 
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from config.config import *
-from logic.regulator_analyzer import RegulatorAnalyzer
+from config.config import (  # noqa: E402
+    ANALYS_AIM,
+    COMBINED_TIME,
+    GSM_A_CUR,
+    GSM_B_CUR,
+    PLOT_FILENAME,
+    TICK_MARK_COUNT_X,
+    TICK_MARK_COUNT_Y,
+)
+from logic.regulator_analyzer import RegulatorAnalyzer  # noqa: E402
 
 
 class WindowGraph(QMainWindow):
@@ -50,8 +56,6 @@ class WindowGraph(QMainWindow):
         enable_button: Можно ли активировать кнопку "АНАЛИЗА"
     """
 
-    
-
     def __init__(
         self,
         data: pd.DataFrame,
@@ -64,7 +68,6 @@ class WindowGraph(QMainWindow):
     ) -> None:
         super().__init__()
 
-
         self.data = data
         self.base_signals = base_signals
         self.secondary_signals = secondary_signals
@@ -72,24 +75,25 @@ class WindowGraph(QMainWindow):
         self.step = int(step)
         self.filenames = filenames
         self.enable_analys = enable_analys
-        
+
         if self.enable_analys:
-            self.analyzer = RegulatorAnalyzer(self.data[COMBINED_TIME].to_numpy(),
-                                            self.data[GSM_A_CUR].to_numpy(),
-                                            self.data[GSM_B_CUR].to_numpy(),
-                                            self.data[ANALYS_AIM].to_numpy(),
-                                            self.filenames,
-                                            )
+            self.analyzer = RegulatorAnalyzer(
+                self.data[COMBINED_TIME].to_numpy(),
+                self.data[GSM_A_CUR].to_numpy(),
+                self.data[GSM_B_CUR].to_numpy(),
+                self.data[ANALYS_AIM].to_numpy(),
+                self.filenames,
+            )
 
         self.lines_list: List = []
         self.checkboxes: dict[str, QCheckBox] = {}
         self.line_visibility: dict[str, bool] = {}
 
         self.vline = None
-        self.annotation = None
+        self.annotation: Optional[plt.Artist] = None
         self.cid = None
-        self.ax1 = None
-        self.ax2 = None
+        self.ax1: Optional[plt.Axes] = None
+        self.ax2: Optional[plt.Axes] = None
 
         # Цвета для графиков
         self.base_colors = [
@@ -158,7 +162,6 @@ class WindowGraph(QMainWindow):
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)  # чтобы растягивалась по размеру
         scroll_area.setWidget(visibility_group)
-
 
         # GroupBox для анализа регулятора
         regulator_group = QGroupBox("Анализ регулятора ГСМ")
@@ -251,7 +254,7 @@ class WindowGraph(QMainWindow):
         ax2 = None
 
         # При больших данных, который не родные QP
-        self.step = len(self.data)//1000 if len(self.data) > 1_000_000 else self.step
+        self.step = len(self.data) // 1000 if len(self.data) > 1_000_000 else self.step
 
         # Основные сигналы
         for signal in self.base_signals:
@@ -300,7 +303,7 @@ class WindowGraph(QMainWindow):
                 ax2.tick_params(axis="y", labelcolor="b")
                 ax2.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_X))
                 ax2.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_Y))
-                ax2.set_ylabel(f",\n".join(visible_secondary), color="b")
+                ax2.set_ylabel(",\n".join(visible_secondary), color="b")
                 ax2.legend(loc="upper right")
 
         for tick in ax1.get_xticklabels():
@@ -313,6 +316,7 @@ class WindowGraph(QMainWindow):
         self.ax2 = ax2
 
         # Вертикальная линия и аннотация
+        assert self.ax1 is not None
         self.vline = self.ax1.axvline(x=0, color="k", lw=1, ls="--", visible=False)
         self.annotation = self.figure.text(
             0.75,
@@ -332,16 +336,16 @@ class WindowGraph(QMainWindow):
     def set_graph_title(self) -> None:
         """Установка заголовка графика на основе имени файла."""
         filename = self.filenames[0]
-        
+
         patterns = [
             # "ШУР41" -> ТГ-4/ШУР-1
-            (r'ШУР(\d)(\d)', lambda m: f"ТГ-{m.group(1)}/ШУР-{m.group(2)}"),
-            # "ТГ41" -> ТГ-4/ШУР-1  
-            (r'ТГ(\d)(\d)',  lambda m: f"ТГ-{m.group(1)}/ШУР-{m.group(2)}"),
+            (r"ШУР(\d)(\d)", lambda m: f"ТГ-{m.group(1)}/ШУР-{m.group(2)}"),
+            # "ТГ41" -> ТГ-4/ШУР-1
+            (r"ТГ(\d)(\d)", lambda m: f"ТГ-{m.group(1)}/ШУР-{m.group(2)}"),
             # "ШСП1" -> ШСП-1
-            (r'ШСП(\d+)',    lambda m: f"ШСП-{m.group(1)}"),
+            (r"ШСП(\d+)", lambda m: f"ШСП-{m.group(1)}"),
         ]
-        
+
         if not filename:
             title = "Не выбран файл с данными"
         else:
@@ -351,7 +355,7 @@ class WindowGraph(QMainWindow):
                     break
             else:
                 title = "Тестовый файл"
-        
+
         self.figure.suptitle(title, y=1.02)
 
     def on_mouse_move(self, event) -> None:
@@ -380,7 +384,7 @@ class WindowGraph(QMainWindow):
         if len(x_series) == 0:
             return
 
-        idx: Optional[int] = None
+        idx: Optional[int] = None  # noqa: UP045
         vline_x = x
         try:
             x_numeric = pd.to_numeric(x_series, errors="coerce").to_numpy()
@@ -434,13 +438,14 @@ class WindowGraph(QMainWindow):
         Обновляет атрибут self.saved_plot_path с полным путём к сохранённому файлу.
         """
         try:
-            os.makedirs(REPORT_DIR, exist_ok=True)
+            # os.makedirs(REPORT_DIR, exist_ok=True)
             # Сохраняем текущую фигуру
             self.figure.savefig(PLOT_FILENAME, bbox_inches="tight", dpi=150)
             print(f"Plot saved to {PLOT_FILENAME}")
         except Exception as e:
             # Простая обработка ошибок — вывести в консоль. GUI-логирование можно добавить позже.
             print(f"Ошибка при сохранении графика: {e}")
+
 
 def main() -> None:
     df = pd.DataFrame()
@@ -518,8 +523,10 @@ def main() -> None:
         secondary_signals=y2,
         time_signals=COMBINED_TIME,
         enable_analys=False,
-        filenames=["E:/User/Temp/ТГ41-2021-06-25_134810_14099.csv.gz",
-                   "E:/User/Temp/ТГ41-2021-06-25_134914_14099.csv.gz"]
+        filenames=[
+            "E:/User/Temp/ТГ41-2021-06-25_134810_14099.csv.gz",
+            "E:/User/Temp/ТГ41-2021-06-25_134914_14099.csv.gz",
+        ],
     )
     window.show()
     sys.exit(app.exec())
