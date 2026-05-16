@@ -47,7 +47,7 @@ REPORT_DIR.mkdir(exist_ok=True)
 
 LOG_FILE: Final[Path] = LOGS_DIR / "app.log"
 
-PLOT_FILENAME: Final[Path] = REPORT_DIR / "regulator_plot.png"
+PLOT_FILENAME: Final[Path] = REPORT_DIR / "plot.png"
 PDF_FILENAME: Final[Path] = REPORT_DIR / "regulator_analysis.pdf"
 
 
@@ -98,7 +98,7 @@ def _load_settings() -> Dict[str, Any]:
 
     try:
         with _SETTINGS_FILE.open(encoding="utf-8") as file:
-            user_settings: dict[str, Any] = json.load(file)
+            user_settings: Dict[str, Any] = json.load(file)
 
         logger.info(
             "settings.json успешно прочитан (%d параметров)",

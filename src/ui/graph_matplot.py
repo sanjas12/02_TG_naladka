@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import logging
 import random
 import re
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
@@ -41,6 +42,8 @@ from config.config import (  # noqa: E402
 )
 from logic.regulator_analyzer import RegulatorAnalyzer  # noqa: E402
 
+logger = logging.getLogger(__name__)
+
 
 class WindowGraph(QMainWindow):
     """
@@ -67,6 +70,11 @@ class WindowGraph(QMainWindow):
         enable_analys: bool = False,
     ) -> None:
         super().__init__()
+        logger.info(
+            f"WindowGraph.__init__: данных={len(data)}, base={base_signals}, "
+            f"secondary={secondary_signals}, step={step}, "
+            f"enable_analys={enable_analys}, files={filenames}"
+        )
 
         self.data = data
         self.base_signals = base_signals
@@ -77,6 +85,7 @@ class WindowGraph(QMainWindow):
         self.enable_analys = enable_analys
 
         if self.enable_analys:
+            logger.debug("Инициализация RegulatorAnalyzer")
             self.analyzer = RegulatorAnalyzer(
                 self.data[COMBINED_TIME].to_numpy(),
                 self.data[GSM_A_CUR].to_numpy(),
@@ -220,14 +229,26 @@ class WindowGraph(QMainWindow):
         sender = self.sender()
         if isinstance(sender, QCheckBox):
             signal_name = sender.text()
-            self.line_visibility[signal_name] = sender.isChecked()
+            visible = sender.isChecked()
+            self.line_visibility[signal_name] = visible
+            logger.info(
+                "toggle_signal_visibility: сигнал=%r, видимость=%s",
+                signal_name,
+                visible,
+            )
             self.update_graphs()
 
     def update_graphs(self) -> None:
         """Обновление графиков при изменении параметров."""
+        old_step = self.step
         self.step = int(self.points_combobox.currentText())
         self.points_label.setText(
             f"Кол-во отображаемых данных: {len(self.data) // self.step}"
+        )
+        logger.info(
+            f"update_graphs: шаг {old_step} -> {self.step}, "
+            f"отображается {len(self.data) // self.step} точек, "
+            f"сигналы base={self.base_signals} secondary={self.secondary_signals}"
         )
         self.plot_graphs()
         self.canvas.draw()
@@ -235,10 +256,12 @@ class WindowGraph(QMainWindow):
 
     def plot_graphs(self) -> None:
         """Построение графиков данных с учетом видимости сигналов."""
+        logger.debug("plot_graphs: начало, строк=%d, шаг=%d", len(self.data), self.step)
         self.figure.clear()
         self.set_graph_title()
 
         if self.data.empty:
+            logger.warning("plot_graphs: данные пусты, график не построен")
             self.figure.text(
                 0.5,
                 0.5,
@@ -254,9 +277,18 @@ class WindowGraph(QMainWindow):
         ax2 = None
 
         # При больших данных, который не родные QP
-        self.step = len(self.data) // 1000 if len(self.data) > 1_000_000 else self.step
+        if len(self.data) > 1_000_000:
+            adjusted_step = len(self.data) // 1000
+            logger.info(
+                "plot_graphs: большой датасет (%d строк), шаг скорректирован %d -> %d",
+                len(self.data),
+                self.step,
+                adjusted_step,
+            )
+            self.step = adjusted_step
 
         # Основные сигналы
+        plotted_base = []
         for signal in self.base_signals:
             if signal in self.data.columns and self.line_visibility.get(signal, True):
                 (line,) = ax1.plot(
@@ -266,6 +298,14 @@ class WindowGraph(QMainWindow):
                     label=signal,
                 )
                 self.lines_list.append(line)
+                plotted_base.append(signal)
+            else:
+                logger.debug(
+                    "plot_graphs: base сигнал %r пропущен (скрыт или отсутствует)",
+                    signal,
+                )
+
+        logger.debug("plot_graphs: построено base сигналов: %s", plotted_base)
 
         ax1.grid(linestyle="--", linewidth=0.5, alpha=0.85)
         ax1.set_ylabel(
@@ -282,6 +322,7 @@ class WindowGraph(QMainWindow):
         # Вторичные сигналы
         if self.secondary_signals:
             ax2 = ax1.twinx()
+            plotted_secondary = []
             for i, signal in enumerate(self.secondary_signals):
                 if signal in self.data.columns and self.line_visibility.get(
                     signal, True
@@ -295,6 +336,16 @@ class WindowGraph(QMainWindow):
                         color=self.secondary_colors[i % len(self.secondary_colors)],
                     )
                     self.lines_list.append(line)
+                    plotted_secondary.append(signal)
+                else:
+                    logger.debug(
+                        "plot_graphs: secondary сигнал %r пропущен (скрыт или отсутствует)",
+                        signal,
+                    )
+
+            logger.debug(
+                "plot_graphs: построено secondary сигналов: %s", plotted_secondary
+            )
 
             visible_secondary = [
                 s for s in self.secondary_signals if self.line_visibility.get(s, True)
@@ -333,11 +384,15 @@ class WindowGraph(QMainWindow):
             self.canvas.mpl_disconnect(self.cid)
         # self.cid = self.canvas.mpl_connect("motion_notify_event", self.on_mouse_move)
 
+        logger.debug(
+            f"plot_graphs: завершено, всего линий на графике: {len(self.lines_list)}"
+        )
+
     def set_graph_title(self) -> None:
         """Установка заголовка графика на основе имени файла."""
         filename = self.filenames[0]
 
-        patterns = [
+        patterns: List[Any] = [
             # "ШУР41" -> ТГ-4/ШУР-1
             (r"ШУР(\d)(\d)", lambda m: f"ТГ-{m.group(1)}/ШУР-{m.group(2)}"),
             # "ТГ41" -> ТГ-4/ШУР-1
@@ -356,6 +411,7 @@ class WindowGraph(QMainWindow):
             else:
                 title = "Тестовый файл"
 
+        logger.debug(f"set_graph_title: файл={filename!r} -> заголовок={title!r}")
         self.figure.suptitle(title, y=1.02)
 
     def on_mouse_move(self, event) -> None:
@@ -392,6 +448,9 @@ class WindowGraph(QMainWindow):
                 idx = int(np.nanargmin(np.abs(x_numeric - x)))
                 vline_x = x_numeric[idx]
         except Exception:
+            logger.debug(
+                "on_mouse_move: не удалось вычислить числовой индекс", exc_info=True
+            )
             idx = None
 
         if idx is None:
@@ -429,22 +488,36 @@ class WindowGraph(QMainWindow):
 
     def analyze_regulator(self) -> None:
         """Обработчик нажатия кнопки анализа регулятора."""
-        self.analyzer.save_to_pdf()
+        logger.info(f"analyze_regulator: запуск анализа, файлы={self.filenames}")
+        try:
+            self.analyzer.save_to_pdf()
+            logger.info("analyze_regulator: анализ успешно завершён")
+        except Exception:
+            logger.exception("analyze_regulator: ошибка при выполнении анализа")
+            raise
+
+    def _build_plot_filename(self) -> Path:
+        """Формирует путь для сохранения графика на основе имён сигналов."""
+        base = Path(PLOT_FILENAME)
+
+        def sanitize(name: str) -> str:
+            """Убирает символы, недопустимые в именах файлов."""
+            return re.sub(r"[^\w\-]", "_", name).strip("_")
+
+        all_signals = self.base_signals + self.secondary_signals
+        signals_part = "_".join(sanitize(s) for s in all_signals if s)
+
+        new_stem = f"{signals_part}_" if signals_part else base.stem
+        return base.with_name(new_stem + base.suffix)
 
     def _save_plot(self) -> None:
-        """Сохранение графика в PNG для вставки в PDF.
-
-        Сохраняет изображение в папку <PROJECT_ROOT>/reports по умолчанию.
-        Обновляет атрибут self.saved_plot_path с полным путём к сохранённому файлу.
-        """
+        """Сохранение графика в PNG для вставки в PDF."""
+        save_path = self._build_plot_filename()
         try:
-            # os.makedirs(REPORT_DIR, exist_ok=True)
-            # Сохраняем текущую фигуру
-            self.figure.savefig(PLOT_FILENAME, bbox_inches="tight", dpi=150)
-            print(f"Plot saved to {PLOT_FILENAME}")
-        except Exception as e:
-            # Простая обработка ошибок — вывести в консоль. GUI-логирование можно добавить позже.
-            print(f"Ошибка при сохранении графика: {e}")
+            self.figure.savefig(save_path, bbox_inches="tight", dpi=150)
+            logger.info(f"_save_plot: график сохранён -> {save_path}")
+        except Exception:
+            logger.exception("_save_plot: ошибка при сохранении графика")
 
 
 def main() -> None:
