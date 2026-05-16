@@ -21,18 +21,16 @@
  ┃ ┣ logic
  ┃ ┃ ┣ logic.py
  ┃ ┃ ┗ regulator_analyzer.py
- ┃ ┣ logs
- ┃ ┃ ┗ app.log
  ┃ ┣ model
  ┃ ┃ ┗ basemodel.py
  ┃ ┣ ui
  ┃ ┃ ┣ graph_matplot.py
  ┃ ┃ ┗ MainWindowUI.py
  ┃ ┣ main.py
- ┃ ┣ settings.json
  ┃ ┗ _version.py
  ┣ .gitignore
  ┣ .python-version
+ ┣ .pre-commit-config.yaml
  ┣ build.py
  ┣ pyproject.toml
  ┣ Readme.md
