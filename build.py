@@ -34,11 +34,12 @@ def get_include_files() -> List[Tuple[str, str]]:
     config_path = os.path.join(project_root, "settings.json")
     if os.path.exists(config_path):
         files.append((config_path, "settings.json"))
-
     relnote = os.path.join(project_root, "docs", "RelNote.txt")
     if os.path.isfile(relnote):
         files.append((relnote, "docs/RelNote.txt"))
-
+    readme = os.path.join(project_root, "docs", "Readme.md")
+    if os.path.isfile(readme):
+        files.append((readme, "docs/Readme.md"))
     revision = os.path.join(src_root, "_revision.py")
     if os.path.isfile(revision):
         files.append((revision, "docs/_revision.py"))
