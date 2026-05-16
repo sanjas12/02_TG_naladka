@@ -19,7 +19,7 @@ repos:
 
   # --- Форматирование Python (Ruff) ---
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.10
+    rev: v0.15.12
     hooks:
       - id: ruff                       # линтер (заменяет flake8, isort, pyupgrade)
         args: ["--fix", "--exit-non-zero-on-fix"]
