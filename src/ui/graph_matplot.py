@@ -22,6 +22,7 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QMessageBox,
     QPushButton,
     QScrollArea,
     QVBoxLayout,
@@ -36,6 +37,7 @@ from config.config import (  # noqa: E402
     COMBINED_TIME,
     GSM_A_CUR,
     GSM_B_CUR,
+    PDF_FILENAME,
     PLOT_FILENAME,
     TICK_MARK_COUNT_X,
     TICK_MARK_COUNT_Y,
@@ -83,16 +85,9 @@ class WindowGraph(QMainWindow):
         self.step = int(step)
         self.filenames = filenames
         self.enable_analys = enable_analys
+        self.save_path_plot: Optional[Path] = None
 
-        if self.enable_analys:
-            logger.debug("Инициализация RegulatorAnalyzer")
-            self.analyzer = RegulatorAnalyzer(
-                self.data[COMBINED_TIME].to_numpy(),
-                self.data[GSM_A_CUR].to_numpy(),
-                self.data[GSM_B_CUR].to_numpy(),
-                self.data[ANALYS_AIM].to_numpy(),
-                self.filenames,
-            )
+        self.analyzer: RegulatorAnalyzer
 
         self.lines_list: List = []
         self.checkboxes: dict[str, QCheckBox] = {}
@@ -488,10 +483,22 @@ class WindowGraph(QMainWindow):
 
     def analyze_regulator(self) -> None:
         """Обработчик нажатия кнопки анализа регулятора."""
+        if self.enable_analys:
+            logger.debug("Инициализация RegulatorAnalyzer")
+            self.analyzer = RegulatorAnalyzer(
+                self.data[COMBINED_TIME].to_numpy(),
+                self.data[GSM_A_CUR].to_numpy(),
+                self.data[GSM_B_CUR].to_numpy(),
+                self.data[ANALYS_AIM].to_numpy(),
+                self.filenames,
+                plot_file=self.save_path_plot,
+            )
         logger.info(f"analyze_regulator: запуск анализа, файлы={self.filenames}")
         try:
             self.analyzer.save_to_pdf()
-            logger.info("analyze_regulator: анализ успешно завершён")
+            self.dialog_box(
+                f"Анализ регулятора успешно завершён\nОтчет сохранен в {PDF_FILENAME}"
+            )
         except Exception:
             logger.exception("analyze_regulator: ошибка при выполнении анализа")
             raise
@@ -512,12 +519,15 @@ class WindowGraph(QMainWindow):
 
     def _save_plot(self) -> None:
         """Сохранение графика в PNG для вставки в PDF."""
-        save_path = self._build_plot_filename()
+        self.save_path_plot = self._build_plot_filename()
         try:
-            self.figure.savefig(save_path, bbox_inches="tight", dpi=150)
-            logger.info(f"_save_plot: график сохранён -> {save_path}")
+            self.figure.savefig(self.save_path_plot, bbox_inches="tight", dpi=150)
+            logger.info(f"_save_plot: график сохранён -> {self.save_path_plot}")
         except Exception:
             logger.exception("_save_plot: ошибка при сохранении графика")
+
+    def dialog_box(self, text: str) -> None:
+        QMessageBox.information(self, "TG_info", text, QMessageBox.StandardButton.Ok)
 
 
 def main() -> None:
