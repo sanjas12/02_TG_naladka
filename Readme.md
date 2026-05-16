@@ -7,44 +7,65 @@ GUI: Qt5.
 Поддерживает форматы CSV, GZ, TXT.
 
 
-## Usage (Repository)
+## Установка (из репозитория)
 
-### Prerequisites:
-- Python >= 3.8.10
+### 1. Требования
 
-- 0S >= Windows 7
+| Параметр | Значение |
+|---|---|
+| Python | 3.8.10 |
+| ОС | Windows 7 и выше |
+| [uv](https://github.com/astral-sh/uv) | 0.11.7 |
 
-### Installation
-С uv (рекомендуется):
-    uv sync
+### 2. Настройка окружения
+
+#### 2.1 Создание виртуального окружения (VSCode)
+
+```bash
+bash scripts/venv_pip.sh
+```
+
+#### 2.2 Установка зависимостей (если скрипт из пункта 2.1 не сработал)
+
+Рекомендуется — через [uv](https://github.com/astral-sh/uv):
+
+```bash
+uv sync
+```
 
 Без uv:
-    pip install -r requirements.txt
-    # requirements.txt сгенерирован из pyproject.toml, не редактировать вручную
 
-## Usage (Windows - exe)
+```bash
+pip install -r requirements.txt
+```
 
-### Prerequisites:
-- Visual C++ 2015-2022
+> `requirements.txt` генерируется из `pyproject.toml` — не редактировать вручную.
 
-- 0S >= Windows 7
+### 3. Запуск
+
+```bash
+python main.py
+```
+
+---
+
+## Использование (Windows — exe)
+
+### Требования
+
+- [Visual C++ Redistributable 2015–2022](https://aka.ms/vs/17/release/vc_redist.x64.exe)
+- ОС: Windows 7 и выше
 
 
 TODO
 1. Узнать сколько памяти использует программа (memory_profiler и psutil)
-2. перейти на timeit
-3. добавить логирование ()
 4. Matplotlib заменить на PyQtGrath
 5. Сделать аналогичную версию на С++
 6. Сделать серверную службу
 7. Сделать десктопную версию
 8. Сделать мобильную версию
 9. Добавить тесты
-10. Поиск в списке сигналов (Qtablewidget) https://stackoverflow.com/questions/51613638/highlight-search-results-in-qtablewidgetselect-and-highlight-that-text-or-chara
 11. Портировать на Linux(Astra и Ubuntu)
-13. перейти на polars для версии по Win_11 для загрузки данных из csv
-14. перейти на uv
-15. добавить pre commit.yaml
 
 
 ## old
