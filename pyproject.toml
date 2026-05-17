@@ -85,3 +85,35 @@ ignore = ["E501", "UP006", "UP045"]
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
+
+# авто релиз
+[tool.semantic_release]
+version_toml = []
+# Основная ветка
+branch = "main"
+
+# Conventional Commits
+commit_parser = "conventional"
+
+# Не публикуем в PyPI
+upload_to_pypi = false
+
+# Не запускаем build автоматически
+build_command = false
+
+# Файлы, где хранится версия
+version_variables = [
+    "src/_version.py:__version__"
+]
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+
+# Текущая версия
+version = "0.1.0"
+
+# Какие файлы обновлять
+version_files = [
+    "__version__",
+    "src/_version.py"
+]
