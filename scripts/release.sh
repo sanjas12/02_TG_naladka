@@ -157,7 +157,7 @@ esac
 verify_versions() {
     local expected=$1
 
-    VER_TOML=$(grep '^version' pyproject.toml | head -1 | awk -F'"' '{print $2}')
+    VER_TOML=$(grep '^version = ' pyproject.toml | awk -F'"' '{print $2}')
     VER_PY=$(grep '__version__' src/_version.py | head -1 | awk -F'"' '{print $2}')
 
     log_info "Проверка версий после bump:"
@@ -175,7 +175,7 @@ verify_versions() {
     fi
 }
 
-NEW_VERSION=$(grep '^version' pyproject.toml | head -1 | awk -F'"' '{print $2}')
+NEW_VERSION=$(grep '^version = ' pyproject.toml | awk -F'"' '{print $2}')
 verify_versions "$NEW_VERSION"
 
 # ─── Push ─────────────────────────────────────────────────────
