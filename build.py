@@ -36,7 +36,7 @@ def get_include_files() -> List[Tuple[str, str]]:
         files.append((config_path, "settings.json"))
     relnote = os.path.join(project_root, "docs", "CHANGELOG.md")
     if os.path.isfile(relnote):
-        files.append((relnote, "docs/RelNote.txt"))
+        files.append((relnote, "docs/CHANGELOG.md"))
     readme = os.path.join(project_root, "docs", "Readme.md")
     if os.path.isfile(readme):
         files.append((readme, "docs/Readme.md"))
