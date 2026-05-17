@@ -118,6 +118,9 @@ version_files = [
     "src/_version.py"
 ]
 
+changelog_file = "docs/CHANGELOG.md"
+update_changelog_on_bump = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]          # чтобы импорты из src/ работали без установки пакета
