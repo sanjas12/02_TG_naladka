@@ -16,9 +16,10 @@ PIP_VERSION="25.0.1"
 activate_venv() {
     if [[ -f ".venv/Scripts/activate" ]]; then
         source .venv/Scripts/activate
-        echo "venv актививарона"
+        echo "venv активирована (Windows)"
     elif [[ -f ".venv/bin/activate" ]]; then
         source .venv/bin/activate
+        echo "venv активирована (Linux/Mac)"
     else
         echo "❌ activate не найден"
         exit 1
@@ -30,7 +31,7 @@ log() {
 }
 
 # --- CLEAN ---
-log "🧹 удаляем .venv"
+log "удаляем .venv ..."
 rm -rf .venv
 
 # --- DETECT UV ---
@@ -51,6 +52,7 @@ EOF
 NET_OK=$?
 set -e
 
+# --- DETECT PROJECT TYPE ---
 [ -f "pyproject.toml" ] && USE_PYPROJECT=1 || USE_PYPROJECT=0
 
 if [ $USE_PYPROJECT -eq 0 ] && [ ! -f "requirements.txt" ]; then
@@ -67,12 +69,12 @@ fi
 USE_OFFLINE=0
 [ $NET_OK -ne 0 ] && USE_OFFLINE=1
 
-# --- COMMON ARGS ---
 PIP_ARGS=()
 [ $USE_OFFLINE -eq 1 ] && PIP_ARGS+=(--no-index --find-links="$LOCAL_PACKAGES_DIR")
 
-# --- INSTALL FUNCS ---
-
+# ─────────────────────────────────────────────────────────────────────────────
+# INSTALL WITH UV
+# ─────────────────────────────────────────────────────────────────────────────
 install_with_uv() {
     log "⚡ uv режим"
 
@@ -91,8 +93,11 @@ install_with_uv() {
     fi
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# INSTALL WITH PIP
+# ─────────────────────────────────────────────────────────────────────────────
 install_with_pip() {
-    log "🐍 pip режим"
+    log "установка через pip"
 
     python -m venv .venv
     activate_venv
@@ -111,9 +116,39 @@ install_with_pip() {
     pip install "${PIP_ARGS[@]}" -r requirements.txt
 }
 
-# --- RUN ---
-log "=== START ==="
+# ─────────────────────────────────────────────────────────────────────────────
+# INSTALL GIT HOOKS
+# ─────────────────────────────────────────────────────────────────────────────
+install_hooks() {
+    log "🔗 установка git hooks"
 
-[ $HAS_UV -eq 1 ] && install_with_uv || install_with_pip
+    if [ ! -d ".git" ]; then
+        echo "❌ это не git репозиторий"
+        exit 1
+    fi
 
-log "✅ ГОТОВО"
+    if command -v uv >/dev/null 2>&1; then
+        uv run pre-commit install
+        uv run pre-commit install --hook-type commit-msg
+    else
+        pre-commit install
+        pre-commit install --hook-type commit-msg
+    fi
+
+    log "✅ git hooks установлены"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RUN
+# ─────────────────────────────────────────────────────────────────────────────
+log "=== START BOOTSTRAP ==="
+
+if [ $HAS_UV -eq 1 ]; then
+    install_with_uv
+else
+    install_with_pip
+fi
+
+install_hooks
+
+log "🎉 ГОТОВО: окружение + зависимости + git hooks готовы"
