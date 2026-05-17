@@ -57,7 +57,7 @@ log_ok "master актуален"
 # ─── Тесты ────────────────────────────────────────────────────
 echo ""
 log_info "Запускаем тесты"
-if ! uv run pytest --no-cov; then
+if ! uv run pytest; then
     log_error "Тесты не прошли! Релиз отменён."
     exit 1
 fi
