@@ -90,7 +90,7 @@ indent-style = "space"
 [tool.semantic_release]
 version_toml = []
 # Основная ветка
-branch = "main"
+branch = "master"
 
 # Conventional Commits
 commit_parser = "conventional"
@@ -103,6 +103,7 @@ build_command = false
 
 # Файлы, где хранится версия
 version_variables = [
+    "__version__",
     "src/_version.py:__version__"
 ]
 
