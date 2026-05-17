@@ -35,6 +35,9 @@ wheels/
 *.egg
 MANIFEST
 
+# Pytest
+.coverage
+
 # Project
 logs/
 *.pdf

@@ -10,6 +10,15 @@ git checkout master
 git pull origin master
 
 echo ""
+echo "=== Запускаем тесты ==="
+uv run pytest
+if [ $? -ne 0 ]; then
+    echo "❌ Тесты не прошли! Релиз отменён."
+    exit 1
+fi
+echo "✅ Тесты прошли успешно"
+
+echo ""
 echo "=== Коммиты с последнего релиза ==="
 git log $(git describe --tags --abbrev=0)..HEAD --oneline
 

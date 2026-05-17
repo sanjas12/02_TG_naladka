@@ -4,6 +4,7 @@
  ┃ ┣ bug-006.md
  ┃ ┗ bug_traker
  ┣ docs
+ ┃ ┣ Readme.md
  ┃ ┗ RelNote.txt
  ┣ input
  ┃ ┣ analys
@@ -28,6 +29,19 @@
  ┃ ┃ ┗ MainWindowUI.py
  ┃ ┣ main.py
  ┃ ┗ _version.py
+ ┣ tests
+ ┃ ┣ fixtures
+ ┃ ┃ ┗ sample.csv
+ ┃ ┣ gui
+ ┃ ┃ ┗ test_main_window.py
+ ┃ ┣ integration
+ ┃ ┃ ┗ test_pipeline.py
+ ┃ ┣ unit
+ ┃ ┃ ┣ test_basemodel.py
+ ┃ ┃ ┣ test_config.py
+ ┃ ┃ ┣ test_logic.py
+ ┃ ┃ ┗ test_regulator_analyzer.py
+ ┃ ┗ conftest.py
  ┣ .gitignore
  ┣ .python-version
  ┣ .pre-commit-config.yaml
