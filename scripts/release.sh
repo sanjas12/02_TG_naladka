@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# Переходим в корень проекта (папка выше scripts/)
+cd "$(dirname "$0")/.."
+
 # Фикс кодировки для Windows
 export PYTHONIOENCODING=utf-8
 export PYTHONUTF8=1
