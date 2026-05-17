@@ -4,7 +4,7 @@ import subprocess
 from functools import lru_cache
 
 __app_name__ = "TG-Naladka"
-__version__ = "0.3.1"
+__version__ = "0.4.1"
 
 GIT_REVISION_CMD: tuple[str, ...] = ("git", "rev-list", "--count", "HEAD")
 
