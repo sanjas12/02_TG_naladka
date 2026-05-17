@@ -108,7 +108,7 @@ build_command = false
 name = "cz_conventional_commits"
 
 # Текущая версия
-version = "0.3.1"
+version = "0.4.0"
 
 # Какие файлы обновлять
 version_files = [
