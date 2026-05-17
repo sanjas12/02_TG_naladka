@@ -16,7 +16,7 @@ repos:
       - id: detect-private-key         # предотвращает коммит приватных ключей
       - id: mixed-line-ending          # нормализует окончания строк
         args: ["--fix=lf"]
-        exclude: ^docs/CHANGELOG\.md$
+        exclude: ^(docs/CHANGELOG\.md|src/_version\.py)$
 
   # --- Форматирование Python (Ruff) ---
   - repo: https://github.com/astral-sh/ruff-pre-commit
