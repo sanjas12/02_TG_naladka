@@ -743,7 +743,6 @@ name = "tg-naladka"
 source = { editable = "." }
 dependencies = [
     { name = "chardet", marker = "sys_platform == 'win32'" },
-    { name = "commitizen", marker = "sys_platform == 'win32'" },
     { name = "contourpy", marker = "sys_platform == 'win32'" },
     { name = "cycler", marker = "sys_platform == 'win32'" },
     { name = "fonttools", marker = "sys_platform == 'win32'" },
@@ -762,7 +761,6 @@ dependencies = [
     { name = "pyqt5-qt5", marker = "sys_platform == 'win32'" },
     { name = "pyqt5-sip", marker = "sys_platform == 'win32'" },
     { name = "python-dateutil", marker = "sys_platform == 'win32'" },
-    { name = "python-semantic-release", marker = "sys_platform == 'win32'" },
     { name = "pytz", marker = "sys_platform == 'win32'" },
     { name = "pywin32", marker = "sys_platform == 'win32'" },
     { name = "reportlab", marker = "sys_platform == 'win32'" },
@@ -778,13 +776,14 @@ build = [
     { name = "cx-freeze", marker = "sys_platform == 'win32'" },
 ]
 dev = [
+    { name = "commitizen", marker = "sys_platform == 'win32'" },
     { name = "pre-commit", marker = "sys_platform == 'win32'" },
+    { name = "python-semantic-release", marker = "sys_platform == 'win32'" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "chardet", specifier = "==5.2.0" },
-    { name = "commitizen", specifier = ">=3.27.0" },
     { name = "contourpy", specifier = "==1.1.1" },
     { name = "cycler", specifier = "==0.11.0" },
     { name = "fonttools", specifier = "==4.38.0" },
@@ -803,7 +802,6 @@ requires-dist = [
     { name = "pyqt5-qt5", specifier = "==5.15.2" },
     { name = "pyqt5-sip", specifier = "==12.15.0" },
     { name = "python-dateutil", specifier = "==2.8.2" },
-    { name = "python-semantic-release", specifier = ">=9.3.1" },
     { name = "pytz", specifier = "==2025.2" },
     { name = "pywin32", marker = "sys_platform == 'win32'", specifier = "==310" },
     { name = "reportlab", specifier = "==3.6.12" },
@@ -816,7 +814,11 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 build = [{ name = "cx-freeze", marker = "sys_platform == 'win32'", specifier = "==7.2.10" }]
-dev = [{ name = "pre-commit", specifier = ">=2.0.0,<3.0.0" }]
+dev = [
+    { name = "commitizen", specifier = ">=3.27.0" },
+    { name = "pre-commit", specifier = ">=2.0.0,<3.0.0" },
+    { name = "python-semantic-release", specifier = ">=9.3.1" },
+]
 
 [[package]]
 name = "tomli"
