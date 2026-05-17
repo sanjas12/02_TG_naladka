@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# Фикс кодировки для Windows
+export PYTHONIOENCODING=utf-8
+export PYTHONUTF8=1
+
 echo "=== Переключаемся на master ==="
 git checkout master
 git pull origin master
