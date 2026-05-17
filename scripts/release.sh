@@ -1,4 +1,14 @@
 #!/bin/bash
+
+# 1. Логирование        — пишет лог в logs/release_ДАТА.log
+# 2. Git checkout       — переключается на master и pull
+# 3. Тесты              — pytest --no-cov, стоп если упали
+# 4. Коммиты            — показывает что войдёт в релиз
+# 5. Меню               — авто / PATCH / MINOR / MAJOR / вручную
+# 6. Bump               — cz bump с выбранным типом
+# 7. Проверка версий    — сравнивает pyproject.toml и _version.py
+# 8. Push               — только если версии совпали
+
 set -e
 
 # Переходим в корень проекта (папка выше scripts/)
@@ -18,7 +28,7 @@ log_warn()  { echo "[WARN]  $(date '+%H:%M:%S') $1"; }
 log_error() { echo "[ERROR] $(date '+%H:%M:%S') $1"; }
 
 # Ловим любой выход из скрипта
-trap 'if [ $? -ne 0 ]; then log_error "Скрипт упал на строке $LINENO. См. $LOG_FILE"; fi' EXIT
+trap 'EXIT_CODE=$?; if [ $EXIT_CODE -ne 0 ]; then log_error "Скрипт завершился с ошибкой (код $EXIT_CODE). См. $LOG_FILE"; fi' EXIT
 
 log_info "Запуск release.sh"
 log_info "Рабочая папка: $(pwd)"
@@ -47,7 +57,7 @@ log_ok "master актуален"
 # ─── Тесты ────────────────────────────────────────────────────
 echo ""
 log_info "Запускаем тесты"
-if ! uv run pytest; then
+if ! uv run pytest --no-cov; then
     log_error "Тесты не прошли! Релиз отменён."
     exit 1
 fi
@@ -57,7 +67,6 @@ log_ok "Тесты прошли успешно"
 echo ""
 log_info "Коммиты с последнего релиза:"
 
-# Защита от отсутствия тегов
 if ! git describe --tags --abbrev=0 > /dev/null 2>&1; then
     log_warn "Теги не найдены — показываем все коммиты"
     git log --oneline
@@ -143,6 +152,31 @@ case $choice in
         exit 1
         ;;
 esac
+
+# ─── Проверка версий после bump ───────────────────────────────
+verify_versions() {
+    local expected=$1
+
+    VER_TOML=$(grep '^version' pyproject.toml | head -1 | awk -F'"' '{print $2}')
+    VER_PY=$(grep '__version__' src/_version.py | head -1 | awk -F'"' '{print $2}')
+
+    log_info "Проверка версий после bump:"
+    log_info "  pyproject.toml  → $VER_TOML"
+    log_info "  src/_version.py → $VER_PY"
+
+    if [ "$VER_TOML" = "$expected" ] && [ "$VER_PY" = "$expected" ]; then
+        log_ok "Версии совпадают: $expected ✅"
+    else
+        log_error "Версии НЕ совпадают!"
+        log_error "  Ожидалось:      $expected"
+        log_error "  pyproject.toml: $VER_TOML"
+        log_error "  _version.py:    $VER_PY"
+        exit 1
+    fi
+}
+
+NEW_VERSION=$(grep '^version' pyproject.toml | head -1 | awk -F'"' '{print $2}')
+verify_versions "$NEW_VERSION"
 
 # ─── Push ─────────────────────────────────────────────────────
 log_info "Пушим в remote"
