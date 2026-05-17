@@ -88,9 +88,11 @@ indent-style = "space"
 
 # авто релиз
 [tool.semantic_release]
-version_toml = []
+# Файлы, где хранится версия
+version_variables = ["src/_version.py:__version__"]
 # Основная ветка
 branch = "master"
+changelog_file = "docs/CHANGELOG.md"
 
 # Conventional Commits
 commit_parser = "conventional"
@@ -101,17 +103,12 @@ upload_to_pypi = false
 # Не запускаем build автоматически
 build_command = false
 
-# Файлы, где хранится версия
-version_variables = [
-    "__version__",
-    "src/_version.py:__version__"
-]
 
 [tool.commitizen]
 name = "cz_conventional_commits"
 
 # Текущая версия
-version = "0.1.0"
+version = "0.3.1"
 
 # Какие файлы обновлять
 version_files = [
