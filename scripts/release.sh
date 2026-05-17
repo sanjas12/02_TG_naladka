@@ -180,7 +180,7 @@ verify_versions "$NEW_VERSION"
 
 # ─── Push ─────────────────────────────────────────────────────
 log_info "Пушим в remote"
-if ! git push origin master --follow-tags; then
+if ! git push origin master && git push origin --tags; then
     log_error "Не удалось выполнить git push"
     exit 1
 fi
