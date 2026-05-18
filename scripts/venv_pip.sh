@@ -8,11 +8,11 @@ set -e
 
 cd "$(dirname "$0")/.." || exit 1
 
-# --- CONFIG ---
-LOCAL_PACKAGES_DIR="/d/temp/python_Library"
-PIP_VERSION="25.0.1"
+# ── Вспомогательные функции ───────────────────────────────────────────────────
+log() {
+    echo -e "$1"
+}
 
-# ── Активация venv ────────────────────────────────────────────────────────────
 activate_venv() {
     if [[ -f ".venv/Scripts/activate" ]]; then
         source .venv/Scripts/activate
@@ -26,9 +26,23 @@ activate_venv() {
     fi
 }
 
-log() {
-    echo -e "$1"
-}
+# --- CONFIG ---
+PIP_VERSION="25.0.1"
+
+# Поиск LOCAL_PACKAGES_DIR на дисках D, E, F
+LOCAL_PACKAGES_DIR=""
+for drive in d e f; do
+    candidate="/$drive/temp/python_Library"
+    if [[ -d "$candidate" ]]; then
+        LOCAL_PACKAGES_DIR="$candidate"
+        log "📦 локальный каталог найден: $LOCAL_PACKAGES_DIR"
+        break
+    fi
+done
+
+if [[ -z "$LOCAL_PACKAGES_DIR" ]]; then
+    log "⚠ локальный каталог python_Library не найден ни на одном из дисков (d/e/f)"
+fi
 
 # --- CLEAN ---
 log "удаляем .venv ..."
