@@ -64,6 +64,7 @@ class MainWindowUI(QMainWindow):
         super().__init__()
         self.progress_dialog: Optional[QProgressDialog] = None
         self.worker_thread: Optional[WorkerThread] = None
+        self._version = version
         print(version)
         self.setup_ui(version)
 
@@ -132,7 +133,7 @@ class MainWindowUI(QMainWindow):
         self.setCentralWidget(wid)
 
     def _setup_menu(self) -> None:
-        """Создаёт меню-бар с выпадающим меню «Анализ»."""
+        """Создаёт меню-бар с пунктами «Файл», «Анализ» и «О программе»."""
         menu_bar: QMenuBar = self.menuBar()
 
         menu_bar.setStyleSheet(
@@ -150,6 +151,21 @@ class MainWindowUI(QMainWindow):
             """
         )
 
+        # ── Файл ──────────────────────────────────────────────────────────────
+        file_menu: QMenu = menu_bar.addMenu("Файл")
+
+        self.action_open = QAction("Открыть", self)
+        self.action_open.setShortcut("Ctrl+O")
+        file_menu.addAction(self.action_open)
+
+        file_menu.addSeparator()
+
+        self.action_exit = QAction("Выход", self)
+        self.action_exit.setShortcut("Ctrl+Q")
+        self.action_exit.triggered.connect(self.close)
+        file_menu.addAction(self.action_exit)
+
+        # ── Анализ ────────────────────────────────────────────────────────────
         analysis_menu: QMenu = menu_bar.addMenu("Анализ")
 
         self.action_analysis_rk_kalina_4 = QAction("Анализ РK Калина 4", self)
@@ -157,6 +173,22 @@ class MainWindowUI(QMainWindow):
 
         self.action_analysis_sarz_kuaes = QAction("Анализ САРЗ Курская", self)
         analysis_menu.addAction(self.action_analysis_sarz_kuaes)
+
+        # ── О программе ───────────────────────────────────────────────────────
+        about_menu: QMenu = menu_bar.addMenu("О программе")
+
+        self.action_about = QAction("О программе", self)
+        self.action_about.triggered.connect(self._show_about)
+        about_menu.addAction(self.action_about)
+
+    def _show_about(self) -> None:
+        """Показывает диалог с информацией о программе."""
+        QMessageBox.about(
+            self,
+            "О программе",
+            f"<b>Версия:</b> {self._version}<br><br>"
+            "Программа для анализа и визуализации сигналов.",
+        )
 
     # ================= Модальный прогресс ===================
     def start_modal_progress(
