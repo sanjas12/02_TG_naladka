@@ -5,6 +5,7 @@ from typing import Callable, Dict, Optional, Union
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtWidgets import (
     QAbstractItemView,
+    QAction,
     QApplication,
     QCheckBox,
     QGridLayout,
@@ -13,6 +14,8 @@ from PyQt5.QtWidgets import (
     QLabel,
     QLineEdit,
     QMainWindow,
+    QMenu,
+    QMenuBar,
     QMessageBox,
     QProgressDialog,
     QPushButton,
@@ -23,6 +26,8 @@ from PyQt5.QtWidgets import (
 
 from _version import __revision__, __version__
 from config.config import AxeName
+
+FuncType = Union[Callable[[], None], Callable[[QTableWidget, Dict[str, int]], None]]
 
 
 class WorkerThread(QThread):
@@ -65,13 +70,16 @@ class MainWindowUI(QMainWindow):
     def setup_ui(self, version: str) -> None:
         self.setWindowTitle(version)
 
+        # Меню
+        self._setup_menu()
+
         # Группы
         self.gb_signals = MyGroupBox(
             title=AxeName.LIST_SIGNALS.value,
             name_first_button="Open files",
             enable_second_btn=False,
             enable_analyzer=False,
-            enable_filter=True,  # включаем фильтр
+            enable_filter=True,
         )
         self.gb_base_axe = MyGroupBox(title=AxeName.BASE_AXE.value)
         self.gb_secondary_axe = MyGroupBox(
@@ -122,6 +130,33 @@ class MainWindowUI(QMainWindow):
         wid = QWidget(self)
         wid.setLayout(main_layout)
         self.setCentralWidget(wid)
+
+    def _setup_menu(self) -> None:
+        """Создаёт меню-бар с выпадающим меню «Анализ»."""
+        menu_bar: QMenuBar = self.menuBar()
+
+        menu_bar.setStyleSheet(
+            """
+            QMenuBar {
+                background-color: transparent;
+            }
+            QMenuBar::item {
+                background-color: transparent;
+            }
+            QMenuBar::item:selected {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+            }
+            """
+        )
+
+        analysis_menu: QMenu = menu_bar.addMenu("Анализ")
+
+        self.action_analysis_rk_kalina_4 = QAction("Анализ РK Калина 4", self)
+        analysis_menu.addAction(self.action_analysis_rk_kalina_4)
+
+        self.action_analysis_sarz_kuaes = QAction("Анализ САРЗ Курская", self)
+        analysis_menu.addAction(self.action_analysis_sarz_kuaes)
 
     # ================= Модальный прогресс ===================
     def start_modal_progress(
@@ -230,14 +265,9 @@ class MyGroupBox(QGroupBox):
         self._enable_second_btn = value
         self.btn_second.setVisible(value)
 
-    FuncType = Union[Callable[[], None], Callable[[QTableWidget, Dict[str, int]], None]]
-
-    def add_func_to_btn(self, btn: QPushButton, func: FuncType) -> None:
+    def add_func_to_btn(self, btn: QPushButton, func: Callable[[], None]) -> None:
         """Добавляет функцию к кнопке."""
-        if func:
-            btn.clicked.connect(lambda: func())
-        else:
-            btn.clicked.connect(lambda: print("Функция не определена"))
+        btn.clicked.connect(lambda: func())  # type: ignore[operator]
 
     def _apply_filter(self, text: str) -> None:
         """Фильтрует строки таблицы по имени сигнала."""
@@ -279,7 +309,7 @@ class TestMyGroupBox(QMainWindow):
         container.setLayout(self.layout)
         self.setCentralWidget(container)
 
-    def test(self, text):
+    def test(self, text: str) -> None:
         print(text)
 
 
@@ -301,7 +331,7 @@ if __name__ == "__main__":
     # для тестирования главного окна
     main_window = MainWindowUI()
 
-    def test(text: str):
+    def test(text: str) -> None:
         print(text + "  some text")
 
     def disable_button(gb: MyGroupBox) -> None:
