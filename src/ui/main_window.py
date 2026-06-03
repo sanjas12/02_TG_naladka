@@ -155,11 +155,18 @@ class MainWindowUI(QMainWindow):
         # ── Анализ ────────────────────────────────────────────────────────────
         analysis_menu: QMenu = menu_bar.addMenu("Анализ")
 
-        self.action_analysis_rk_kalina_4 = QAction("Анализ РK Калина 4", self)
+        self.action_analysis_rk_kalina_4 = QAction("РK Калина 4", self)
         analysis_menu.addAction(self.action_analysis_rk_kalina_4)
 
-        self.action_analysis_sarz_kuaes = QAction("Анализ САРЗ Курская", self)
-        analysis_menu.addAction(self.action_analysis_sarz_kuaes)
+        # Подменю «Анализ САРЗ Курская»
+        sarz_kuaes_menu: QMenu = analysis_menu.addMenu("САРЗ Курская")
+
+        self.action_analysis_sarz_kuaes_gsm = QAction("Анализ регулятора ГСМ", self)
+        sarz_kuaes_menu.addAction(self.action_analysis_sarz_kuaes_gsm)
+
+        self.action_analysis_sarz_kuaes_test = QAction("Тест", self)
+        self.action_analysis_sarz_kuaes_test.setEnabled(False)
+        sarz_kuaes_menu.addAction(self.action_analysis_sarz_kuaes_test)
 
         # ── О программе ───────────────────────────────────────────────────────
         about_menu: QMenu = menu_bar.addMenu("О программе")
@@ -305,18 +312,7 @@ class TestMyGroupBox(QMainWindow):
         super().__init__()
         self.setWindowTitle("My App")
 
-        # self.layout = QVBoxLayout()
-        # for _ in range(3):
-        #     btn = QPushButton(str(_))
-        #     self.layout.addWidget(btn)
-
         self.layout = QHBoxLayout()
-
-        # self.my_group = MyGroupBox("test", "какая-то ось")
-        # self.layout.addWidget(self.my_group)
-        # for axe in AxeName:
-        #     _ = MyGroupBox(title=axe.value)
-        #     self.layout.addWidget(_)
 
         self.gb_base_axe = MyGroupBox("Base Axe")
         self.gb_secondary_axe = MyGroupBox("Secondary Axe")
@@ -334,18 +330,6 @@ class TestMyGroupBox(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-
-    # для тестирования 3-x myGroupBox создан класс TestMyGroupBox
-    # window = TestMyGroupBox()    # для тестирования 3-x myGroupBox создан класс MainWindow
-    # window.show()             # для тестирования 3-x myGroupBox
-
-    # для тестирования одного myGroupBox
-    # box = MyGroupBox(button_add_name="1 кнопка", title="заголовок", enable_btns=True)
-    # box.add_func_to_btn(box.btn_first, lambda: test("add"))
-    # box.add_func_to_btn(box.btn_second, lambda: test("remove"))
-    # box.show()
-    # def test(text):
-    #    print(text + "  some text")
 
     # для тестирования главного окна
     main_window = MainWindowUI()
