@@ -154,21 +154,35 @@ class MainWindowUI(QMainWindow):
         # ── Анализ ────────────────────────────────────────────────────────────
         analysis_menu: QMenu = menu_bar.addMenu("Анализ")
 
-        self.action_analysis_rk_kalina_4 = QAction("РК Калина 4", self)
-        analysis_menu.addAction(self.action_analysis_rk_kalina_4)
+        rk_kalina_4: QMenu = analysis_menu.addMenu("РК Калина 4")
 
-        # ── Подменю САРЗ Курская ─────────────────────────────────────────────
+        self.action_analysis_sarz_gsm = QAction("Анализ регулятора ГСМ", self)
+        rk_kalina_4.addAction(self.action_analysis_sarz_gsm)
+
+        ##── Подменю САРЗ Курская ─────────────────────────────────────────────
         sarz_kuaes_menu: QMenu = analysis_menu.addMenu("САРЗ Курская")
 
         self.action_analysis_sarz_gsm = QAction("Анализ регулятора ГСМ", self)
         sarz_kuaes_menu.addAction(self.action_analysis_sarz_gsm)
 
-        # “Тест” — это НЕ QAction, а логическая группа
+        ## “Тест” — это НЕ QAction, а логическая группа
         sarz_kuaes_menu.addSeparator()
 
         self.action_sarz_kuaes_test = QAction("Тест", self)
         self.action_sarz_kuaes_test.setEnabled(False)
         sarz_kuaes_menu.addAction(self.action_sarz_kuaes_test)
+
+        # ── Быстрое добавление сигналов ────────────────────────────────────────────────────────────
+        quick_add_signals_menu: QMenu = menu_bar.addMenu("Добавление сигналов")
+
+        ##── Подменю РК Калина 4 ─────────────────────────────────────────────
+        rk_kalina4_menu: QMenu = quick_add_signals_menu.addMenu("РК Калина 4")
+
+        self.nd = QAction("ND", self)
+        rk_kalina4_menu.addAction(self.nd)
+
+        self.vd = QAction("VD", self)
+        rk_kalina4_menu.addAction(self.vd)
 
         # ── О программе ───────────────────────────────────────────────────────
         about_menu: QMenu = menu_bar.addMenu("О программе")
