@@ -134,7 +134,6 @@ class MainWindowUI(QMainWindow):
         self.setCentralWidget(wid)
 
     def _setup_menu(self) -> None:
-        """Создаёт меню-бар с пунктами «Файл», «Анализ» и «О программе»."""
         menu_bar: QMenuBar = self.menuBar()
         menu_bar.setStyleSheet(MENU_BAR_STYLE)
 
@@ -155,18 +154,21 @@ class MainWindowUI(QMainWindow):
         # ── Анализ ────────────────────────────────────────────────────────────
         analysis_menu: QMenu = menu_bar.addMenu("Анализ")
 
-        self.action_analysis_rk_kalina_4 = QAction("РK Калина 4", self)
+        self.action_analysis_rk_kalina_4 = QAction("РК Калина 4", self)
         analysis_menu.addAction(self.action_analysis_rk_kalina_4)
 
-        # Подменю «Анализ САРЗ Курская»
+        # ── Подменю САРЗ Курская ─────────────────────────────────────────────
         sarz_kuaes_menu: QMenu = analysis_menu.addMenu("САРЗ Курская")
 
-        self.action_analysis_sarz_kuaes_gsm = QAction("Анализ регулятора ГСМ", self)
-        sarz_kuaes_menu.addAction(self.action_analysis_sarz_kuaes_gsm)
+        self.action_analysis_sarz_gsm = QAction("Анализ регулятора ГСМ", self)
+        sarz_kuaes_menu.addAction(self.action_analysis_sarz_gsm)
 
-        self.action_analysis_sarz_kuaes_test = QAction("Тест", self)
-        self.action_analysis_sarz_kuaes_test.setEnabled(False)
-        sarz_kuaes_menu.addAction(self.action_analysis_sarz_kuaes_test)
+        # “Тест” — это НЕ QAction, а логическая группа
+        sarz_kuaes_menu.addSeparator()
+
+        self.action_sarz_kuaes_test = QAction("Тест", self)
+        self.action_sarz_kuaes_test.setEnabled(False)
+        sarz_kuaes_menu.addAction(self.action_sarz_kuaes_test)
 
         # ── О программе ───────────────────────────────────────────────────────
         about_menu: QMenu = menu_bar.addMenu("О программе")
