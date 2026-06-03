@@ -10,7 +10,8 @@ from PyQt5.QtWidgets import QApplication, QMessageBox
 import config.config as cfg
 from _version import __full_version__
 from logic.logic import MainLogic
-from ui.MainWindowUI import MainWindowUI
+from ui.main_window import MainWindowUI
+from ui.styles import app_stylesheet
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +92,7 @@ def log_startup_done(elapsed: float) -> None:
 
 def main() -> None:
     setup_logging()
-    
+
     log_startup_begin()
 
     cfg.load_runtime_settings()
@@ -101,7 +102,7 @@ def main() -> None:
 
     try:
         app = QApplication(sys.argv)
-        app.setStyleSheet(f"* {{ font-size: {cfg.FONT_SIZE}pt; font-family: Arial; }}")
+        app.setStyleSheet(app_stylesheet())
 
         main_window = MainWindowUI()
         MainLogic(main_window)

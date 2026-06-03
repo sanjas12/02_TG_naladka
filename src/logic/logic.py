@@ -1,21 +1,27 @@
+import gzip
 import logging
 import os
-import gzip
-from pathlib import Path
 import sys
+from pathlib import Path
+from typing import Dict, List, Optional, Union
+
 import chardet
 import pandas as pd
-from typing import List, Dict, Optional, Union
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QMessageBox, QFileDialog
+from PyQt5.QtWidgets import (
+    QApplication,
+    QFileDialog,
+    QMessageBox,
+    QTableWidget,
+    QTableWidgetItem,
+)
 
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-import config.config as cfg
-from model.basemodel import Model
-from ui.MainWindowUI import MainWindowUI, MyGroupBox
-from ui.graph_matplot import WindowGraph
+import config.config as cfg  # noqa: E402
+from model.basemodel import Model  # noqa: E402
+from ui.graph_matplot import WindowGraph  # noqa: E402
+from ui.main_window import MainWindowUI, MyGroupBox  # noqa: E402
 
 
 class FileHandler:
@@ -180,7 +186,7 @@ class PlotManager:
         )
 
         # Если архивы не сожержат колонки "дата время" берем из Qtable_time
-        self.model.time_signal = self.ui.gb_x_axe.qtable_axe.item(0,1).text()
+        self.model.time_signal = self.ui.gb_x_axe.qtable_axe.item(0, 1).text()
 
         if not base_signals and not secondary_signals:
             self.ui.show_error("Не выбраны сигналы для построения графика")
@@ -189,13 +195,19 @@ class PlotManager:
         self.model.step = 10
 
         # Проверка, если среди выбранных сигналов есть дла АНАЛИЗА РЕГУлятора
-        all_signals : List[str] = base_signals + secondary_signals + [self.model.time_signal]
+        all_signals: List[str] = (
+            base_signals + secondary_signals + [self.model.time_signal]
+        )
 
         if (cfg.ANALYS_AIM in all_signals) and (cfg.GSM_A_CUR in all_signals):
             self.model.ready_to_analysis = True
-            print("Среди выбранных сигналов есть данные для оценки качество регулятора ГСМ")
+            print(
+                "Среди выбранных сигналов есть данные для оценки качество регулятора ГСМ"
+            )
         else:
-            print("Среди выбранных сигналов нет данных для оценки качество регулятора ГСМ")
+            print(
+                "Среди выбранных сигналов нет данных для оценки качество регулятора ГСМ"
+            )
 
         # Запускаем прогресс-бар с количеством файлов
         self.ui.start_modal_progress(maximum=len(self.model.filenames))
@@ -286,7 +298,7 @@ class MainLogic:
     def __init__(self, ui: MainWindowUI):
         self.model = Model()
         self.ui = ui
-        self.graph_window = None
+        self.graph_window: Optional[WindowGraph] = None
 
         self.file_handler = FileHandler(self.model)
         self.signal_manager = SignalManager(self.model, self.ui)
@@ -296,13 +308,13 @@ class MainLogic:
 
     def _setup_connections(self) -> None:
         """Настраивает соединения сигналов и слотов"""
-        
+
         # кнопка Open files
         self.ui.gb_signals.btn_first.clicked.connect(self.load_and_prepare_data)
-        
+
         # кнопка Построить графики
         self.ui.button_graph.clicked.connect(self.plot_graph)
-        
+
         for group_box, dict_signal in zip(
             (self.ui.gb_base_axe, self.ui.gb_secondary_axe, self.ui.gb_x_axe),
             (self.model.dict_base_signals, self.model.dict_secondary_signals, dict()),
@@ -320,12 +332,16 @@ class MainLogic:
             # Добавляем сигналы только если они существуют в общем списке
             for signal_name in [cfg.ANALYS_AIM, cfg.GSM_A_CUR, cfg.GSM_B_CUR]:
                 if signal_name in self.model.dict_all_signals:
-                    self.add_signal(self.ui.gb_base_axe, self.model.dict_base_signals, signal_name)
+                    self.add_signal(
+                        self.ui.gb_base_axe, self.model.dict_base_signals, signal_name
+                    )
         else:
             # Удаляем сигналы только если они есть в группе
             for signal_name in [cfg.ANALYS_AIM, cfg.GSM_A_CUR, cfg.GSM_B_CUR]:
                 if signal_name in self.model.dict_base_signals:
-                    self.remove_signal(self.ui.gb_base_axe, self.model.dict_base_signals, signal_name)
+                    self.remove_signal(
+                        self.ui.gb_base_axe, self.model.dict_base_signals, signal_name
+                    )
 
     def load_and_prepare_data(self) -> None:
         """Основной метод загрузки и подготовки данных"""
@@ -380,12 +396,12 @@ class MainLogic:
         """
         1. Обновляет UI после загрузки данных
         2. Определяемся с данными для оси Времени
-        3. 
+        3.
         """
         self._update_qtable(self.ui.gb_signals, self.model.dict_all_signals)
         self._setup_time_axis()
         self.ui.button_graph.setEnabled(True)
-        if (cfg.ANALYS_AIM and cfg.GSM_A_CUR) in self.model.dict_all_signals.keys():
+        if (cfg.ANALYS_AIM and cfg.GSM_A_CUR) in self.model.dict_all_signals:
             self.ui.gb_base_axe.ch_analyzer.setEnabled(True)
 
     def _update_qtable(
@@ -427,7 +443,9 @@ class MainLogic:
         """
 
         if not self.model.is_time:
-            self._show_error("Данные для времени не найдены.\nДобавьте источник времени самостоятельно")
+            self._show_error(
+                "Данные для времени не найдены.\nДобавьте источник времени самостоятельно"
+            )
             self.ui.gb_x_axe.enable_first_btn = True
             self.ui.gb_x_axe.enable_second_btn = True
             return
@@ -442,7 +460,7 @@ class MainLogic:
             self.model.time_signal = cfg.DEFAULT_TIME
 
         # # Проверяем, что сигнал времени существует в данных
-        if self.model.time_signal not in self.model.dict_all_signals.keys():
+        if self.model.time_signal not in self.model.dict_all_signals:
             self._show_error(
                 f"Сигнал времени '{self.model.time_signal}' не найден в данных"
             )
@@ -472,12 +490,16 @@ class MainLogic:
         if self.ui.gb_signals.qtable_axe.rowCount() > 0:
             self.ui.gb_signals.qtable_axe.selectRow(0)
 
-    def add_signal(self, group_box: MyGroupBox, dict_signals: Dict[str, int], 
-                signal_name: Optional[str] = None) -> None:
-        """Добавляет сигнал в указанную группу по названию сигнала 
+    def add_signal(
+        self,
+        group_box: MyGroupBox,
+        dict_signals: Dict[str, int],
+        signal_name: Optional[str] = None,
+    ) -> None:
+        """Добавляет сигнал в указанную группу по названию сигнала
         или выбранному положению в таблице"""
-        
-        # Получаем данные сигнала  Определяем текущую строку 
+
+        # Получаем данные сигнала  Определяем текущую строку
         if signal_name:
             if signal_name not in self.model.dict_all_signals:
                 self.ui.show_error(f"Сигнал '{signal_name}' не найден в общем списке")
@@ -499,11 +521,15 @@ class MainLogic:
         # Обновляем таблицы
         self._update_qtable(group_box, dict_signals)
         self._update_qtable(self.ui.gb_signals, self.model.dict_all_signals)
-        
+
         # self.ui.gb_signals.qtable_axe.selectRow(current_row)
 
-    def remove_signal(self, group_box: MyGroupBox, dict_signals: Dict[str, int],
-                    signal_name: Optional[str] = None) -> None:
+    def remove_signal(
+        self,
+        group_box: MyGroupBox,
+        dict_signals: Dict[str, int],
+        signal_name: Optional[str] = None,
+    ) -> None:
         """Удаляет сигнал из указанной группы"""
 
         # Определяем какой сигнал удалять
@@ -514,14 +540,14 @@ class MainLogic:
                 return
             signal_to_remove = signal_name
             idx = dict_signals[signal_name]
-            
+
         else:
             # Удаляем по текущему выбору в таблице
             current_row = group_box.qtable_axe.currentRow()
             if current_row < 0:
                 self.ui.show_error("Не выбраны сигналы для удаления")
                 return
-                
+
             signal_to_remove = group_box.qtable_axe.item(current_row, 1).text()
             idx = int(group_box.qtable_axe.item(current_row, 0).text())
 
@@ -569,7 +595,7 @@ class MainLogic:
             #     str(int(len(self.model.df) / self.model.step))
             # )
 
-            self.graph_window = WindowGraph(
+            graph_window = WindowGraph(
                 self.model.df,
                 base_signals=list(self.model.dict_base_signals.keys()),
                 secondary_signals=list(self.model.dict_secondary_signals.keys()),
@@ -580,6 +606,7 @@ class MainLogic:
                 enable_analys=self.model.ready_to_analysis,
             )
 
+            self.graph_window = graph_window
             self.graph_window.show()
 
         finally:
@@ -590,7 +617,7 @@ class MainLogic:
         QMessageBox.critical(self.ui, "Ошибка", message)
 
 
-def test_FileHandker():
+def test_file_handker():
     model = Model()
     fh = FileHandler(model)
 
@@ -606,7 +633,7 @@ def test_FileHandker():
         print("Ошибка при анализе файла")
 
 
-def test_MainLogic():
+def test_main_logic():
 
     app = QApplication(sys.argv)
 
@@ -618,9 +645,8 @@ def test_MainLogic():
 
 
 if __name__ == "__main__":
-
     # --- Тест FileHandler класса ---
-    # test_FileHandker()
+    # test_file_handker()
 
     # --- Тест MainLogic класса ---
-    test_MainLogic()
+    test_main_logic()

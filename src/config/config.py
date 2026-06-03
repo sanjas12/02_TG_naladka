@@ -64,6 +64,7 @@ _SETTINGS_FILE: Final[Path] = ROOT_DIR / "settings.json"
 
 _DEFAULTS: Final[Dict[str, Any]] = {
     "FONT_SIZE": 8,
+    "FONT_FAMILY": "Arial",
     "TICK_MARK_COUNT_X": 15,
     "TICK_MARK_COUNT_Y": 10,
     "LEVEL_LOG": "INFO",
@@ -148,6 +149,8 @@ def _get(key: str, default: Any) -> Any:
 
 
 FONT_SIZE: int = _get("FONT_SIZE", 8)
+
+FONT_FAMILY: str = _get("FONT_FAMILY", "Arial")
 
 TICK_MARK_COUNT_X: int = _get("TICK_MARK_COUNT_X", 15)
 

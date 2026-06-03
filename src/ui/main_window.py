@@ -26,6 +26,7 @@ from PyQt5.QtWidgets import (
 
 from _version import __revision__, __version__
 from config.config import AxeName
+from ui.styles import MENU_BAR_STYLE
 
 FuncType = Union[Callable[[], None], Callable[[QTableWidget, Dict[str, int]], None]]
 
@@ -135,21 +136,7 @@ class MainWindowUI(QMainWindow):
     def _setup_menu(self) -> None:
         """Создаёт меню-бар с пунктами «Файл», «Анализ» и «О программе»."""
         menu_bar: QMenuBar = self.menuBar()
-
-        menu_bar.setStyleSheet(
-            """
-            QMenuBar {
-                background-color: transparent;
-            }
-            QMenuBar::item {
-                background-color: transparent;
-            }
-            QMenuBar::item:selected {
-                background-color: palette(highlight);
-                color: palette(highlighted-text);
-            }
-            """
-        )
+        menu_bar.setStyleSheet(MENU_BAR_STYLE)
 
         # ── Файл ──────────────────────────────────────────────────────────────
         file_menu: QMenu = menu_bar.addMenu("Файл")
