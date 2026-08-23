@@ -135,12 +135,16 @@ class RegulatorAnalyzer:
                     previous_jump["regulator_b"] = previous_jump["regulator_b"][
                         :previous_length
                     ]
+                    previous_jump["time_values"] = previous_jump["time_values"][
+                        :previous_length
+                    ]
                 jump_count += 1
                 self.jumps[jump_count] = {
                     "start_value": prev_pos,
                     "end_value": new_pos,
                     "sample_index": index,
                     "time": self.time[index],
+                    "time_values": list(self.time[index : index + interval]),
                     "regulator_a": list(self.real_position_a[index : index + interval]),
                     "regulator_b": list(self.real_position_b[index : index + interval]),
                 }
@@ -266,6 +270,30 @@ class RegulatorAnalyzer:
         logger.debug(f"Отчёт сформирован, строк={len(report_lines)}")
         return report
 
+    @staticmethod
+    def _quality_text(value: Optional[bool]) -> str:
+        if value is None:
+            return "Не оценено"
+        return "Удовл." if value else "Неудовл."
+
+    def _format_jump_details(self, jump_id: int, info: Dict[str, Any]) -> str:
+        """Формирует единое описание скачка для текста и страницы с графиком."""
+        reached_a = info["reached_value_a"]
+        reached_b = info["reached_value_b"]
+        reached_a_text = f"{reached_a:0.3f}" if reached_a is not None else "нет данных"
+        reached_b_text = f"{reached_b:0.3f}" if reached_b is not None else "нет данных"
+        return (
+            f"Изменение задания № {jump_id}, мм: "
+            f"{info['start_value']:g} → {info['end_value']:g}, "
+            f"Время изменения задания = {info['time']}, "
+            f"Ожидаемое значение (63%) = {info['expected_63']:0.3f} мм, "
+            f"Достигнутое значение ГСМ-А = {reached_a_text} мм, "
+            f"Достигнутое значение ГСМ-Б = {reached_b_text} мм, "
+            f"Качество регулятора ГСМ-А = {self._quality_text(info['reg_ok_a'])}; "
+            f"Качество регулятора ГСМ-Б = {self._quality_text(info['reg_ok_b'])}. "
+            f"Порог обнаружения = {self.jump_threshold:g} мм."
+        )
+
     def _register_font(self) -> str:
         """Регистрация шрифта с поддержкой Unicode. Возвращает имя шрифта."""
         for font_name, font_file in [
@@ -336,7 +364,8 @@ class RegulatorAnalyzer:
         """Рисует векторный график одного переходного процесса."""
         regulator_a = np.asarray(info["regulator_a"], dtype=float)
         regulator_b = np.asarray(info["regulator_b"], dtype=float)
-        point_count = min(len(regulator_a), len(regulator_b))
+        source_time = info["time_values"]
+        point_count = min(len(regulator_a), len(regulator_b), len(source_time))
         time_axis = np.arange(point_count, dtype=float) * self.dt
         target = np.full(point_count, info["end_value"], dtype=float)
         if point_count:
@@ -360,9 +389,9 @@ class RegulatorAnalyzer:
         time_max = max(float(time_axis[-1]) if point_count else 0.0, 0.7, self.dt)
 
         left = x + 45
-        bottom = y + 35
+        bottom = y + 55
         plot_width = width - 60
-        plot_height = height - 65
+        plot_height = height - 85
 
         def map_x(value: float) -> float:
             return left + value / time_max * plot_width
@@ -374,20 +403,32 @@ class RegulatorAnalyzer:
         c.setFont(font_name, 8)
         c.setStrokeColor(colors.HexColor("#b0b0b0"))
         c.setLineWidth(0.4)
-        for tick in range(6):
-            fraction = tick / 5
+        tick_count = 4
+        for tick in range(tick_count):
+            fraction = tick / (tick_count - 1)
             tick_x = left + fraction * plot_width
             tick_y = bottom + fraction * plot_height
             c.line(tick_x, bottom, tick_x, bottom + plot_height)
             c.line(left, tick_y, left + plot_width, tick_y)
-            c.drawCentredString(tick_x, bottom - 12, f"{fraction * time_max:.1f}")
+            source_index = min(round(fraction * (point_count - 1)), point_count - 1)
+            source_label = str(source_time[source_index]) if point_count else ""
+            c.saveState()
+            c.translate(tick_x - 2, bottom - 12)
+            c.rotate(-20)
+            if tick == 0:
+                c.drawString(0, 0, source_label)
+            elif tick == tick_count - 1:
+                c.drawRightString(0, 0, source_label)
+            else:
+                c.drawCentredString(0, 0, source_label)
+            c.restoreState()
             c.drawRightString(
                 left - 5, tick_y - 3, f"{value_min + fraction * value_span:.1f}"
             )
 
         c.setStrokeColor(colors.black)
         c.rect(left, bottom, plot_width, plot_height, stroke=1, fill=0)
-        c.drawCentredString(left + plot_width / 2, y + 8, "Время после скачка, с")
+        c.drawCentredString(left + plot_width / 2, y + 8, "Время из исходного файла")
         c.saveState()
         c.translate(x + 10, bottom + plot_height / 2)
         c.rotate(90)
@@ -512,7 +553,10 @@ class RegulatorAnalyzer:
 
         # Текст отчёта
         c.showPage()
-        report_lines = self.get_analysis_report().split("\n")
+        report_lines = [
+            f"Количество изменений заданий ГСМ: {len(self.jumps)}",
+            "Подробные результаты и графики приведены далее: по одной странице на каждое изменение задания.",
+        ]
         self._draw_wrapped_lines(
             c,
             report_lines,
@@ -526,43 +570,26 @@ class RegulatorAnalyzer:
         # Отдельная страница с графиком для каждого найденного скачка.
         for jump_id, info in self.jumps.items():
             c.showPage()
-            c.setFont(font_name, 14)
-            c.drawString(50, page_height - 50, f"Переходный процесс № {jump_id}")
-
-            status_a = (
-                "Не оценено"
-                if info["reg_ok_a"] is None
-                else ("Удовл." if info["reg_ok_a"] else "Неудовл.")
-            )
-            status_b = (
-                "Не оценено"
-                if info["reg_ok_b"] is None
-                else ("Удовл." if info["reg_ok_b"] else "Неудовл.")
-            )
-            summary = (
-                f"Время скачка: {info['time']}. "
-                f"ГСМ-А: {status_a}. ГСМ-Б: {status_b}. "
-                f"Порог обнаружения: {self.jump_threshold:g} мм."
-            )
-            self._draw_wrapped_lines(
+            details_bottom = self._draw_wrapped_lines(
                 c,
-                [summary],
+                [self._format_jump_details(jump_id, info)],
                 font_name,
                 11,
                 50,
-                page_height - 75,
+                page_height - 50,
                 max_width=page_width - 100,
                 line_height=15,
             )
 
+            plot_height = min(350, details_bottom - 75)
             self._draw_jump_plot(
                 c,
                 info,
                 font_name,
                 35,
-                page_height - 485,
+                details_bottom - plot_height - 20,
                 page_width - 70,
-                350,
+                plot_height,
             )
 
         try:
