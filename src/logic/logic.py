@@ -199,15 +199,16 @@ class PlotManager:
             base_signals + secondary_signals + [self.model.time_signal]
         )
 
-        if (cfg.ANALYS_AIM in all_signals) and (cfg.GSM_A_CUR in all_signals):
-            self.model.ready_to_analysis = True
-            print(
-                "Среди выбранных сигналов есть данные для оценки качество регулятора ГСМ"
-            )
-        else:
-            print(
-                "Среди выбранных сигналов нет данных для оценки качество регулятора ГСМ"
-            )
+        required_analysis_signals = {
+            cfg.ANALYS_AIM,
+            cfg.GSM_A_CUR,
+            cfg.GSM_B_CUR,
+        }
+        self.model.ready_to_analysis = required_analysis_signals.issubset(all_signals)
+        logging.info(
+            "Данные для анализа регулятора %s",
+            "доступны" if self.model.ready_to_analysis else "неполны",
+        )
 
         # Запускаем прогресс-бар с количеством файлов
         self.ui.start_modal_progress(maximum=len(self.model.filenames))
@@ -401,7 +402,12 @@ class MainLogic:
         self._update_qtable(self.ui.gb_signals, self.model.dict_all_signals)
         self._setup_time_axis()
         self.ui.button_graph.setEnabled(True)
-        if (cfg.ANALYS_AIM and cfg.GSM_A_CUR) in self.model.dict_all_signals:
+        required_analysis_signals = {
+            cfg.ANALYS_AIM,
+            cfg.GSM_A_CUR,
+            cfg.GSM_B_CUR,
+        }
+        if required_analysis_signals.issubset(self.model.dict_all_signals):
             self.ui.gb_base_axe.ch_analyzer.setEnabled(True)
 
     def _update_qtable(

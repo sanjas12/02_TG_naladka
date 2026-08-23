@@ -49,4 +49,5 @@ class Model:
         self.dict_secondary_signals.clear()
         # self.time_signal = None
         self.ready_plot = False
+        self.ready_to_analysis = False
         self.step = None

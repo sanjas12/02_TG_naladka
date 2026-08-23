@@ -32,16 +32,7 @@ from PyQt5.QtWidgets import (
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from config.config import (  # noqa: E402
-    ANALYS_AIM,
-    COMBINED_TIME,
-    GSM_A_CUR,
-    GSM_B_CUR,
-    PDF_FILENAME,
-    PLOT_FILENAME,
-    TICK_MARK_COUNT_X,
-    TICK_MARK_COUNT_Y,
-)
+import config.config as cfg  # noqa: E402
 from logic.regulator_analyzer import RegulatorAnalyzer  # noqa: E402
 
 logger = logging.getLogger(__name__)
@@ -308,8 +299,8 @@ class WindowGraph(QMainWindow):
                 [s for s in self.base_signals if self.line_visibility.get(s, True)]
             )
         )
-        ax1.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_X))
-        ax1.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_Y))
+        ax1.xaxis.set_major_locator(ticker.MaxNLocator(cfg.TICK_MARK_COUNT_X))
+        ax1.yaxis.set_major_locator(ticker.MaxNLocator(cfg.TICK_MARK_COUNT_Y))
         if any(self.line_visibility.get(s, False) for s in self.base_signals):
             ax1.legend(loc="upper left")
         ax1.set_xlabel(self.time_signals, loc="right")
@@ -347,8 +338,8 @@ class WindowGraph(QMainWindow):
             ]
             if visible_secondary:
                 ax2.tick_params(axis="y", labelcolor="b")
-                ax2.xaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_X))
-                ax2.yaxis.set_major_locator(ticker.MaxNLocator(TICK_MARK_COUNT_Y))
+                ax2.xaxis.set_major_locator(ticker.MaxNLocator(cfg.TICK_MARK_COUNT_X))
+                ax2.yaxis.set_major_locator(ticker.MaxNLocator(cfg.TICK_MARK_COUNT_Y))
                 ax2.set_ylabel(",\n".join(visible_secondary), color="b")
                 ax2.legend(loc="upper right")
 
@@ -483,29 +474,47 @@ class WindowGraph(QMainWindow):
 
     def analyze_regulator(self) -> None:
         """Обработчик нажатия кнопки анализа регулятора."""
-        if self.enable_analys:
+        if not self.enable_analys:
+            self.dialog_box("Недостаточно сигналов для анализа регулятора")
+            return
+
+        required_columns = {
+            self.time_signals,
+            cfg.GSM_A_CUR,
+            cfg.GSM_B_CUR,
+            cfg.ANALYS_AIM,
+        }
+        missing_columns = required_columns.difference(self.data.columns)
+        if missing_columns:
+            self.dialog_box(
+                "Не найдены сигналы для анализа:\n" + "\n".join(sorted(missing_columns))
+            )
+            return
+
+        try:
             logger.debug("Инициализация RegulatorAnalyzer")
             self.analyzer = RegulatorAnalyzer(
-                self.data[COMBINED_TIME].to_numpy(),
-                self.data[GSM_A_CUR].to_numpy(),
-                self.data[GSM_B_CUR].to_numpy(),
-                self.data[ANALYS_AIM].to_numpy(),
+                self.data[self.time_signals].to_numpy(),
+                self.data[cfg.GSM_A_CUR].to_numpy(),
+                self.data[cfg.GSM_B_CUR].to_numpy(),
+                self.data[cfg.ANALYS_AIM].to_numpy(),
                 self.filenames,
+                dt=0.01,
+                jump_threshold=cfg.JUMP_THRESHOLD_MM,
                 plot_file=self.save_path_plot,
             )
-        logger.info(f"analyze_regulator: запуск анализа, файлы={self.filenames}")
-        try:
+            logger.info(f"analyze_regulator: запуск анализа, файлы={self.filenames}")
             self.analyzer.save_to_pdf()
             self.dialog_box(
-                f"Анализ регулятора успешно завершён\nОтчет сохранен в {PDF_FILENAME}"
+                f"Анализ регулятора успешно завершён\nОтчет сохранен в {cfg.PDF_FILENAME}"
             )
-        except Exception:
+        except (OSError, TypeError, ValueError, IndexError) as exc:
             logger.exception("analyze_regulator: ошибка при выполнении анализа")
-            raise
+            QMessageBox.critical(self, "Ошибка анализа регулятора", str(exc))
 
     def _build_plot_filename(self) -> Path:
         """Формирует путь для сохранения графика на основе имён сигналов."""
-        base = Path(PLOT_FILENAME)
+        base = Path(cfg.PLOT_FILENAME)
 
         def sanitize(name: str) -> str:
             """Убирает символы, недопустимые в именах файлов."""
@@ -594,7 +603,7 @@ def main() -> None:
         (start_time + timedelta(seconds=float(i))).strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
         for i in np.linspace(0, 100, number_data)
     ]
-    df[COMBINED_TIME] = timestamps
+    df[cfg.COMBINED_TIME] = timestamps
 
     y1 = [first_signal, "ГСМ-А.Текущее положение", "Значение развертки. Положение ГСМ"]
     y2 = ["ОЗ-А", "ОЗ-Б"]
@@ -604,7 +613,7 @@ def main() -> None:
         data=df,
         base_signals=y1,
         secondary_signals=y2,
-        time_signals=COMBINED_TIME,
+        time_signals=cfg.COMBINED_TIME,
         enable_analys=False,
         filenames=[
             "E:/User/Temp/ТГ41-2021-06-25_134810_14099.csv.gz",

@@ -7,7 +7,6 @@ from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
-from PyQt5.QtWidgets import QApplication  # noqa: F401
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
@@ -37,7 +36,8 @@ class RegulatorAnalyzer:
         real_position_b: np.ndarray,
         aim_position: np.ndarray,
         files: List[str],
-        dt: float = 0.05,
+        dt: float = 0.01,
+        jump_threshold: float = 9.0,
         plot_file: Optional[str] = None,
     ) -> None:
         """
@@ -50,11 +50,17 @@ class RegulatorAnalyzer:
         logger.info(
             f"Инициализация RegulatorAnalyzer: точек={len(time_)}, файлов={len(files)}, dt={dt:.4f}"
         )
-        self.time = time_
-        self.real_position_a = real_position_a
-        self.real_position_b = real_position_b
-        self.aim_position = aim_position
-        self.dt = dt
+        self.time = np.asarray(time_)
+        try:
+            self.real_position_a = np.asarray(real_position_a, dtype=float)
+            self.real_position_b = np.asarray(real_position_b, dtype=float)
+            self.aim_position = np.asarray(aim_position, dtype=float)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Сигналы регулятора должны содержать числа") from exc
+
+        self.dt = float(dt)
+        self.jump_threshold = float(jump_threshold)
+        self._validate_input()
         self.plot_file = plot_file
         self.jumps: Dict[int, Dict[str, Any]] = {}
         self.files = [os.path.basename(path) for path in files]
@@ -62,7 +68,37 @@ class RegulatorAnalyzer:
         self.count_jumps()
         self.evaluate_regulator_quality()
 
-    def count_jumps(self, threshold: float = 9.0) -> Dict[int, Dict[str, Any]]:
+    def _validate_input(self) -> None:
+        """Проверяет входные ряды до выполнения расчёта."""
+        lengths = {
+            len(self.time),
+            len(self.real_position_a),
+            len(self.real_position_b),
+            len(self.aim_position),
+        }
+        if len(lengths) != 1:
+            raise ValueError("Время, задание, ГСМ-А и ГСМ-Б имеют разную длину")
+        if not self.aim_position.size:
+            raise ValueError("Нет данных для анализа регулятора")
+        if self.dt <= 0:
+            raise ValueError("Шаг дискретизации должен быть больше нуля")
+        if self.jump_threshold < 0:
+            raise ValueError("Порог скачка не может быть отрицательным")
+        if not all(
+            np.isfinite(values).all()
+            for values in (
+                self.real_position_a,
+                self.real_position_b,
+                self.aim_position,
+            )
+        ):
+            raise ValueError(
+                "Сигналы регулятора содержат пустые или бесконечные значения"
+            )
+
+    def count_jumps(
+        self, threshold: Optional[float] = None
+    ) -> Dict[int, Dict[str, Any]]:
         """
         Подсчёт количества скачков целевого задания с временными метками.
 
@@ -77,19 +113,23 @@ class RegulatorAnalyzer:
                                  }
                  }
         """
-        logger.debug(f"Поиск скачков задания, порог={threshold:.1f}")
+        threshold = self.jump_threshold if threshold is None else float(threshold)
+        if threshold < 0:
+            raise ValueError("Порог скачка не может быть отрицательным")
+        logger.debug(f"Поиск скачков задания, порог={threshold:.3f}")
         self.jumps.clear()
         prev_pos = float(self.aim_position[0])
         jump_count = 0
-        interval = 300  # эквивалетно 3 cek после измененея задания   3/0.01 = 300
+        interval = int(round(3.0 / self.dt))
 
         for index, pos in enumerate(self.aim_position[1:], start=1):
             new_pos = float(pos)
             if abs(new_pos - prev_pos) > threshold:
                 jump_count += 1
                 self.jumps[jump_count] = {
-                    "start_value": int(prev_pos),
-                    "end_value": int(new_pos),
+                    "start_value": prev_pos,
+                    "end_value": new_pos,
+                    "sample_index": index,
                     "time": self.time[index],
                     "regulator_a": list(self.real_position_a[index : index + interval]),
                     "regulator_b": list(self.real_position_b[index : index + interval]),
@@ -109,7 +149,6 @@ class RegulatorAnalyzer:
         logger.debug(
             f"Оценка качества регулятора, постоянная времени={time_constant:.2f} с"
         )
-        dt = 0.01  # шаг дискретизации в секундах от ПЛК
         ok_a_count = 0
         ok_b_count = 0
 
@@ -120,22 +159,33 @@ class RegulatorAnalyzer:
             expected_63 = start + 0.63 * delta
             reg_values_a = jump_info["regulator_a"]
             reg_values_b = jump_info["regulator_b"]
-            check_idx = int(time_constant / dt)
-            reached_value_a = (
-                reg_values_a[check_idx]
-                if check_idx < len(reg_values_a)
-                else reg_values_a[-1]
+            check_idx = int(round(time_constant / self.dt))
+            if check_idx >= len(reg_values_a) or check_idx >= len(reg_values_b):
+                self.jumps[jump_id].update(
+                    {
+                        "expected_63": expected_63,
+                        "reached_value_a": None,
+                        "reached_value_b": None,
+                        "reg_ok_a": None,
+                        "reg_ok_b": None,
+                        "evaluation_error": (
+                            f"Недостаточно данных после скачка: требуется {check_idx + 1} "
+                            f"отсчётов ({time_constant:.2f} с)"
+                        ),
+                    }
+                )
+                logger.warning("Скачок №%d не оценён: недостаточно данных", jump_id)
+                continue
+
+            reached_value_a = reg_values_a[check_idx]
+            reached_value_b = reg_values_b[check_idx]
+            ok_a = bool(
+                (delta >= 0 and reached_value_a >= expected_63)
+                or (delta < 0 and reached_value_a <= expected_63)
             )
-            reached_value_b = (
-                reg_values_b[check_idx]
-                if check_idx < len(reg_values_b)
-                else reg_values_b[-1]
-            )
-            ok_a = (delta >= 0 and reached_value_a >= expected_63) or (
-                delta < 0 and reached_value_a <= expected_63
-            )
-            ok_b = (delta >= 0 and reached_value_b >= expected_63) or (
-                delta < 0 and reached_value_b <= expected_63
+            ok_b = bool(
+                (delta >= 0 and reached_value_b >= expected_63)
+                or (delta < 0 and reached_value_b <= expected_63)
             )
             self.jumps[jump_id].update(
                 {
@@ -174,19 +224,33 @@ class RegulatorAnalyzer:
                 start_val = info["start_value"]
                 end_val = info["end_value"]
                 time_idx = info["time"]
-                reg_ok_a = "Удовл." if info["reg_ok_a"] else "Неудовл."
-                reg_ok_b = "Удовл." if info["reg_ok_b"] else "Неудовл."
+                if info["reg_ok_a"] is None:
+                    reg_ok_a = "Не оценено"
+                    reg_ok_b = "Не оценено"
+                else:
+                    reg_ok_a = "Удовл." if info["reg_ok_a"] else "Неудовл."
+                    reg_ok_b = "Удовл." if info["reg_ok_b"] else "Неудовл."
                 expected_63 = info["expected_63"]
                 reached_value_a = info["reached_value_a"]
                 reached_value_b = info["reached_value_b"]
+                reached_a_text = (
+                    f"{reached_value_a:0.3f}"
+                    if reached_value_a is not None
+                    else "нет данных"
+                )
+                reached_b_text = (
+                    f"{reached_value_b:0.3f}"
+                    if reached_value_b is not None
+                    else "нет данных"
+                )
                 report_lines.append(
-                    f"Изменение задания № {jump_id}, мм: {start_val} → {end_val}, "
+                    f"Изменение задания № {jump_id}, мм: {start_val:g} → {end_val:g}, "
                     f"Время изменения задания = {time_idx}, "
                     f"Ожидаемое значение(63%) = {expected_63:0.3f} мм, "
-                    f"Достигнутое значение ГСМ-А = {reached_value_a:0.3f} мм, "
-                    f"Достигнутое значение ГСМ-Б = {reached_value_b:0.3f} мм, "
-                    f"Качество регулятора ГСМ-А = {reg_ok_a} "
-                    f"Качество регулятора ГСМ-Б = {reg_ok_b} "
+                    f"Достигнутое значение ГСМ-А = {reached_a_text} мм, "
+                    f"Достигнутое значение ГСМ-Б = {reached_b_text} мм, "
+                    f"Качество регулятора ГСМ-А = {reg_ok_a}; "
+                    f"Качество регулятора ГСМ-Б = {reg_ok_b}"
                 )
         report = "\n".join(report_lines)
         logger.debug(f"Отчёт сформирован, строк={len(report_lines)}")
@@ -259,7 +323,8 @@ class RegulatorAnalyzer:
         :param filename: имя выходного файла PDF
         :param plot_filename: путь к графику для вставки (если None — не вставлять)
         """
-        plot_filename = self.plot_file
+        if plot_filename is None:
+            plot_filename = self.plot_file
 
         logger.info(f"Сохранение PDF-отчёта: {filename}")
         font_name = self._register_font()
@@ -336,6 +401,7 @@ class RegulatorAnalyzer:
             logger.error(
                 f"Не удалось сохранить PDF '{filename}': {e}. Возможно, файл открыт."
             )
+            raise
 
     def print_jumps(self) -> None:
         """Печать информации по каждому скачку."""

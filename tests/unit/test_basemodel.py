@@ -81,7 +81,7 @@ def test_clear_state_resets_ready_plot_and_step(filled_model):
 
 
 @pytest.mark.unit
-def test_clear_state_does_not_reset_disabled_fields(filled_model):
+def test_clear_state_keeps_file_params_but_resets_analysis_readiness(filled_model):
     # Arrange
     model = filled_model
 
@@ -99,7 +99,7 @@ def test_clear_state_does_not_reset_disabled_fields(filled_model):
     assert model.is_kol_1_2 is True
     assert model.is_time is True
     assert model.is_ms is True
-    assert model.ready_to_analysis is True
+    assert model.ready_to_analysis is False
 
 
 @pytest.mark.unit

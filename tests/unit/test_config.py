@@ -11,9 +11,11 @@ import pytest
 
 DEFAULTS = {
     "FONT_SIZE": 8,
+    "FONT_FAMILY": "Arial",
     "TICK_MARK_COUNT_X": 15,
     "TICK_MARK_COUNT_Y": 10,
     "LEVEL_LOG": "INFO",
+    "JUMP_THRESHOLD_MM": 9.0,
     "ANALYS_AIM": "Значение развертки. Положение ГСМ",
     "GSM_A_CUR": "ГСМ-А.Текущее положение",
     "GSM_B_CUR": "ГСМ-Б.Текущее положение",
@@ -288,6 +290,7 @@ class TestLoadRuntimeSettings:
             "TICK_MARK_COUNT_X": 20,
             "TICK_MARK_COUNT_Y": 5,
             "LEVEL_LOG": "DEBUG",
+            "JUMP_THRESHOLD_MM": 12.5,
             "ANALYS_AIM": "custom aim",
             "GSM_A_CUR": "custom_a",
             "GSM_B_CUR": "custom_b",

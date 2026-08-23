@@ -68,6 +68,7 @@ _DEFAULTS: Final[Dict[str, Any]] = {
     "TICK_MARK_COUNT_X": 15,
     "TICK_MARK_COUNT_Y": 10,
     "LEVEL_LOG": "INFO",
+    "JUMP_THRESHOLD_MM": 9.0,
     "ANALYS_AIM": "Значение развертки. Положение ГСМ",
     "GSM_A_CUR": "ГСМ-А.Текущее положение",
     "GSM_B_CUR": "ГСМ-Б.Текущее положение",
@@ -124,6 +125,8 @@ def load_runtime_settings() -> None:
     Вызывается ИЗ main после setup_logging().
     Безопасная инициализация логируемого конфига.
     """
+    global ANALYS_AIM, FONT_FAMILY, FONT_SIZE, GSM_A_CUR, GSM_B_CUR
+    global JUMP_THRESHOLD_MM, LEVEL_LOG, TICK_MARK_COUNT_X, TICK_MARK_COUNT_Y
     global _SETTINGS
 
     logger.info("Загрузка settings.json: %s", _SETTINGS_FILE)
@@ -141,6 +144,28 @@ def load_runtime_settings() -> None:
 
     if overridden:
         logger.info("Переопределены настройки: %s", ", ".join(overridden))
+
+    FONT_SIZE = int(_get("FONT_SIZE", 8))
+    FONT_FAMILY = str(_get("FONT_FAMILY", "Arial"))
+    TICK_MARK_COUNT_X = int(_get("TICK_MARK_COUNT_X", 15))
+    TICK_MARK_COUNT_Y = int(_get("TICK_MARK_COUNT_Y", 10))
+    LEVEL_LOG = getattr(
+        logging,
+        str(_get("LEVEL_LOG", "INFO")).upper(),
+        logging.INFO,
+    )
+    ANALYS_AIM = str(_get("ANALYS_AIM", _DEFAULTS["ANALYS_AIM"]))
+    GSM_A_CUR = str(_get("GSM_A_CUR", _DEFAULTS["GSM_A_CUR"]))
+    GSM_B_CUR = str(_get("GSM_B_CUR", _DEFAULTS["GSM_B_CUR"]))
+    try:
+        JUMP_THRESHOLD_MM = float(_get("JUMP_THRESHOLD_MM", 9.0))
+        if JUMP_THRESHOLD_MM < 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        logger.warning(
+            "JUMP_THRESHOLD_MM должен быть неотрицательным числом; используется 9.0"
+        )
+        JUMP_THRESHOLD_MM = 9.0
 
 
 # --- Публичные значения (после load_runtime_settings) ---
@@ -170,3 +195,6 @@ ANALYS_AIM: str = _get(
 GSM_A_CUR: str = _get("GSM_A_CUR", "ГСМ-А.Текущее положение")
 
 GSM_B_CUR: str = _get("GSM_B_CUR", "ГСМ-Б.Текущее положение")
+
+# Значение обновляется и валидируется в load_runtime_settings().
+JUMP_THRESHOLD_MM: float = 9.0
