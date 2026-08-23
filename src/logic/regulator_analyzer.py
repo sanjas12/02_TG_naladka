@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
+from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
@@ -125,6 +126,15 @@ class RegulatorAnalyzer:
         for index, pos in enumerate(self.aim_position[1:], start=1):
             new_pos = float(pos)
             if abs(new_pos - prev_pos) > threshold:
+                if jump_count:
+                    previous_jump = self.jumps[jump_count]
+                    previous_length = index - previous_jump["sample_index"]
+                    previous_jump["regulator_a"] = previous_jump["regulator_a"][
+                        :previous_length
+                    ]
+                    previous_jump["regulator_b"] = previous_jump["regulator_b"][
+                        :previous_length
+                    ]
                 jump_count += 1
                 self.jumps[jump_count] = {
                     "start_value": prev_pos,
@@ -313,6 +323,125 @@ class RegulatorAnalyzer:
                 y = page_height - 50
         return y
 
+    def _draw_jump_plot(
+        self,
+        c: canvas.Canvas,
+        info: Dict[str, Any],
+        font_name: str,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+    ) -> None:
+        """Рисует векторный график одного переходного процесса."""
+        regulator_a = np.asarray(info["regulator_a"], dtype=float)
+        regulator_b = np.asarray(info["regulator_b"], dtype=float)
+        point_count = min(len(regulator_a), len(regulator_b))
+        time_axis = np.arange(point_count, dtype=float) * self.dt
+        target = np.full(point_count, info["end_value"], dtype=float)
+        if point_count:
+            target[0] = info["start_value"]
+
+        all_values = np.concatenate(
+            (
+                regulator_a[:point_count],
+                regulator_b[:point_count],
+                target,
+                np.asarray([info["expected_63"]]),
+            )
+        )
+        value_min = float(np.min(all_values))
+        value_max = float(np.max(all_values))
+        value_span = value_max - value_min
+        padding = value_span * 0.08 if value_span else 1.0
+        value_min -= padding
+        value_max += padding
+        value_span = value_max - value_min
+        time_max = max(float(time_axis[-1]) if point_count else 0.0, 0.7, self.dt)
+
+        left = x + 45
+        bottom = y + 35
+        plot_width = width - 60
+        plot_height = height - 65
+
+        def map_x(value: float) -> float:
+            return left + value / time_max * plot_width
+
+        def map_y(value: float) -> float:
+            return bottom + (value - value_min) / value_span * plot_height
+
+        c.saveState()
+        c.setFont(font_name, 8)
+        c.setStrokeColor(colors.HexColor("#b0b0b0"))
+        c.setLineWidth(0.4)
+        for tick in range(6):
+            fraction = tick / 5
+            tick_x = left + fraction * plot_width
+            tick_y = bottom + fraction * plot_height
+            c.line(tick_x, bottom, tick_x, bottom + plot_height)
+            c.line(left, tick_y, left + plot_width, tick_y)
+            c.drawCentredString(tick_x, bottom - 12, f"{fraction * time_max:.1f}")
+            c.drawRightString(
+                left - 5, tick_y - 3, f"{value_min + fraction * value_span:.1f}"
+            )
+
+        c.setStrokeColor(colors.black)
+        c.rect(left, bottom, plot_width, plot_height, stroke=1, fill=0)
+        c.drawCentredString(left + plot_width / 2, y + 8, "Время после скачка, с")
+        c.saveState()
+        c.translate(x + 10, bottom + plot_height / 2)
+        c.rotate(90)
+        c.drawCentredString(0, 0, "Положение, мм")
+        c.restoreState()
+
+        def draw_series(
+            values: np.ndarray, color: colors.Color, line_width: float
+        ) -> None:
+            if not point_count:
+                return
+            path = c.beginPath()
+            path.moveTo(map_x(float(time_axis[0])), map_y(float(values[0])))
+            for time_value, signal_value in zip(time_axis[1:], values[1:]):
+                path.lineTo(map_x(float(time_value)), map_y(float(signal_value)))
+            c.setStrokeColor(color)
+            c.setLineWidth(line_width)
+            c.drawPath(path, stroke=1, fill=0)
+
+        draw_series(target, colors.HexColor("#202020"), 1.3)
+        draw_series(regulator_a[:point_count], colors.HexColor("#1f77b4"), 1.1)
+        draw_series(regulator_b[:point_count], colors.HexColor("#ff7f0e"), 1.1)
+
+        c.setStrokeColor(colors.HexColor("#d62728"))
+        c.setDash(5, 3)
+        c.line(
+            left,
+            map_y(info["expected_63"]),
+            left + plot_width,
+            map_y(info["expected_63"]),
+        )
+        c.setStrokeColor(colors.HexColor("#9467bd"))
+        c.setDash(2, 2)
+        c.line(map_x(0.7), bottom, map_x(0.7), bottom + plot_height)
+        c.setDash()
+
+        legend = [
+            ("Задание", "#202020"),
+            ("ГСМ-А", "#1f77b4"),
+            ("ГСМ-Б", "#ff7f0e"),
+            ("Уровень 63%", "#d62728"),
+            ("0,7 с", "#9467bd"),
+        ]
+        legend_x = left
+        legend_y = y + height - 12
+        for label, color in legend:
+            c.setStrokeColor(colors.HexColor(color))
+            c.setLineWidth(1.5)
+            c.line(legend_x, legend_y, legend_x + 14, legend_y)
+            c.setFillColor(colors.black)
+            c.drawString(legend_x + 18, legend_y - 3, label)
+            legend_x += 85 if label != "Уровень 63%" else 115
+        c.restoreState()
+
     def save_to_pdf(
         self,
         plot_filename: Optional[str] = None,
@@ -393,6 +522,48 @@ class RegulatorAnalyzer:
             page_height - 80,
             max_width=page_width - 100,
         )
+
+        # Отдельная страница с графиком для каждого найденного скачка.
+        for jump_id, info in self.jumps.items():
+            c.showPage()
+            c.setFont(font_name, 14)
+            c.drawString(50, page_height - 50, f"Переходный процесс № {jump_id}")
+
+            status_a = (
+                "Не оценено"
+                if info["reg_ok_a"] is None
+                else ("Удовл." if info["reg_ok_a"] else "Неудовл.")
+            )
+            status_b = (
+                "Не оценено"
+                if info["reg_ok_b"] is None
+                else ("Удовл." if info["reg_ok_b"] else "Неудовл.")
+            )
+            summary = (
+                f"Время скачка: {info['time']}. "
+                f"ГСМ-А: {status_a}. ГСМ-Б: {status_b}. "
+                f"Порог обнаружения: {self.jump_threshold:g} мм."
+            )
+            self._draw_wrapped_lines(
+                c,
+                [summary],
+                font_name,
+                11,
+                50,
+                page_height - 75,
+                max_width=page_width - 100,
+                line_height=15,
+            )
+
+            self._draw_jump_plot(
+                c,
+                info,
+                font_name,
+                35,
+                page_height - 485,
+                page_width - 70,
+                350,
+            )
 
         try:
             c.save()
