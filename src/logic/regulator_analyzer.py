@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.pagesizes import landscape, letter
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -414,11 +414,14 @@ class RegulatorAnalyzer:
         )
         raw_min = float(np.min(all_values))
         raw_max = float(np.max(all_values))
-        raw_span = raw_max - raw_min
-        tick_step = max(5.0, math.ceil((raw_span / 6.0) / 5.0) * 5.0)
-        value_min = math.floor(raw_min / tick_step) * tick_step - tick_step
-        value_max = math.ceil(raw_max / tick_step) * tick_step + tick_step
+        assignment_min = min(info["start_value"], info["end_value"]) - 5.0
+        assignment_max = max(info["start_value"], info["end_value"]) + 5.0
+        signal_min = math.floor(raw_min / 5.0) * 5.0
+        signal_max = math.ceil(raw_max / 5.0) * 5.0
+        value_min = min(assignment_min, signal_min)
+        value_max = max(assignment_max, signal_max)
         value_span = value_max - value_min
+        tick_step = max(5.0, math.ceil((value_span / 7.0) / 5.0) * 5.0)
         time_min = min(float(time_axis[0]) if point_count else 0.0, 0.0)
         time_max = max(float(time_axis[-1]) if point_count else 0.0, 0.7, self.dt)
         time_span = time_max - time_min
@@ -466,9 +469,10 @@ class RegulatorAnalyzer:
                 c.drawCentredString(tick_x, bottom - 20, milliseconds)
 
         c.setFont(font_name, 8)
-        y_tick_count = int(round(value_span / tick_step)) + 1
+        first_y_tick = math.ceil(value_min / tick_step) * tick_step
+        y_tick_count = int(math.floor((value_max - first_y_tick) / tick_step)) + 1
         for tick in range(y_tick_count):
-            tick_value = value_min + tick * tick_step
+            tick_value = first_y_tick + tick * tick_step
             tick_y = map_y(tick_value)
             c.line(left, tick_y, left + plot_width, tick_y)
             c.drawRightString(left - 5, tick_y - 3, f"{tick_value:g}")
@@ -625,6 +629,8 @@ class RegulatorAnalyzer:
         # Отдельная страница с графиком для каждого найденного скачка.
         for jump_id, info in self.jumps.items():
             c.showPage()
+            page_width, page_height = landscape(letter)
+            c.setPageSize((page_width, page_height))
             details_bottom = self._draw_wrapped_lines(
                 c,
                 [self._format_jump_details(jump_id, info)],
@@ -636,7 +642,7 @@ class RegulatorAnalyzer:
                 line_height=15,
             )
 
-            plot_height = min(350, details_bottom - 75)
+            plot_height = min(445, details_bottom - 75)
             self._draw_jump_plot(
                 c,
                 info,
