@@ -4,7 +4,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -380,6 +380,19 @@ class RegulatorAnalyzer:
         height: float,
     ) -> None:
         """Рисует векторный график одного переходного процесса."""
+
+        def split_source_time(value: Any) -> Tuple[str, str]:
+            text = str(value)
+            parts = text.split(" ", 1)
+            if (
+                len(parts) == 2
+                and len(parts[0]) == 10
+                and parts[0][4] == "-"
+                and parts[0][7] == "-"
+            ):
+                return parts[0], parts[1]
+            return "", text
+
         regulator_a = np.asarray(info["plot_regulator_a"], dtype=float)
         regulator_b = np.asarray(info["plot_regulator_b"], dtype=float)
         target = np.asarray(info["plot_aim"], dtype=float)
@@ -411,9 +424,9 @@ class RegulatorAnalyzer:
         time_span = time_max - time_min
 
         left = x + 45
-        bottom = y + 90
+        bottom = y + 55
         plot_width = width - 60
-        plot_height = height - 120
+        plot_height = height - 90
 
         def map_x(value: float) -> float:
             return left + (value - time_min) / time_span * plot_width
@@ -427,22 +440,30 @@ class RegulatorAnalyzer:
         c.setLineWidth(0.4)
         x_tick_count = 10
         c.setFont(font_name, 6.5)
+        first_date, _ = split_source_time(source_time[0]) if point_count else ("", "")
+        last_date, _ = split_source_time(source_time[-1]) if point_count else ("", "")
         for tick in range(x_tick_count):
             fraction = tick / (x_tick_count - 1)
             tick_x = left + fraction * plot_width
             c.line(tick_x, bottom, tick_x, bottom + plot_height)
             source_index = min(round(fraction * (point_count - 1)), point_count - 1)
-            source_label = str(source_time[source_index]) if point_count else ""
-            c.saveState()
-            c.translate(tick_x - 2, bottom - 12)
-            c.rotate(-55)
+            _, source_label = (
+                split_source_time(source_time[source_index])
+                if point_count
+                else ("", "")
+            )
+            time_parts = source_label.rsplit(",", 1)
+            main_time = time_parts[0]
+            milliseconds = f",{time_parts[1]}" if len(time_parts) == 2 else ""
             if tick == 0:
-                c.drawString(0, 0, source_label)
+                c.drawString(tick_x, bottom - 12, main_time)
+                c.drawString(tick_x, bottom - 20, milliseconds)
             elif tick == x_tick_count - 1:
-                c.drawRightString(0, 0, source_label)
+                c.drawRightString(tick_x, bottom - 12, main_time)
+                c.drawRightString(tick_x, bottom - 20, milliseconds)
             else:
-                c.drawCentredString(0, 0, source_label)
-            c.restoreState()
+                c.drawCentredString(tick_x, bottom - 12, main_time)
+                c.drawCentredString(tick_x, bottom - 20, milliseconds)
 
         c.setFont(font_name, 8)
         y_tick_count = int(round(value_span / tick_step)) + 1
@@ -454,7 +475,15 @@ class RegulatorAnalyzer:
 
         c.setStrokeColor(colors.black)
         c.rect(left, bottom, plot_width, plot_height, stroke=1, fill=0)
-        c.drawCentredString(left + plot_width / 2, y + 8, "Время из исходного файла")
+        c.setFont(font_name, 8)
+        c.drawCentredString(left + plot_width / 2, y + 20, "Время")
+        if first_date:
+            date_label = (
+                f"Дата: {first_date}"
+                if first_date == last_date
+                else f"Дата: {first_date} - {last_date}"
+            )
+            c.drawCentredString(left + plot_width / 2, y + 7, date_label)
         c.saveState()
         c.translate(x + 10, bottom + plot_height / 2)
         c.rotate(90)
