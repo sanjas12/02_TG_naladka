@@ -1,4 +1,5 @@
 import logging
+import math
 import os
 import sys
 from datetime import datetime
@@ -122,6 +123,7 @@ class RegulatorAnalyzer:
         prev_pos = float(self.aim_position[0])
         jump_count = 0
         interval = int(round(3.0 / self.dt))
+        pre_interval = int(round(2.0 / self.dt))
 
         for index, pos in enumerate(self.aim_position[1:], start=1):
             new_pos = float(pos)
@@ -138,13 +140,29 @@ class RegulatorAnalyzer:
                     previous_jump["time_values"] = previous_jump["time_values"][
                         :previous_length
                     ]
+                    previous_plot_length = index - previous_jump["plot_start_index"]
+                    for key in (
+                        "plot_time",
+                        "plot_aim",
+                        "plot_regulator_a",
+                        "plot_regulator_b",
+                    ):
+                        previous_jump[key] = previous_jump[key][:previous_plot_length]
                 jump_count += 1
+                plot_start = max(0, index - pre_interval)
+                plot_end = index + interval
                 self.jumps[jump_count] = {
                     "start_value": prev_pos,
                     "end_value": new_pos,
                     "sample_index": index,
+                    "plot_start_index": plot_start,
+                    "plot_jump_offset": index - plot_start,
                     "time": self.time[index],
                     "time_values": list(self.time[index : index + interval]),
+                    "plot_time": list(self.time[plot_start:plot_end]),
+                    "plot_aim": list(self.aim_position[plot_start:plot_end]),
+                    "plot_regulator_a": list(self.real_position_a[plot_start:plot_end]),
+                    "plot_regulator_b": list(self.real_position_b[plot_start:plot_end]),
                     "regulator_a": list(self.real_position_a[index : index + interval]),
                     "regulator_b": list(self.real_position_b[index : index + interval]),
                 }
@@ -362,14 +380,16 @@ class RegulatorAnalyzer:
         height: float,
     ) -> None:
         """Рисует векторный график одного переходного процесса."""
-        regulator_a = np.asarray(info["regulator_a"], dtype=float)
-        regulator_b = np.asarray(info["regulator_b"], dtype=float)
-        source_time = info["time_values"]
-        point_count = min(len(regulator_a), len(regulator_b), len(source_time))
-        time_axis = np.arange(point_count, dtype=float) * self.dt
-        target = np.full(point_count, info["end_value"], dtype=float)
-        if point_count:
-            target[0] = info["start_value"]
+        regulator_a = np.asarray(info["plot_regulator_a"], dtype=float)
+        regulator_b = np.asarray(info["plot_regulator_b"], dtype=float)
+        target = np.asarray(info["plot_aim"], dtype=float)
+        source_time = info["plot_time"]
+        point_count = min(
+            len(regulator_a), len(regulator_b), len(target), len(source_time)
+        )
+        time_axis = (
+            np.arange(point_count, dtype=float) - info["plot_jump_offset"]
+        ) * self.dt
 
         all_values = np.concatenate(
             (
@@ -379,22 +399,24 @@ class RegulatorAnalyzer:
                 np.asarray([info["expected_63"]]),
             )
         )
-        value_min = float(np.min(all_values))
-        value_max = float(np.max(all_values))
+        raw_min = float(np.min(all_values))
+        raw_max = float(np.max(all_values))
+        raw_span = raw_max - raw_min
+        tick_step = max(5.0, math.ceil((raw_span / 6.0) / 5.0) * 5.0)
+        value_min = math.floor(raw_min / tick_step) * tick_step - tick_step
+        value_max = math.ceil(raw_max / tick_step) * tick_step + tick_step
         value_span = value_max - value_min
-        padding = value_span * 0.08 if value_span else 1.0
-        value_min -= padding
-        value_max += padding
-        value_span = value_max - value_min
+        time_min = min(float(time_axis[0]) if point_count else 0.0, 0.0)
         time_max = max(float(time_axis[-1]) if point_count else 0.0, 0.7, self.dt)
+        time_span = time_max - time_min
 
         left = x + 45
-        bottom = y + 55
+        bottom = y + 90
         plot_width = width - 60
-        plot_height = height - 85
+        plot_height = height - 120
 
         def map_x(value: float) -> float:
-            return left + value / time_max * plot_width
+            return left + (value - time_min) / time_span * plot_width
 
         def map_y(value: float) -> float:
             return bottom + (value - value_min) / value_span * plot_height
@@ -403,28 +425,32 @@ class RegulatorAnalyzer:
         c.setFont(font_name, 8)
         c.setStrokeColor(colors.HexColor("#b0b0b0"))
         c.setLineWidth(0.4)
-        tick_count = 4
-        for tick in range(tick_count):
-            fraction = tick / (tick_count - 1)
+        x_tick_count = 10
+        c.setFont(font_name, 6.5)
+        for tick in range(x_tick_count):
+            fraction = tick / (x_tick_count - 1)
             tick_x = left + fraction * plot_width
-            tick_y = bottom + fraction * plot_height
             c.line(tick_x, bottom, tick_x, bottom + plot_height)
-            c.line(left, tick_y, left + plot_width, tick_y)
             source_index = min(round(fraction * (point_count - 1)), point_count - 1)
             source_label = str(source_time[source_index]) if point_count else ""
             c.saveState()
             c.translate(tick_x - 2, bottom - 12)
-            c.rotate(-20)
+            c.rotate(-55)
             if tick == 0:
                 c.drawString(0, 0, source_label)
-            elif tick == tick_count - 1:
+            elif tick == x_tick_count - 1:
                 c.drawRightString(0, 0, source_label)
             else:
                 c.drawCentredString(0, 0, source_label)
             c.restoreState()
-            c.drawRightString(
-                left - 5, tick_y - 3, f"{value_min + fraction * value_span:.1f}"
-            )
+
+        c.setFont(font_name, 8)
+        y_tick_count = int(round(value_span / tick_step)) + 1
+        for tick in range(y_tick_count):
+            tick_value = value_min + tick * tick_step
+            tick_y = map_y(tick_value)
+            c.line(left, tick_y, left + plot_width, tick_y)
+            c.drawRightString(left - 5, tick_y - 3, f"{tick_value:g}")
 
         c.setStrokeColor(colors.black)
         c.rect(left, bottom, plot_width, plot_height, stroke=1, fill=0)

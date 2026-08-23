@@ -91,6 +91,21 @@ def test_short_tail_is_reported_as_not_evaluated():
 
 
 @pytest.mark.unit
+def test_jump_plot_contains_two_seconds_before_jump():
+    aim = np.zeros(600)
+    aim[250:] = 100.0
+    real = np.zeros(600)
+
+    jump = make_analyzer(aim, real).jumps[1]
+
+    assert jump["plot_jump_offset"] == 200
+    assert jump["plot_time"][0] == pytest.approx(0.5)
+    assert jump["time"] == pytest.approx(2.5)
+    assert jump["plot_aim"][199] == pytest.approx(0.0)
+    assert jump["plot_aim"][200] == pytest.approx(100.0)
+
+
+@pytest.mark.unit
 def test_empty_input_is_rejected():
     with pytest.raises(ValueError, match="Нет данных"):
         make_analyzer([], [])
