@@ -4,6 +4,7 @@
   "TICK_MARK_COUNT_Y": 10,
   "LEVEL_LOG": "INFO",
   "JUMP_THRESHOLD_MM": 9.0,
+  "MAX_JUMP_THRESHOLD_MM": 40.0,
   "ANALYS_AIM": "Значение развертки. Положение ГСМ",
   "GSM_A_CUR": "ГСМ-А.Текущее положение",
   "GSM_B_CUR": "ГСМ-Б.Текущее положение"

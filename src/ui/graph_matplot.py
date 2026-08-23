@@ -501,6 +501,7 @@ class WindowGraph(QMainWindow):
                 self.filenames,
                 dt=0.01,
                 jump_threshold=cfg.JUMP_THRESHOLD_MM,
+                max_jump_threshold=cfg.MAX_JUMP_THRESHOLD_MM,
                 plot_file=self.save_path_plot,
             )
             logger.info(f"analyze_regulator: запуск анализа, файлы={self.filenames}")

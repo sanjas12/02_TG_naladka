@@ -69,6 +69,7 @@ _DEFAULTS: Final[Dict[str, Any]] = {
     "TICK_MARK_COUNT_Y": 10,
     "LEVEL_LOG": "INFO",
     "JUMP_THRESHOLD_MM": 9.0,
+    "MAX_JUMP_THRESHOLD_MM": 50.0,
     "ANALYS_AIM": "Значение развертки. Положение ГСМ",
     "GSM_A_CUR": "ГСМ-А.Текущее положение",
     "GSM_B_CUR": "ГСМ-Б.Текущее положение",
@@ -126,7 +127,8 @@ def load_runtime_settings() -> None:
     Безопасная инициализация логируемого конфига.
     """
     global ANALYS_AIM, FONT_FAMILY, FONT_SIZE, GSM_A_CUR, GSM_B_CUR
-    global JUMP_THRESHOLD_MM, LEVEL_LOG, TICK_MARK_COUNT_X, TICK_MARK_COUNT_Y
+    global JUMP_THRESHOLD_MM, LEVEL_LOG, MAX_JUMP_THRESHOLD_MM
+    global TICK_MARK_COUNT_X, TICK_MARK_COUNT_Y
     global _SETTINGS
 
     logger.info("Загрузка settings.json: %s", _SETTINGS_FILE)
@@ -167,6 +169,17 @@ def load_runtime_settings() -> None:
         )
         JUMP_THRESHOLD_MM = 9.0
 
+    try:
+        MAX_JUMP_THRESHOLD_MM = float(_get("MAX_JUMP_THRESHOLD_MM", 50.0))
+        if MAX_JUMP_THRESHOLD_MM <= JUMP_THRESHOLD_MM:
+            raise ValueError
+    except (TypeError, ValueError):
+        MAX_JUMP_THRESHOLD_MM = max(50.0, JUMP_THRESHOLD_MM + 1.0)
+        logger.warning(
+            "MAX_JUMP_THRESHOLD_MM должен быть больше JUMP_THRESHOLD_MM; используется %.1f",
+            MAX_JUMP_THRESHOLD_MM,
+        )
+
 
 # --- Публичные значения (после load_runtime_settings) ---
 def _get(key: str, default: Any) -> Any:
@@ -198,3 +211,4 @@ GSM_B_CUR: str = _get("GSM_B_CUR", "ГСМ-Б.Текущее положение"
 
 # Значение обновляется и валидируется в load_runtime_settings().
 JUMP_THRESHOLD_MM: float = 9.0
+MAX_JUMP_THRESHOLD_MM: float = 50.0

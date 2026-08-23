@@ -10,6 +10,7 @@ def make_analyzer(
     real_b=None,
     *,
     threshold=9.0,
+    max_threshold=50.0,
 ):
     aim_array = np.asarray(aim, dtype=float)
     real_a_array = np.asarray(real_a, dtype=float)
@@ -23,6 +24,7 @@ def make_analyzer(
         files=["sample.csv.gz"],
         dt=0.01,
         jump_threshold=threshold,
+        max_jump_threshold=max_threshold,
     )
 
 
@@ -62,6 +64,36 @@ def test_operator_threshold_controls_jump_detection():
 
     assert len(make_analyzer(aim, real, threshold=9.0).jumps) == 1
     assert len(make_analyzer(aim, real, threshold=10.0).jumps) == 0
+
+
+@pytest.mark.unit
+def test_jump_larger_than_maximum_is_counted_but_not_analyzed():
+    aim = np.zeros(500)
+    aim[10:] = 10.0
+    aim[150:] = 80.0
+    aim[300:] = 90.0
+    real = aim.copy()
+
+    analyzer = make_analyzer(aim, real, max_threshold=50.0)
+
+    assert analyzer.total_jump_count == 3
+    assert list(analyzer.jumps) == [1, 3]
+    assert len(analyzer.excluded_large_jumps) == 1
+    assert analyzer.excluded_large_jumps[0]["jump_id"] == 2
+    assert analyzer.excluded_large_jumps[0]["jump_size"] == pytest.approx(70.0)
+
+
+@pytest.mark.unit
+def test_jump_equal_to_maximum_is_analyzed():
+    aim = np.zeros(150)
+    aim[10:] = 50.0
+    real = aim.copy()
+
+    analyzer = make_analyzer(aim, real, max_threshold=50.0)
+
+    assert analyzer.total_jump_count == 1
+    assert len(analyzer.jumps) == 1
+    assert analyzer.excluded_large_jumps == []
 
 
 @pytest.mark.unit

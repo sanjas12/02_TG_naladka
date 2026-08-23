@@ -40,6 +40,7 @@ class RegulatorAnalyzer:
         files: List[str],
         dt: float = 0.01,
         jump_threshold: float = 9.0,
+        max_jump_threshold: float = 50.0,
         plot_file: Optional[str] = None,
     ) -> None:
         """
@@ -62,9 +63,12 @@ class RegulatorAnalyzer:
 
         self.dt = float(dt)
         self.jump_threshold = float(jump_threshold)
+        self.max_jump_threshold = float(max_jump_threshold)
         self._validate_input()
         self.plot_file = plot_file
         self.jumps: Dict[int, Dict[str, Any]] = {}
+        self.excluded_large_jumps: List[Dict[str, Any]] = []
+        self.total_jump_count = 0
         self.files = [os.path.basename(path) for path in files]
         logger.debug(f"Файлы для анализа: {self.files}")
         self.count_jumps()
@@ -86,6 +90,10 @@ class RegulatorAnalyzer:
             raise ValueError("Шаг дискретизации должен быть больше нуля")
         if self.jump_threshold < 0:
             raise ValueError("Порог скачка не может быть отрицательным")
+        if self.max_jump_threshold <= self.jump_threshold:
+            raise ValueError(
+                "Максимальный порог скачка должен быть больше минимального"
+            )
         if not all(
             np.isfinite(values).all()
             for values in (
@@ -120,16 +128,19 @@ class RegulatorAnalyzer:
             raise ValueError("Порог скачка не может быть отрицательным")
         logger.debug(f"Поиск скачков задания, порог={threshold:.3f}")
         self.jumps.clear()
+        self.excluded_large_jumps.clear()
+        self.total_jump_count = 0
         prev_pos = float(self.aim_position[0])
-        jump_count = 0
+        open_jump_id: Optional[int] = None
+        last_change_index = 0
         interval = int(round(3.0 / self.dt))
         pre_interval = int(round(2.0 / self.dt))
 
         for index, pos in enumerate(self.aim_position[1:], start=1):
             new_pos = float(pos)
             if abs(new_pos - prev_pos) > threshold:
-                if jump_count:
-                    previous_jump = self.jumps[jump_count]
+                if open_jump_id is not None:
+                    previous_jump = self.jumps[open_jump_id]
                     previous_length = index - previous_jump["sample_index"]
                     previous_jump["regulator_a"] = previous_jump["regulator_a"][
                         :previous_length
@@ -148,10 +159,33 @@ class RegulatorAnalyzer:
                         "plot_regulator_b",
                     ):
                         previous_jump[key] = previous_jump[key][:previous_plot_length]
-                jump_count += 1
-                plot_start = max(0, index - pre_interval)
+
+                self.total_jump_count += 1
+                jump_size = abs(new_pos - prev_pos)
+                if jump_size > self.max_jump_threshold:
+                    self.excluded_large_jumps.append(
+                        {
+                            "jump_id": self.total_jump_count,
+                            "start_value": prev_pos,
+                            "end_value": new_pos,
+                            "jump_size": jump_size,
+                            "time": self.time[index],
+                        }
+                    )
+                    logger.info(
+                        "Изменение задания №%d исключено: %.3f мм > %.3f мм",
+                        self.total_jump_count,
+                        jump_size,
+                        self.max_jump_threshold,
+                    )
+                    open_jump_id = None
+                    prev_pos = new_pos
+                    last_change_index = index
+                    continue
+
+                plot_start = max(0, index - pre_interval, last_change_index)
                 plot_end = index + interval
-                self.jumps[jump_count] = {
+                self.jumps[self.total_jump_count] = {
                     "start_value": prev_pos,
                     "end_value": new_pos,
                     "sample_index": index,
@@ -166,9 +200,16 @@ class RegulatorAnalyzer:
                     "regulator_a": list(self.real_position_a[index : index + interval]),
                     "regulator_b": list(self.real_position_b[index : index + interval]),
                 }
+                open_jump_id = self.total_jump_count
                 prev_pos = new_pos
+                last_change_index = index
 
-        logger.info(f"Обнаружено скачков задания: {len(self.jumps)}")
+        logger.info(
+            "Обнаружено изменений задания: %d; исключено крупных: %d; анализируется: %d",
+            self.total_jump_count,
+            len(self.excluded_large_jumps),
+            len(self.jumps),
+        )
         return self.jumps
 
     def evaluate_regulator_quality(self, time_constant: float = 0.7) -> None:
@@ -248,7 +289,10 @@ class RegulatorAnalyzer:
         """Генерация текстового отчёта по анализу."""
         logger.debug(f"Генерация текстового отчёта, скачков={len(self.jumps)}")
         report_lines: List[str] = [
-            f"Количество изменений заданий ГСМ: {len(self.jumps)}"
+            f"Количество изменений заданий ГСМ: {self.total_jump_count}",
+            f"Из них больше {self.max_jump_threshold:g} мм: "
+            f"{len(self.excluded_large_jumps)} — не учитываются в детальном анализе.",
+            f"Детально проанализировано изменений: {len(self.jumps)}.",
         ]
         if self.jumps:
             report_lines.append("\nДетальная информация по каждому изменению задания:")
@@ -613,8 +657,11 @@ class RegulatorAnalyzer:
         # Текст отчёта
         c.showPage()
         report_lines = [
-            f"Количество изменений заданий ГСМ: {len(self.jumps)}",
-            "Подробные результаты и графики приведены далее: по одной странице на каждое изменение задания.",
+            f"Количество изменений заданий ГСМ: {self.total_jump_count}",
+            f"Из них больше {self.max_jump_threshold:g} мм: "
+            f"{len(self.excluded_large_jumps)} — не учитываются в детальном анализе.",
+            f"Детально проанализировано изменений: {len(self.jumps)}.",
+            "Подробные результаты и графики приведены далее: по одной странице на каждое учитываемое изменение задания.",
         ]
         self._draw_wrapped_lines(
             c,
