@@ -38,6 +38,7 @@ from logic.plc_archive_analyzer import (
 logger = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ERROR_CODE_SIGNAL = "Код ошибки по приоритету (младшая часть)"
+ERROR_CODE_MAX = 66000
 
 
 class PlkArchiveWindow(QMainWindow):
@@ -164,8 +165,12 @@ class PlkArchiveWindow(QMainWindow):
             sharex=True,
             gridspec_kw={"height_ratios": [1, 1.5, 1]},
         )
-        self._draw_numeric_signal(signal_axis_1, signal_1, "Канал 1", "#2563eb")
-        self._draw_numeric_signal(signal_axis_2, signal_2, "Канал 2", "#9333ea")
+        self._draw_numeric_signal(
+            signal_axis_1, signal_1, "Канал 1", "#2563eb", label_offset=6
+        )
+        self._draw_numeric_signal(
+            signal_axis_2, signal_2, "Канал 2", "#9333ea", label_offset=-12
+        )
         signal_axis_2.invert_yaxis()
         axis.axhline(0, color="#374151", linewidth=1.2)
 
@@ -252,8 +257,11 @@ class PlkArchiveWindow(QMainWindow):
         points: Sequence[NumericSignalPoint],
         channel_name: str,
         color: str,
+        label_offset: int,
     ) -> None:
         axis.set_ylabel(f"{channel_name}\nКод ошибки")
+        axis.set_ylim(0, ERROR_CODE_MAX)
+        axis.set_yticks([0, 22000, 44000, ERROR_CODE_MAX])
         axis.grid(color="#d1d5db", alpha=0.6)
         axis.ticklabel_format(axis="y", style="plain", useOffset=False)
         if not points:
@@ -280,6 +288,19 @@ class PlkArchiveWindow(QMainWindow):
             s=13,
             zorder=3,
         )
+        for point in points:
+            value_label = f"{point.value:g}"
+            axis.annotate(
+                value_label,
+                xy=(point.timestamp, point.value),
+                xytext=(0, label_offset),
+                textcoords="offset points",
+                ha="center",
+                va="bottom" if label_offset > 0 else "top",
+                color=color,
+                fontsize=8,
+                zorder=4,
+            )
 
     def _on_hover(self, mouse_event: MouseEvent) -> None:
         annotation = self._annotation
