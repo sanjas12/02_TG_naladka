@@ -116,7 +116,7 @@ name = "cz_conventional_commits"
 ignored_tag_formats = ["#*"]
 
 # Текущая версия
-version = "0.4.4"
+version = "0.4.5"
 
 # Какие файлы обновлять
 version_files = ["src/_version.py:__version__"]
