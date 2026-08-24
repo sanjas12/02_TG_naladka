@@ -109,6 +109,9 @@ build_command = false
 [tool.commitizen]
 name = "cz_conventional_commits"
 
+# Исторические теги с префиксом # не являются текущими релизными версиями.
+ignored_tag_formats = ["#*"]
+
 # Текущая версия
 version = "0.4.3"
 
