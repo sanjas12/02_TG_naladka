@@ -54,26 +54,47 @@ if ! git pull origin master; then
 fi
 log_ok "master актуален"
 
+# ─── Проверка новых коммитов ──────────────────────────────────
+# Commitizen не создаёт обычный релиз, если после последнего тега нет коммитов.
+LAST_RELEASE_TAG=$(git describe --tags --match '[0-9]*' --abbrev=0 2>/dev/null || true)
+if [ -n "$LAST_RELEASE_TAG" ]; then
+    NEW_COMMIT_COUNT=$(git rev-list "$LAST_RELEASE_TAG"..HEAD --count)
+    if [ "$NEW_COMMIT_COUNT" -eq 0 ]; then
+        log_error "После релиза $LAST_RELEASE_TAG нет новых коммитов."
+        log_error "Сначала закоммить изменения и тесты, затем повтори запуск release.sh."
+        exit 1
+    fi
+    log_info "После релиза $LAST_RELEASE_TAG найдено коммитов: $NEW_COMMIT_COUNT"
+else
+    log_warn "Корректные релизные теги не найдены — будет обработана вся история коммитов."
+fi
+
 # ─── Тесты ────────────────────────────────────────────────────
 echo ""
-log_info "Запускаем тесты"
-if ! uv run pytest --no-cov; then
+log_info "Синхронизируем зависимости для тестов из uv.lock"
+if ! uv sync --frozen --group dev; then
+    log_error "Не удалось подготовить окружение для тестов! Релиз отменён."
+    exit 1
+fi
+log_ok "Тестовое окружение готово"
+
+log_info "Запускаем unit, integration и GUI-тесты"
+if ! uv run --frozen pytest tests/unit tests/integration tests/gui; then
     log_error "Тесты не прошли! Релиз отменён."
     exit 1
 fi
-log_ok "Тесты прошли успешно"
+log_ok "Все тесты прошли успешно"
 
 # ─── Коммиты с последнего релиза ──────────────────────────────
 echo ""
 log_info "Коммиты с последнего релиза:"
 
-if ! git describe --tags --abbrev=0 > /dev/null 2>&1; then
+if [ -z "$LAST_RELEASE_TAG" ]; then
     log_warn "Теги не найдены — показываем все коммиты"
     git log --oneline
 else
-    LAST_TAG=$(git describe --tags --abbrev=0)
-    log_info "Последний тег: $LAST_TAG"
-    git log "$LAST_TAG"..HEAD --oneline
+    log_info "Последний тег: $LAST_RELEASE_TAG"
+    git log "$LAST_RELEASE_TAG"..HEAD --oneline
 fi
 
 # ─── Текущая версия и предполагаемые bump'ы ───────────────────
