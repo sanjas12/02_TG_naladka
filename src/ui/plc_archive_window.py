@@ -51,6 +51,7 @@ class PlkArchiveWindow(QMainWindow):
         self.channel_2: List[PlkEvent] = []
         self._plotted_events: List[Tuple[PlkEvent, int]] = []
         self._annotation: Optional[Annotation] = None
+        self._time_axis: Optional[Axes] = None
 
         self.setWindowTitle("Анализ архивов PLK")
         self.resize(1280, 760)
@@ -100,6 +101,8 @@ class PlkArchiveWindow(QMainWindow):
         layout.addWidget(self.toolbar)
         layout.addWidget(self.canvas, 1)
         self.canvas.mpl_connect("motion_notify_event", self._on_hover)
+        self.canvas.mpl_connect("button_release_event", self._on_view_changed)
+        self.canvas.mpl_connect("scroll_event", self._on_view_changed)
 
     def _load_default_archives(self) -> None:
         log_root = PROJECT_ROOT / "input" / "Logs"
@@ -226,7 +229,14 @@ class PlkArchiveWindow(QMainWindow):
         axis.set_ylim(-1.6, 1.6)
         axis.grid(axis="x", color="#d1d5db", alpha=0.6)
         signal_axis_2.set_xlabel("Дата и время")
-        signal_axis_2.callbacks.connect("xlim_changed", self._update_time_axis)
+        self._time_axis = signal_axis_2
+        for shared_axis in (signal_axis_1, axis, signal_axis_2):
+            shared_axis.callbacks.connect(
+                "xlim_changed",
+                lambda changed_axis, target_axis=signal_axis_2: self._update_time_axis(
+                    target_axis, changed_axis.get_xlim()
+                ),
+            )
         self._update_time_axis(signal_axis_2)
         axis.legend(loc="upper right")
 
@@ -252,13 +262,26 @@ class PlkArchiveWindow(QMainWindow):
         self.canvas.draw_idle()
 
     @staticmethod
-    def _update_time_axis(axis: Axes) -> None:
+    def _update_time_axis(
+        axis: Axes, limits: Optional[Tuple[float, float]] = None
+    ) -> None:
         """Подбирает деления времени вплоть до полусекунд при увеличении."""
-        x_min, x_max = axis.get_xlim()
+        x_min, x_max = limits if limits is not None else axis.get_xlim()
         visible_seconds = abs(x_max - x_min) * 24 * 60 * 60
+        axis.xaxis.set_minor_locator(ticker.NullLocator())
 
-        if visible_seconds <= 30:
-            axis.xaxis.set_major_locator(mdates.MicrosecondLocator(interval=500000))
+        if visible_seconds <= 60:
+            subminute_intervals = (0.5, 1, 2, 5, 10)
+            interval = next(
+                value for value in subminute_intervals if visible_seconds / value <= 12
+            )
+            if interval == 0.5:
+                axis.xaxis.set_major_locator(mdates.MicrosecondLocator(interval=500000))
+            else:
+                axis.xaxis.set_major_locator(
+                    mdates.SecondLocator(interval=int(interval))
+                )
+                axis.xaxis.set_minor_locator(mdates.MicrosecondLocator(interval=500000))
             axis.xaxis.set_major_formatter(
                 ticker.FuncFormatter(
                     lambda value, _position: mdates.num2date(value).strftime(
@@ -267,17 +290,17 @@ class PlkArchiveWindow(QMainWindow):
                 )
             )
         elif visible_seconds <= 300:
-            intervals = (1, 2, 5, 10, 15, 30)
+            second_intervals = (1, 2, 5, 10, 15, 30)
             interval = next(
-                value for value in intervals if visible_seconds / value <= 12
+                value for value in second_intervals if visible_seconds / value <= 12
             )
             axis.xaxis.set_major_locator(mdates.SecondLocator(interval=interval))
             axis.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
         elif visible_seconds <= 7200:
-            intervals = (1, 2, 5, 10, 15, 30)
+            minute_intervals = (1, 2, 5, 10, 15, 30)
             visible_minutes = visible_seconds / 60
             interval = next(
-                value for value in intervals if visible_minutes / value <= 12
+                value for value in minute_intervals if visible_minutes / value <= 12
             )
             axis.xaxis.set_major_locator(mdates.MinuteLocator(interval=interval))
             axis.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
@@ -285,6 +308,14 @@ class PlkArchiveWindow(QMainWindow):
             locator = mdates.AutoDateLocator(minticks=5, maxticks=12)
             axis.xaxis.set_major_locator(locator)
             axis.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
+
+    def _on_view_changed(self, _mouse_event: MouseEvent) -> None:
+        """Обновляет формат времени после завершения масштабирования и прокрутки."""
+        time_axis = self._time_axis
+        if time_axis is None:
+            return
+        self._update_time_axis(time_axis)
+        self.canvas.draw_idle()
 
     @staticmethod
     def _draw_numeric_signal(
