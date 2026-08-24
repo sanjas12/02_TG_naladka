@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 import matplotlib.dates as mdates
+from matplotlib.axes import Axes
+from matplotlib.backend_bases import MouseEvent
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
+from matplotlib.text import Annotation
 from PyQt5.QtWidgets import (
     QFileDialog,
     QGridLayout,
@@ -25,13 +28,16 @@ from PyQt5.QtWidgets import (
 
 from logic.plc_archive_analyzer import (
     ComparisonResult,
+    NumericSignalPoint,
     PlkEvent,
     compare_events,
+    extract_numeric_signal,
     load_plk_archive,
 )
 
 logger = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+ERROR_CODE_SIGNAL = "Код ошибки по приоритету (младшая часть)"
 
 
 class PlkArchiveWindow(QMainWindow):
@@ -42,7 +48,7 @@ class PlkArchiveWindow(QMainWindow):
         self.channel_1: List[PlkEvent] = []
         self.channel_2: List[PlkEvent] = []
         self._plotted_events: List[Tuple[PlkEvent, int]] = []
-        self._annotation = None
+        self._annotation: Optional[Annotation] = None
 
         self.setWindowTitle("Анализ архивов PLK")
         self.resize(1280, 760)
@@ -130,14 +136,37 @@ class PlkArchiveWindow(QMainWindow):
     def _refresh_plot(self) -> None:
         if not self.channel_1 or not self.channel_2:
             return
-        result = compare_events(
-            self.channel_1, self.channel_2, tolerance_ms=self.tolerance.value()
-        )
-        self._draw_timeline(result)
+        try:
+            signal_1, events_1 = extract_numeric_signal(
+                self.channel_1, ERROR_CODE_SIGNAL
+            )
+            signal_2, events_2 = extract_numeric_signal(
+                self.channel_2, ERROR_CODE_SIGNAL
+            )
+            result = compare_events(
+                events_1, events_2, tolerance_ms=self.tolerance.value()
+            )
+            self._draw_timeline(result, signal_1, signal_2)
+        except ValueError as error:
+            logger.error("Ошибка числового сигнала архива PLK", exc_info=True)
+            QMessageBox.critical(self, "Ошибка архива PLK", str(error))
 
-    def _draw_timeline(self, result: ComparisonResult) -> None:
+    def _draw_timeline(
+        self,
+        result: ComparisonResult,
+        signal_1: List[NumericSignalPoint],
+        signal_2: List[NumericSignalPoint],
+    ) -> None:
         self.figure.clear()
-        axis = self.figure.add_subplot(111)
+        signal_axis_1, axis, signal_axis_2 = self.figure.subplots(
+            3,
+            1,
+            sharex=True,
+            gridspec_kw={"height_ratios": [1, 1.5, 1]},
+        )
+        self._draw_numeric_signal(signal_axis_1, signal_1, "Канал 1", "#2563eb")
+        self._draw_numeric_signal(signal_axis_2, signal_2, "Канал 2", "#9333ea")
+        signal_axis_2.invert_yaxis()
         axis.axhline(0, color="#374151", linewidth=1.2)
 
         for pair in result.pairs:
@@ -189,11 +218,11 @@ class PlkArchiveWindow(QMainWindow):
         axis.set_yticks([-1, 0, 1])
         axis.set_yticklabels(["Канал 2", "Время", "Канал 1"])
         axis.set_ylim(-1.6, 1.6)
-        axis.set_xlabel("Дата и время")
         axis.grid(axis="x", color="#d1d5db", alpha=0.6)
         locator = mdates.AutoDateLocator(minticks=5, maxticks=12)
-        axis.xaxis.set_major_locator(locator)
-        axis.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
+        signal_axis_2.xaxis.set_major_locator(locator)
+        signal_axis_2.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
+        signal_axis_2.set_xlabel("Дата и время")
         axis.legend(loc="upper right")
 
         deltas = [abs(pair.delta_ms) for pair in result.pairs]
@@ -202,6 +231,7 @@ class PlkArchiveWindow(QMainWindow):
             f"Канал 1: {len(self.channel_1)} | Канал 2: {len(self.channel_2)} | "
             f"пар: {len(result.pairs)} | расхождений: "
             f"{len(result.only_channel_1) + len(result.only_channel_2)} | "
+            f"точек кода: {len(signal_1)}/{len(signal_2)} | "
             f"макс. сдвиг: {max_delta:.0f} мс"
         )
         annotation = axis.annotate(
@@ -216,9 +246,45 @@ class PlkArchiveWindow(QMainWindow):
         self._annotation = annotation
         self.canvas.draw_idle()
 
-    def _on_hover(self, mouse_event) -> None:
+    @staticmethod
+    def _draw_numeric_signal(
+        axis: Axes,
+        points: Sequence[NumericSignalPoint],
+        channel_name: str,
+        color: str,
+    ) -> None:
+        axis.set_ylabel(f"{channel_name}\nКод ошибки")
+        axis.grid(color="#d1d5db", alpha=0.6)
+        axis.ticklabel_format(axis="y", style="plain", useOffset=False)
+        if not points:
+            axis.text(
+                0.5,
+                0.5,
+                "Сигнал отсутствует",
+                ha="center",
+                va="center",
+                transform=axis.transAxes,
+            )
+            return
+        axis.step(
+            [point.timestamp for point in points],
+            [point.value for point in points],
+            where="post",
+            color=color,
+            linewidth=1.4,
+        )
+        axis.scatter(
+            [point.timestamp for point in points],
+            [point.value for point in points],
+            color=color,
+            s=13,
+            zorder=3,
+        )
+
+    def _on_hover(self, mouse_event: MouseEvent) -> None:
+        annotation = self._annotation
         if (
-            not self._annotation
+            annotation is None
             or mouse_event.inaxes is None
             or mouse_event.xdata is None
         ):
@@ -238,14 +304,14 @@ class PlkArchiveWindow(QMainWindow):
             or abs(mdates.date2num(nearest[0].timestamp) - mouse_event.xdata)
             > tolerance
         ):
-            self._annotation.set_visible(False)
+            annotation.set_visible(False)
             self.canvas.draw_idle()
             return
         event, channel_y = nearest
-        self._annotation.xy = (mdates.date2num(event.timestamp), channel_y)
+        annotation.xy = (mdates.date2num(event.timestamp), channel_y)
         timestamp_text = f"{event.timestamp:%Y-%m-%d %H:%M:%S.%f}"[:-3]
-        self._annotation.set_text(
+        annotation.set_text(
             f"{timestamp_text}\n{event.message}\nЗначение: {event.value}"
         )
-        self._annotation.set_visible(True)
+        annotation.set_visible(True)
         self.canvas.draw_idle()

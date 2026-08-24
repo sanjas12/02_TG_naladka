@@ -39,6 +39,13 @@ class ComparisonResult:
     only_channel_2: List[PlkEvent]
 
 
+@dataclass(frozen=True)
+class NumericSignalPoint:
+    timestamp: datetime
+    value: float
+    event: PlkEvent
+
+
 def _read_text(path: Path) -> str:
     raw = path.read_bytes()
     for encoding in ("utf-8-sig", "cp1251"):
@@ -80,6 +87,27 @@ def load_plk_archive(path: Path) -> List[PlkEvent]:
             PlkEvent(timestamp, row[1].strip(), row[2].strip(), path, row_number)
         )
     return sorted(events, key=lambda event: event.timestamp)
+
+
+def extract_numeric_signal(
+    events: Sequence[PlkEvent], message: str
+) -> Tuple[List[NumericSignalPoint], List[PlkEvent]]:
+    """Извлекает числовой сигнал, не оставляя его в списке обычных событий."""
+    points: List[NumericSignalPoint] = []
+    remaining_events: List[PlkEvent] = []
+    for event in events:
+        if event.message != message:
+            remaining_events.append(event)
+            continue
+        try:
+            value = float(event.value.replace(",", "."))
+        except ValueError as error:
+            raise ValueError(
+                f"Нечисловое значение сигнала «{message}» в строке "
+                f"{event.row_number} файла {event.source.name}: {event.value}"
+            ) from error
+        points.append(NumericSignalPoint(event.timestamp, value, event))
+    return points, remaining_events
 
 
 def compare_events(

@@ -1,7 +1,14 @@
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from logic.plc_archive_analyzer import PlkEvent, compare_events, load_plk_archive
+import pytest
+
+from logic.plc_archive_analyzer import (
+    PlkEvent,
+    compare_events,
+    extract_numeric_signal,
+    load_plk_archive,
+)
 
 
 def _event(offset_ms: int, message: str = "Событие", value: str = "Вкл") -> PlkEvent:
@@ -61,3 +68,25 @@ def test_compare_events_maximizes_duplicate_pairs():
     assert len(result.pairs) == 2
     assert not result.only_channel_1
     assert not result.only_channel_2
+
+
+def test_extract_numeric_signal_separates_and_converts_values():
+    signal_name = "Код ошибки по приоритету (младшая часть)"
+    signal_event = _event(0, message=signal_name, value="32768")
+    ordinary_event = _event(10)
+
+    points, remaining = extract_numeric_signal(
+        [signal_event, ordinary_event], signal_name
+    )
+
+    assert len(points) == 1
+    assert points[0].value == 32768
+    assert points[0].event is signal_event
+    assert remaining == [ordinary_event]
+
+
+def test_extract_numeric_signal_rejects_non_numeric_value():
+    signal_name = "Код ошибки по приоритету (младшая часть)"
+
+    with pytest.raises(ValueError, match="Нечисловое значение"):
+        extract_numeric_signal([_event(0, signal_name, "ошибка")], signal_name)
