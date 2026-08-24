@@ -288,19 +288,67 @@ class PlkArchiveWindow(QMainWindow):
             s=13,
             zorder=3,
         )
-        for point in points:
+        horizontal_offsets = PlkArchiveWindow._label_horizontal_offsets(points)
+        for point, horizontal_offset in zip(points, horizontal_offsets):
             value_label = f"{point.value:g}"
             axis.annotate(
                 value_label,
                 xy=(point.timestamp, point.value),
-                xytext=(0, label_offset),
+                xytext=(horizontal_offset, label_offset),
                 textcoords="offset points",
                 ha="center",
                 va="bottom" if label_offset > 0 else "top",
                 color=color,
-                fontsize=8,
+                fontsize=7.5,
+                bbox={
+                    "boxstyle": "round,pad=0.12",
+                    "fc": "white",
+                    "ec": "none",
+                    "alpha": 0.85,
+                },
+                arrowprops=(
+                    {
+                        "arrowstyle": "-",
+                        "color": color,
+                        "alpha": 0.55,
+                        "linewidth": 0.6,
+                    }
+                    if horizontal_offset
+                    else None
+                ),
                 zorder=4,
             )
+
+    @staticmethod
+    def _label_horizontal_offsets(
+        points: Sequence[NumericSignalPoint],
+    ) -> List[int]:
+        """Разводит подписи близких по времени точек влево и вправо."""
+        if not points:
+            return []
+
+        timestamps = [point.timestamp for point in points]
+        time_span = (max(timestamps) - min(timestamps)).total_seconds()
+        cluster_window = max(time_span * 0.015, 0.25)
+        offsets: List[int] = []
+        cluster_start = timestamps[0]
+        position_in_cluster = 0
+
+        for timestamp in timestamps:
+            distance = (timestamp - cluster_start).total_seconds()
+            if distance > cluster_window:
+                cluster_start = timestamp
+                position_in_cluster = 0
+
+            if position_in_cluster == 0:
+                offsets.append(0)
+            else:
+                magnitude = ((position_in_cluster + 1) // 2) * 18
+                direction = -1 if position_in_cluster % 2 else 1
+                offsets.append(direction * magnitude)
+            position_in_cluster += 1
+
+        return offsets
 
     def _on_hover(self, mouse_event: MouseEvent) -> None:
         annotation = self._annotation
