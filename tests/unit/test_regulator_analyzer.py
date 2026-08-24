@@ -173,9 +173,9 @@ def test_pdf_time_grid_uses_round_constant_step():
 def test_pdf_overview_contains_independent_format_version():
     analyzer = make_analyzer(np.zeros(10), np.zeros(10))
 
-    assert PDF_REPORT_FORMAT_VERSION == "0.2"
+    assert PDF_REPORT_FORMAT_VERSION == "0.3"
     assert analyzer._get_report_overview_lines()[0] == (
-        "Версия формата PDF-отчёта: 0.2"
+        "Версия формата PDF-отчёта: 0.3"
     )
 
 
@@ -191,6 +191,19 @@ def test_actual_time_constant_is_interpolated_between_samples():
 
     assert jump["actual_time_constant_a"] == pytest.approx(0.5065)
     assert jump["reg_ok_a"] is True
+
+
+@pytest.mark.unit
+def test_time_constant_table_contains_each_jump_and_both_channels():
+    aim = np.zeros(300)
+    aim[10:] = 10.0
+    aim[160:] = 20.0
+    analyzer = make_analyzer(aim, aim.copy())
+
+    rows = analyzer._get_time_constant_table_rows()
+
+    assert [row[0] for row in rows] == ["№ 1: 0 → 10 мм", "№ 2: 10 → 20 мм"]
+    assert rows[0][1:] == ("0.000", "0.000")
 
 
 @pytest.mark.unit

@@ -30,7 +30,7 @@ from model.basemodel import Model  # noqa: E402
 logger = logging.getLogger(__name__)
 
 # Повышать только при изменении структуры или оформления PDF-отчёта.
-PDF_REPORT_FORMAT_VERSION = "0.2"
+PDF_REPORT_FORMAT_VERSION = "0.3"
 
 
 class ReportCanvas(canvas.Canvas):
@@ -424,6 +424,22 @@ class RegulatorAnalyzer:
             "на каждое учитываемое изменение задания.",
         ]
 
+    def _get_time_constant_table_rows(self) -> List[Tuple[str, str, str]]:
+        """Подготовить строки сводной таблицы фактических постоянных времени."""
+        rows: List[Tuple[str, str, str]] = []
+        for jump_id, info in self.jumps.items():
+            label = f"№ {jump_id}: {info['start_value']:g} → {info['end_value']:g} мм"
+            value_a = info.get("actual_time_constant_a")
+            value_b = info.get("actual_time_constant_b")
+            rows.append(
+                (
+                    label,
+                    f"{value_a:.3f}" if value_a is not None else "не определена",
+                    f"{value_b:.3f}" if value_b is not None else "не определена",
+                )
+            )
+        return rows
+
     def get_analysis_report(self) -> str:
         """Генерация текстового отчёта по анализу."""
         logger.debug(f"Генерация текстового отчёта, скачков={len(self.jumps)}")
@@ -557,6 +573,109 @@ class RegulatorAnalyzer:
                 c.showPage()
                 c.setFont(font_name, font_size)
                 y = page_height - 50
+        return y
+
+    def _draw_time_constants_table(
+        self,
+        c: canvas.Canvas,
+        font_name: str,
+        y: float,
+    ) -> float:
+        """Нарисовать таблицу постоянных времени с переносом на новые страницы."""
+        page_width, page_height = letter
+        left = 50.0
+        column_widths = (252.0, 130.0, 130.0)
+        table_width = sum(column_widths)
+        header_height = 24.0
+        row_height = 22.0
+        bottom_margin = 40.0
+        rows = self._get_time_constant_table_rows()
+
+        def draw_header(current_y: float, continued: bool = False) -> float:
+            title = "Фактические постоянные времени по изменениям задания"
+            if continued:
+                title += " (продолжение)"
+            c.setFillColor(colors.black)
+            c.setFont(font_name, 11)
+            c.drawString(left, current_y, title)
+            current_y -= 20
+
+            c.setFillColor(colors.HexColor("#e6e6e6"))
+            c.rect(
+                left,
+                current_y - header_height,
+                table_width,
+                header_height,
+                stroke=0,
+                fill=1,
+            )
+            headers = ("Изменение задания", "ГСМ-А, с", "ГСМ-Б, с")
+            cell_x = left
+            c.setFillColor(colors.black)
+            c.setStrokeColor(colors.HexColor("#777777"))
+            c.setFont(font_name, 9)
+            for header, column_width in zip(headers, column_widths):
+                c.rect(
+                    cell_x,
+                    current_y - header_height,
+                    column_width,
+                    header_height,
+                    stroke=1,
+                    fill=0,
+                )
+                c.drawCentredString(
+                    cell_x + column_width / 2,
+                    current_y - header_height + 8,
+                    header,
+                )
+                cell_x += column_width
+            return current_y - header_height
+
+        if y < bottom_margin + header_height + row_height + 30:
+            c.showPage()
+            y = page_height - 50
+        y = draw_header(y)
+
+        if not rows:
+            c.setFont(font_name, 9)
+            c.drawString(left + 6, y - 15, "Учитываемых изменений задания нет")
+            return y - row_height
+
+        for row_index, row in enumerate(rows):
+            if y - row_height < bottom_margin:
+                c.showPage()
+                c.setPageSize(letter)
+                y = draw_header(page_height - 50, continued=True)
+
+            if row_index % 2:
+                c.setFillColor(colors.HexColor("#f7f7f7"))
+                c.rect(left, y - row_height, table_width, row_height, stroke=0, fill=1)
+
+            cell_x = left
+            c.setFillColor(colors.black)
+            c.setStrokeColor(colors.HexColor("#999999"))
+            c.setFont(font_name, 9)
+            for column_index, (value, column_width) in enumerate(
+                zip(row, column_widths)
+            ):
+                c.rect(
+                    cell_x,
+                    y - row_height,
+                    column_width,
+                    row_height,
+                    stroke=1,
+                    fill=0,
+                )
+                if column_index == 0:
+                    c.drawString(cell_x + 6, y - row_height + 7, value)
+                else:
+                    c.drawCentredString(
+                        cell_x + column_width / 2,
+                        y - row_height + 7,
+                        value,
+                    )
+                cell_x += column_width
+            y -= row_height
         return y
 
     def _draw_jump_plot(
@@ -890,7 +1009,7 @@ class RegulatorAnalyzer:
         # Текст отчёта
         c.showPage()
         report_lines = self._get_report_overview_lines()
-        self._draw_wrapped_lines(
+        overview_bottom = self._draw_wrapped_lines(
             c,
             report_lines,
             font_name,
@@ -899,6 +1018,7 @@ class RegulatorAnalyzer:
             page_height - 80,
             max_width=page_width - 100,
         )
+        self._draw_time_constants_table(c, font_name, overview_bottom - 8)
 
         # Отдельная страница с графиком для каждого найденного скачка.
         for jump_id, info in self.jumps.items():
