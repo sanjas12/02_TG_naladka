@@ -291,7 +291,7 @@ class RegulatorAnalyzer:
         report_lines: List[str] = [
             f"Количество изменений заданий ГСМ: {self.total_jump_count}",
             f"Из них больше {self.max_jump_threshold:g} мм: "
-            f"{len(self.excluded_large_jumps)} — не учитываются в детальном анализе.",
+            f"{len(self.excluded_large_jumps)} — не учитываются в детальном анализе (изменение задания > 50 мм).",
             f"Детально проанализировано изменений: {len(self.jumps)}.",
         ]
         if self.jumps:
