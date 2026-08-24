@@ -165,7 +165,7 @@ class MainWindowUI(QMainWindow):
         self.action_analysis_sarz_gsm = QAction("Анализ регулятора ГСМ", self)
         sarz_kuaes_menu.addAction(self.action_analysis_sarz_gsm)
 
-        self.action_analysis_plk_archives = QAction("Анализ архивов PLK", self)
+        self.action_analysis_plk_archives = QAction("Анализ архивов PLC", self)
         sarz_kuaes_menu.addAction(self.action_analysis_plk_archives)
 
         ## “Тест” — это НЕ QAction, а логическая группа

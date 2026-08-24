@@ -22,6 +22,7 @@ import config.config as cfg  # noqa: E402
 from model.basemodel import Model  # noqa: E402
 from ui.graph_matplot import WindowGraph  # noqa: E402
 from ui.main_window import MainWindowUI, MyGroupBox  # noqa: E402
+from ui.plc_archive_window import PlkArchiveWindow  # noqa: E402
 
 
 class FileHandler:
@@ -300,6 +301,7 @@ class MainLogic:
         self.model = Model()
         self.ui = ui
         self.graph_window: Optional[WindowGraph] = None
+        self.plk_archive_window: Optional[PlkArchiveWindow] = None
 
         self.file_handler = FileHandler(self.model)
         self.signal_manager = SignalManager(self.model, self.ui)
@@ -327,6 +329,17 @@ class MainLogic:
                 lambda _, gb=group_box, ds=dict_signal: self.remove_signal(gb, ds)
             )
         self.ui.gb_base_axe.ch_analyzer.stateChanged.connect(self.on_checkbox_changed)
+        self.ui.action_analysis_plk_archives.triggered.connect(
+            self.show_plk_archive_analysis
+        )
+
+    def show_plk_archive_analysis(self) -> None:
+        """Открывает сравнение архивов двух каналов PLK."""
+        if self.plk_archive_window is None:
+            self.plk_archive_window = PlkArchiveWindow(self.ui)
+        self.plk_archive_window.show()
+        self.plk_archive_window.raise_()
+        self.plk_archive_window.activateWindow()
 
     def on_checkbox_changed(self):
         if self.ui.gb_base_axe.ch_analyzer.isChecked():
