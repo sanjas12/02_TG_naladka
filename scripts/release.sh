@@ -188,7 +188,15 @@ esac
 verify_versions() {
     local expected=$1
 
-    VER_TOML=$(grep '^version = ' pyproject.toml | awk -F'"' '{print $2}')
+    VER_TOML=$(awk '
+        /^\[tool\.commitizen\]$/ { in_commitizen = 1; next }
+        /^\[/ { in_commitizen = 0 }
+        in_commitizen && /^version = / {
+            split($0, parts, "\"")
+            print parts[2]
+            exit
+        }
+    ' pyproject.toml)
     VER_PY=$(grep '__version__' src/_version.py | head -1 | awk -F'"' '{print $2}')
 
     log_info "Проверка версий после bump:"
@@ -206,7 +214,11 @@ verify_versions() {
     fi
 }
 
-NEW_VERSION=$(grep '^version = ' pyproject.toml | awk -F'"' '{print $2}')
+NEW_VERSION=$(git describe --tags --exact-match HEAD 2>/dev/null || true)
+if [ -z "$NEW_VERSION" ]; then
+    log_error "После bump на текущем коммите не найден релизный тег."
+    exit 1
+fi
 verify_versions "$NEW_VERSION"
 
 # ─── Push ─────────────────────────────────────────────────────
