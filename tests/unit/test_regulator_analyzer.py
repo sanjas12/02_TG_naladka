@@ -97,6 +97,29 @@ def test_jump_equal_to_maximum_is_analyzed():
 
 
 @pytest.mark.unit
+def test_quality_summary_counts_only_analyzed_jumps():
+    aim = np.zeros(500)
+    aim[10:] = 10.0
+    aim[150:] = 20.0
+    aim[300:] = 80.0
+    aim[430:] = 90.0
+    analyzer = make_analyzer(aim, aim.copy(), max_threshold=50.0)
+
+    analyzed = list(analyzer.jumps.values())
+    analyzed[0].update(reg_ok_a=True, reg_ok_b=True)
+    analyzed[1].update(reg_ok_a=True, reg_ok_b=False)
+    analyzed[2].update(reg_ok_a=None, reg_ok_b=None)
+
+    assert analyzer.total_jump_count == 4
+    assert len(analyzer.excluded_large_jumps) == 1
+    assert analyzer.get_quality_summary() == {
+        "gsm_a": {"satisfactory": 2, "unsatisfactory": 0, "not_evaluated": 1},
+        "gsm_b": {"satisfactory": 1, "unsatisfactory": 1, "not_evaluated": 1},
+        "overall": {"satisfactory": 1, "unsatisfactory": 1, "not_evaluated": 1},
+    }
+
+
+@pytest.mark.unit
 def test_fractional_setpoints_are_not_truncated():
     aim = np.full(100, 10.9)
     aim[10:] = 20.9

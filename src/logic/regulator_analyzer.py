@@ -285,15 +285,63 @@ class RegulatorAnalyzer:
                 f"Качество регулятора: ГСМ-А удовл. {ok_a_count}/{total}, ГСМ-Б удовл. {ok_b_count}/{total}"
             )
 
+    def get_quality_summary(self) -> Dict[str, Dict[str, int]]:
+        """Подсчитать результаты только по скачкам детального анализа."""
+        summary = {
+            "gsm_a": {"satisfactory": 0, "unsatisfactory": 0, "not_evaluated": 0},
+            "gsm_b": {"satisfactory": 0, "unsatisfactory": 0, "not_evaluated": 0},
+            "overall": {"satisfactory": 0, "unsatisfactory": 0, "not_evaluated": 0},
+        }
+        for info in self.jumps.values():
+            for field_name, summary_key in (
+                ("reg_ok_a", "gsm_a"),
+                ("reg_ok_b", "gsm_b"),
+            ):
+                value = info.get(field_name)
+                result_key = (
+                    "not_evaluated"
+                    if value is None
+                    else "satisfactory"
+                    if value
+                    else "unsatisfactory"
+                )
+                summary[summary_key][result_key] += 1
+
+            reg_ok_a = info.get("reg_ok_a")
+            reg_ok_b = info.get("reg_ok_b")
+            if reg_ok_a is None or reg_ok_b is None:
+                overall_key = "not_evaluated"
+            elif reg_ok_a and reg_ok_b:
+                overall_key = "satisfactory"
+            else:
+                overall_key = "unsatisfactory"
+            summary["overall"][overall_key] += 1
+        return summary
+
+    def _get_summary_lines(self) -> List[str]:
+        quality = self.get_quality_summary()
+        return [
+            f"Количество изменений заданий ГСМ: {self.total_jump_count}",
+            f"Из них больше {self.max_jump_threshold:g} мм: "
+            f"{len(self.excluded_large_jumps)} — не учитываются в детальном анализе.",
+            f"Детально проанализировано изменений: {len(self.jumps)}.",
+            "ГСМ-А: удовлетворительно — {satisfactory}, неудовлетворительно — "
+            "{unsatisfactory}, не оценено — {not_evaluated}.".format(
+                **quality["gsm_a"]
+            ),
+            "ГСМ-Б: удовлетворительно — {satisfactory}, неудовлетворительно — "
+            "{unsatisfactory}, не оценено — {not_evaluated}.".format(
+                **quality["gsm_b"]
+            ),
+            "По обоим каналам: удовлетворительно — {satisfactory}, "
+            "неудовлетворительно хотя бы по одному — {unsatisfactory}, "
+            "не оценено — {not_evaluated}.".format(**quality["overall"]),
+        ]
+
     def get_analysis_report(self) -> str:
         """Генерация текстового отчёта по анализу."""
         logger.debug(f"Генерация текстового отчёта, скачков={len(self.jumps)}")
-        report_lines: List[str] = [
-            f"Количество изменений заданий ГСМ: {self.total_jump_count}",
-            f"Из них больше {self.max_jump_threshold:g} мм: "
-            f"{len(self.excluded_large_jumps)} — не учитываются в детальном анализе (изменение задания > 50 мм).",
-            f"Детально проанализировано изменений: {len(self.jumps)}.",
-        ]
+        report_lines = self._get_summary_lines()
         if self.jumps:
             report_lines.append("\nДетальная информация по каждому изменению задания:")
             for jump_id, info in self.jumps.items():
@@ -656,13 +704,11 @@ class RegulatorAnalyzer:
 
         # Текст отчёта
         c.showPage()
-        report_lines = [
-            f"Количество изменений заданий ГСМ: {self.total_jump_count}",
-            f"Из них больше {self.max_jump_threshold:g} мм: "
-            f"{len(self.excluded_large_jumps)} — не учитываются в детальном анализе.",
-            f"Детально проанализировано изменений: {len(self.jumps)}.",
-            "Подробные результаты и графики приведены далее: по одной странице на каждое учитываемое изменение задания.",
-        ]
+        report_lines = self._get_summary_lines()
+        report_lines.append(
+            "Подробные результаты и графики приведены далее: по одной странице "
+            "на каждое учитываемое изменение задания."
+        )
         self._draw_wrapped_lines(
             c,
             report_lines,
