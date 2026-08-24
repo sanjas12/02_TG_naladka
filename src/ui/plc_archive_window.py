@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import List, Optional, Sequence, Tuple
 
 import matplotlib.dates as mdates
+import matplotlib.ticker as ticker
 from matplotlib.axes import Axes
 from matplotlib.backend_bases import MouseEvent
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
@@ -224,10 +225,9 @@ class PlkArchiveWindow(QMainWindow):
         axis.set_yticklabels(["Канал 2", "Время", "Канал 1"])
         axis.set_ylim(-1.6, 1.6)
         axis.grid(axis="x", color="#d1d5db", alpha=0.6)
-        locator = mdates.AutoDateLocator(minticks=5, maxticks=12)
-        signal_axis_2.xaxis.set_major_locator(locator)
-        signal_axis_2.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
         signal_axis_2.set_xlabel("Дата и время")
+        signal_axis_2.callbacks.connect("xlim_changed", self._update_time_axis)
+        self._update_time_axis(signal_axis_2)
         axis.legend(loc="upper right")
 
         deltas = [abs(pair.delta_ms) for pair in result.pairs]
@@ -250,6 +250,41 @@ class PlkArchiveWindow(QMainWindow):
         annotation.set_visible(False)
         self._annotation = annotation
         self.canvas.draw_idle()
+
+    @staticmethod
+    def _update_time_axis(axis: Axes) -> None:
+        """Подбирает деления времени вплоть до полусекунд при увеличении."""
+        x_min, x_max = axis.get_xlim()
+        visible_seconds = abs(x_max - x_min) * 24 * 60 * 60
+
+        if visible_seconds <= 30:
+            axis.xaxis.set_major_locator(mdates.MicrosecondLocator(interval=500000))
+            axis.xaxis.set_major_formatter(
+                ticker.FuncFormatter(
+                    lambda value, _position: mdates.num2date(value).strftime(
+                        "%H:%M:%S.%f"
+                    )[:-3]
+                )
+            )
+        elif visible_seconds <= 300:
+            intervals = (1, 2, 5, 10, 15, 30)
+            interval = next(
+                value for value in intervals if visible_seconds / value <= 12
+            )
+            axis.xaxis.set_major_locator(mdates.SecondLocator(interval=interval))
+            axis.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
+        elif visible_seconds <= 7200:
+            intervals = (1, 2, 5, 10, 15, 30)
+            visible_minutes = visible_seconds / 60
+            interval = next(
+                value for value in intervals if visible_minutes / value <= 12
+            )
+            axis.xaxis.set_major_locator(mdates.MinuteLocator(interval=interval))
+            axis.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+        else:
+            locator = mdates.AutoDateLocator(minticks=5, maxticks=12)
+            axis.xaxis.set_major_locator(locator)
+            axis.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
 
     @staticmethod
     def _draw_numeric_signal(
