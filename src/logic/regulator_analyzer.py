@@ -2,7 +2,7 @@ import logging
 import math
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -473,6 +473,15 @@ class RegulatorAnalyzer:
     ) -> None:
         """Рисует векторный график одного переходного процесса."""
 
+        def parse_source_datetime(value: Any) -> Optional[datetime]:
+            text = str(value)
+            for time_format in ("%Y-%m-%d %H:%M:%S,%f", "%Y-%m-%d %H:%M:%S.%f"):
+                try:
+                    return datetime.strptime(text, time_format)
+                except ValueError:
+                    continue
+            return None
+
         def split_source_time(value: Any) -> Tuple[str, str]:
             text = str(value)
             parts = text.split(" ", 1)
@@ -513,7 +522,7 @@ class RegulatorAnalyzer:
         value_min = min(assignment_min, signal_min)
         value_max = max(assignment_max, signal_max)
         value_span = value_max - value_min
-        tick_step = max(5.0, math.ceil((value_span / 7.0) / 5.0) * 5.0)
+        y_tick_step = max(5.0, math.ceil((value_span / 7.0) / 5.0) * 5.0)
         time_min = min(float(time_axis[0]) if point_count else 0.0, 0.0)
         time_max = max(float(time_axis[-1]) if point_count else 0.0, 0.7, self.dt)
         time_span = time_max - time_min
@@ -533,27 +542,55 @@ class RegulatorAnalyzer:
         c.setFont(font_name, 8)
         c.setStrokeColor(colors.HexColor("#b0b0b0"))
         c.setLineWidth(0.4)
-        x_tick_count = 10
         c.setFont(font_name, 6.5)
         first_date, _ = split_source_time(source_time[0]) if point_count else ("", "")
         last_date, _ = split_source_time(source_time[-1]) if point_count else ("", "")
-        for tick in range(x_tick_count):
-            fraction = tick / (x_tick_count - 1)
-            tick_x = left + fraction * plot_width
-            c.line(tick_x, bottom, tick_x, bottom + plot_height)
-            source_index = min(round(fraction * (point_count - 1)), point_count - 1)
-            _, source_label = (
-                split_source_time(source_time[source_index])
-                if point_count
-                else ("", "")
+        x_tick_step = self._choose_time_tick_step(time_span)
+        first_datetime = parse_source_datetime(source_time[0]) if point_count else None
+        x_ticks: List[Tuple[float, str]] = []
+        if first_datetime is not None:
+            seconds_at_first_point = (
+                first_datetime.hour * 3600
+                + first_datetime.minute * 60
+                + first_datetime.second
+                + first_datetime.microsecond / 1_000_000.0
             )
+            absolute_start = seconds_at_first_point + time_min - time_axis[0]
+            first_tick_absolute = (
+                math.ceil((absolute_start - 1e-9) / x_tick_step) * x_tick_step
+            )
+            tick_absolute = first_tick_absolute
+            while (
+                tick_absolute <= seconds_at_first_point + time_max - time_axis[0] + 1e-9
+            ):
+                tick_value = time_axis[0] + tick_absolute - seconds_at_first_point
+                tick_datetime = first_datetime + timedelta(
+                    seconds=tick_value - time_axis[0]
+                )
+                x_ticks.append((tick_value, tick_datetime.strftime("%H:%M:%S,%f")[:-3]))
+                tick_absolute += x_tick_step
+        else:
+            first_tick = math.ceil((time_min - 1e-9) / x_tick_step) * x_tick_step
+            tick_value = first_tick
+            while tick_value <= time_max + 1e-9:
+                source_index = min(
+                    max(round((tick_value - time_axis[0]) / self.dt), 0),
+                    point_count - 1,
+                )
+                _, source_label = split_source_time(source_time[source_index])
+                x_ticks.append((tick_value, source_label))
+                tick_value += x_tick_step
+
+        for tick_value, source_label in x_ticks:
+            tick_x = map_x(tick_value)
+            c.line(tick_x, bottom, tick_x, bottom + plot_height)
             time_parts = source_label.rsplit(",", 1)
             main_time = time_parts[0]
             milliseconds = f",{time_parts[1]}" if len(time_parts) == 2 else ""
-            if tick == 0:
+            if abs(tick_x - left) < 1.0:
                 c.drawString(tick_x, bottom - 12, main_time)
                 c.drawString(tick_x, bottom - 20, milliseconds)
-            elif tick == x_tick_count - 1:
+            elif abs(tick_x - (left + plot_width)) < 1.0:
                 c.drawRightString(tick_x, bottom - 12, main_time)
                 c.drawRightString(tick_x, bottom - 20, milliseconds)
             else:
@@ -561,10 +598,10 @@ class RegulatorAnalyzer:
                 c.drawCentredString(tick_x, bottom - 20, milliseconds)
 
         c.setFont(font_name, 8)
-        first_y_tick = math.ceil(value_min / tick_step) * tick_step
-        y_tick_count = int(math.floor((value_max - first_y_tick) / tick_step)) + 1
+        first_y_tick = math.ceil(value_min / y_tick_step) * y_tick_step
+        y_tick_count = int(math.floor((value_max - first_y_tick) / y_tick_step)) + 1
         for tick in range(y_tick_count):
-            tick_value = first_y_tick + tick * tick_step
+            tick_value = first_y_tick + tick * y_tick_step
             tick_y = map_y(tick_value)
             c.line(left, tick_y, left + plot_width, tick_y)
             c.drawRightString(left - 5, tick_y - 3, f"{tick_value:g}")
@@ -633,6 +670,30 @@ class RegulatorAnalyzer:
             c.drawString(legend_x + 18, legend_y - 3, label)
             legend_x += 85 if label != "Уровень 63%" else 115
         c.restoreState()
+
+    @staticmethod
+    def _choose_time_tick_step(time_span: float) -> float:
+        """Выбрать круглый постоянный шаг сетки, сохраняя около 10 делений."""
+        nice_steps = (
+            0.01,
+            0.02,
+            0.05,
+            0.1,
+            0.2,
+            0.5,
+            1.0,
+            2.0,
+            5.0,
+            10.0,
+            20.0,
+            30.0,
+            60.0,
+        )
+        minimum_step = max(time_span, 0.0) / 12.0
+        for step in nice_steps:
+            if step >= minimum_step - 1e-12:
+                return step
+        return math.ceil(minimum_step / 60.0) * 60.0
 
     def save_to_pdf(
         self,

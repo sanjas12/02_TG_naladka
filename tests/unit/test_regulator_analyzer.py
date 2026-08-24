@@ -161,6 +161,13 @@ def test_jump_plot_contains_two_seconds_before_jump():
 
 
 @pytest.mark.unit
+def test_pdf_time_grid_uses_round_constant_step():
+    assert RegulatorAnalyzer._choose_time_tick_step(0.95) == pytest.approx(0.1)
+    assert RegulatorAnalyzer._choose_time_tick_step(5.65) == pytest.approx(0.5)
+    assert RegulatorAnalyzer._choose_time_tick_step(20.0) == pytest.approx(2.0)
+
+
+@pytest.mark.unit
 def test_empty_input_is_rejected():
     with pytest.raises(ValueError, match="Нет данных"):
         make_analyzer([], [])
