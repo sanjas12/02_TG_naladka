@@ -30,7 +30,7 @@ from model.basemodel import Model  # noqa: E402
 logger = logging.getLogger(__name__)
 
 # Повышать только при изменении структуры или оформления PDF-отчёта.
-PDF_REPORT_FORMAT_VERSION = "0.1"
+PDF_REPORT_FORMAT_VERSION = "0.2"
 
 
 class ReportCanvas(canvas.Canvas):
@@ -243,6 +243,31 @@ class RegulatorAnalyzer:
         )
         return self.jumps
 
+    def _find_63_percent_time(
+        self, values: List[float], expected_63: float, delta: float
+    ) -> Optional[float]:
+        """Найти первое достижение 63% с интерполяцией между отсчётами."""
+        if not values:
+            return None
+        for index, current_value in enumerate(values):
+            reached = (
+                current_value >= expected_63
+                if delta >= 0
+                else current_value <= expected_63
+            )
+            if not reached:
+                continue
+            if index == 0:
+                return 0.0
+            previous_value = values[index - 1]
+            value_delta = current_value - previous_value
+            if value_delta == 0:
+                return index * self.dt
+            fraction = (expected_63 - previous_value) / value_delta
+            fraction = min(max(float(fraction), 0.0), 1.0)
+            return (index - 1 + fraction) * self.dt
+        return None
+
     def evaluate_regulator_quality(self, time_constant: float = 0.7) -> None:
         """
         Оценивает качество переходного процесса по скачкам задания.
@@ -263,15 +288,33 @@ class RegulatorAnalyzer:
             expected_63 = start + 0.63 * delta
             reg_values_a = jump_info["regulator_a"]
             reg_values_b = jump_info["regulator_b"]
+            actual_time_constant_a = self._find_63_percent_time(
+                reg_values_a, expected_63, delta
+            )
+            actual_time_constant_b = self._find_63_percent_time(
+                reg_values_b, expected_63, delta
+            )
             check_idx = int(round(time_constant / self.dt))
             if check_idx >= len(reg_values_a) or check_idx >= len(reg_values_b):
+                ok_a = (
+                    actual_time_constant_a <= time_constant + 1e-9
+                    if actual_time_constant_a is not None
+                    else None
+                )
+                ok_b = (
+                    actual_time_constant_b <= time_constant + 1e-9
+                    if actual_time_constant_b is not None
+                    else None
+                )
                 self.jumps[jump_id].update(
                     {
                         "expected_63": expected_63,
                         "reached_value_a": None,
                         "reached_value_b": None,
-                        "reg_ok_a": None,
-                        "reg_ok_b": None,
+                        "actual_time_constant_a": actual_time_constant_a,
+                        "actual_time_constant_b": actual_time_constant_b,
+                        "reg_ok_a": ok_a,
+                        "reg_ok_b": ok_b,
                         "evaluation_error": (
                             f"Недостаточно данных после скачка: требуется {check_idx + 1} "
                             f"отсчётов ({time_constant:.2f} с)"
@@ -284,18 +327,20 @@ class RegulatorAnalyzer:
             reached_value_a = reg_values_a[check_idx]
             reached_value_b = reg_values_b[check_idx]
             ok_a = bool(
-                (delta >= 0 and reached_value_a >= expected_63)
-                or (delta < 0 and reached_value_a <= expected_63)
+                actual_time_constant_a is not None
+                and actual_time_constant_a <= time_constant + 1e-9
             )
             ok_b = bool(
-                (delta >= 0 and reached_value_b >= expected_63)
-                or (delta < 0 and reached_value_b <= expected_63)
+                actual_time_constant_b is not None
+                and actual_time_constant_b <= time_constant + 1e-9
             )
             self.jumps[jump_id].update(
                 {
                     "expected_63": expected_63,
                     "reached_value_a": reached_value_a,
                     "reached_value_b": reached_value_b,
+                    "actual_time_constant_a": actual_time_constant_a,
+                    "actual_time_constant_b": actual_time_constant_b,
                     "reg_ok_a": ok_a,
                     "reg_ok_b": ok_b,
                 }
@@ -414,6 +459,10 @@ class RegulatorAnalyzer:
                     f"Ожидаемое значение(63%) = {expected_63:0.3f} мм, "
                     f"Достигнутое значение ГСМ-А = {reached_a_text} мм, "
                     f"Достигнутое значение ГСМ-Б = {reached_b_text} мм, "
+                    "Фактическая постоянная времени ГСМ-А = "
+                    f"{self._time_constant_text(info.get('actual_time_constant_a'))}, "
+                    "Фактическая постоянная времени ГСМ-Б = "
+                    f"{self._time_constant_text(info.get('actual_time_constant_b'))}, "
                     f"Качество регулятора ГСМ-А = {reg_ok_a}; "
                     f"Качество регулятора ГСМ-Б = {reg_ok_b}"
                 )
@@ -426,6 +475,10 @@ class RegulatorAnalyzer:
         if value is None:
             return "Не оценено"
         return "Удовл." if value else "Неудовл."
+
+    @staticmethod
+    def _time_constant_text(value: Optional[float]) -> str:
+        return f"{value:.3f} с" if value is not None else "не определена"
 
     def _format_jump_details(self, jump_id: int, info: Dict[str, Any]) -> str:
         """Формирует единое описание скачка для текста и страницы с графиком."""
@@ -440,6 +493,10 @@ class RegulatorAnalyzer:
             f"Ожидаемое значение (63%) = {info['expected_63']:0.3f} мм, "
             f"Достигнутое значение ГСМ-А = {reached_a_text} мм, "
             f"Достигнутое значение ГСМ-Б = {reached_b_text} мм, "
+            "Фактическая постоянная времени ГСМ-А = "
+            f"{self._time_constant_text(info.get('actual_time_constant_a'))}, "
+            "Фактическая постоянная времени ГСМ-Б = "
+            f"{self._time_constant_text(info.get('actual_time_constant_b'))}, "
             f"Качество регулятора ГСМ-А = {self._quality_text(info['reg_ok_a'])}; "
             f"Качество регулятора ГСМ-Б = {self._quality_text(info['reg_ok_b'])}. "
             f"Порог обнаружения = {self.jump_threshold:g} мм."
@@ -565,7 +622,7 @@ class RegulatorAnalyzer:
         value_span = value_max - value_min
         y_tick_step = max(5.0, math.ceil((value_span / 7.0) / 5.0) * 5.0)
         time_min = min(float(time_axis[0]) if point_count else 0.0, 0.0)
-        time_max = max(float(time_axis[-1]) if point_count else 0.0, 0.7, self.dt)
+        time_max = max(float(time_axis[-1]) if point_count else 0.0, self.dt)
         time_span = time_max - time_min
 
         left = x + 45
@@ -689,27 +746,53 @@ class RegulatorAnalyzer:
             left + plot_width,
             map_y(info["expected_63"]),
         )
-        c.setStrokeColor(colors.HexColor("#9467bd"))
-        c.setDash(2, 2)
-        c.line(map_x(0.7), bottom, map_x(0.7), bottom + plot_height)
+        actual_time_constant_a = info.get("actual_time_constant_a")
+        actual_time_constant_b = info.get("actual_time_constant_b")
+        if actual_time_constant_a is not None:
+            c.setStrokeColor(colors.HexColor("#1f77b4"))
+            c.setDash(2, 2)
+            c.line(
+                map_x(actual_time_constant_a),
+                bottom,
+                map_x(actual_time_constant_a),
+                bottom + plot_height,
+            )
+        if actual_time_constant_b is not None:
+            c.setStrokeColor(colors.HexColor("#ff7f0e"))
+            c.setDash(4, 2)
+            c.line(
+                map_x(actual_time_constant_b),
+                bottom,
+                map_x(actual_time_constant_b),
+                bottom + plot_height,
+            )
         c.setDash()
 
         legend = [
-            ("Задание", "#202020"),
-            ("ГСМ-А", "#1f77b4"),
-            ("ГСМ-Б", "#ff7f0e"),
-            ("Уровень 63%", "#d62728"),
-            ("0,7 с", "#9467bd"),
+            ("Задание", "#202020", 85),
+            ("ГСМ-А", "#1f77b4", 85),
+            ("ГСМ-Б", "#ff7f0e", 85),
+            ("Уровень 63%", "#d62728", 115),
+            (
+                f"τ ГСМ-А: {self._time_constant_text(actual_time_constant_a)}",
+                "#1f77b4",
+                130,
+            ),
+            (
+                f"τ ГСМ-Б: {self._time_constant_text(actual_time_constant_b)}",
+                "#ff7f0e",
+                130,
+            ),
         ]
         legend_x = left
         legend_y = y + height - 12
-        for label, color in legend:
+        for label, color, legend_width in legend:
             c.setStrokeColor(colors.HexColor(color))
             c.setLineWidth(1.5)
             c.line(legend_x, legend_y, legend_x + 14, legend_y)
             c.setFillColor(colors.black)
             c.drawString(legend_x + 18, legend_y - 3, label)
-            legend_x += 85 if label != "Уровень 63%" else 115
+            legend_x += legend_width
         c.restoreState()
 
     @staticmethod

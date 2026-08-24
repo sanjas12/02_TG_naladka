@@ -40,6 +40,7 @@ def test_increasing_jump_is_evaluated_after_point_seven_seconds():
     jump = analyzer.jumps[1]
     assert jump["expected_63"] == pytest.approx(6.3)
     assert jump["reached_value_a"] == pytest.approx(6.3)
+    assert jump["actual_time_constant_a"] == pytest.approx(0.7)
     assert jump["reg_ok_a"] is True
 
 
@@ -53,6 +54,7 @@ def test_decreasing_jump_uses_lower_comparison():
     analyzer = make_analyzer(aim, real)
 
     assert analyzer.jumps[1]["expected_63"] == pytest.approx(18.5)
+    assert analyzer.jumps[1]["actual_time_constant_a"] == pytest.approx(0.7)
     assert analyzer.jumps[1]["reg_ok_a"] is True
 
 
@@ -171,10 +173,24 @@ def test_pdf_time_grid_uses_round_constant_step():
 def test_pdf_overview_contains_independent_format_version():
     analyzer = make_analyzer(np.zeros(10), np.zeros(10))
 
-    assert PDF_REPORT_FORMAT_VERSION == "0.1"
+    assert PDF_REPORT_FORMAT_VERSION == "0.2"
     assert analyzer._get_report_overview_lines()[0] == (
-        "Версия формата PDF-отчёта: 0.1"
+        "Версия формата PDF-отчёта: 0.2"
     )
+
+
+@pytest.mark.unit
+def test_actual_time_constant_is_interpolated_between_samples():
+    aim = np.zeros(150)
+    aim[10:] = 10.0
+    real = np.zeros(150)
+    real[60] = 5.0
+    real[61:] = 7.0
+
+    jump = make_analyzer(aim, real).jumps[1]
+
+    assert jump["actual_time_constant_a"] == pytest.approx(0.5065)
+    assert jump["reg_ok_a"] is True
 
 
 @pytest.mark.unit
