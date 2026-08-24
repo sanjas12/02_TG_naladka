@@ -57,7 +57,7 @@ def _read_text(path: Path) -> str:
 
 
 def load_plk_archive(path: Path) -> List[PlkEvent]:
-    """Читает архив PLK с колонками времени, сообщения и значения."""
+    """Читает архив PLC с колонками времени, сообщения и значения."""
     path = Path(path)
     if not path.is_file():
         raise FileNotFoundError(f"Файл архива не найден: {path}")

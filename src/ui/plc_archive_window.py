@@ -40,10 +40,11 @@ logger = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ERROR_CODE_SIGNAL = "Код ошибки по приоритету (младшая часть)"
 ERROR_CODE_MAX = 66000
+MIN_TIME_WINDOW_SECONDS = 1.0
 
 
 class PlkArchiveWindow(QMainWindow):
-    """Сравнение синхронизированных архивов двух каналов PLK."""
+    """Сравнение синхронизированных архивов двух каналов PLC."""
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -52,8 +53,9 @@ class PlkArchiveWindow(QMainWindow):
         self._plotted_events: List[Tuple[PlkEvent, int]] = []
         self._annotation: Optional[Annotation] = None
         self._time_axis: Optional[Axes] = None
+        self._adjusting_time_limits = False
 
-        self.setWindowTitle("Анализ архивов PLK")
+        self.setWindowTitle("Анализ архивов PLC")
         self.resize(1280, 760)
         self._setup_ui()
         self._load_default_archives()
@@ -135,8 +137,8 @@ class PlkArchiveWindow(QMainWindow):
             if refresh:
                 self._refresh_plot()
         except (OSError, ValueError) as error:
-            logger.error("Ошибка чтения архива PLK", exc_info=True)
-            QMessageBox.critical(self, "Ошибка архива PLK", str(error))
+            logger.error("Ошибка чтения архива PLC", exc_info=True)
+            QMessageBox.critical(self, "Ошибка архива PLC", str(error))
 
     def _refresh_plot(self) -> None:
         if not self.channel_1 or not self.channel_2:
@@ -153,8 +155,8 @@ class PlkArchiveWindow(QMainWindow):
             )
             self._draw_timeline(result, signal_1, signal_2)
         except ValueError as error:
-            logger.error("Ошибка числового сигнала архива PLK", exc_info=True)
-            QMessageBox.critical(self, "Ошибка архива PLK", str(error))
+            logger.error("Ошибка числового сигнала архива PLC", exc_info=True)
+            QMessageBox.critical(self, "Ошибка архива PLC", str(error))
 
     def _draw_timeline(
         self,
@@ -261,16 +263,39 @@ class PlkArchiveWindow(QMainWindow):
         self._annotation = annotation
         self.canvas.draw_idle()
 
-    @staticmethod
     def _update_time_axis(
-        axis: Axes, limits: Optional[Tuple[float, float]] = None
+        self, axis: Axes, limits: Optional[Tuple[float, float]] = None
     ) -> None:
-        """Подбирает деления времени вплоть до полусекунд при увеличении."""
+        """Ограничивает приближение одной секундой и подбирает деления времени."""
+        if self._adjusting_time_limits:
+            return
+
         x_min, x_max = limits if limits is not None else axis.get_xlim()
         visible_seconds = abs(x_max - x_min) * 24 * 60 * 60
+        if visible_seconds < MIN_TIME_WINDOW_SECONDS:
+            center = (x_min + x_max) / 2
+            half_window = MIN_TIME_WINDOW_SECONDS / (2 * 24 * 60 * 60)
+            x_min = center - half_window
+            x_max = center + half_window
+            visible_seconds = MIN_TIME_WINDOW_SECONDS
+            self._adjusting_time_limits = True
+            try:
+                axis.set_xlim(x_min, x_max)
+            finally:
+                self._adjusting_time_limits = False
+
         axis.xaxis.set_minor_locator(ticker.NullLocator())
 
-        if visible_seconds <= 60:
+        if visible_seconds <= MIN_TIME_WINDOW_SECONDS * 1.001:
+            axis.xaxis.set_major_locator(mdates.MicrosecondLocator(interval=100000))
+            axis.xaxis.set_major_formatter(
+                ticker.FuncFormatter(
+                    lambda value, _position: mdates.num2date(value).strftime(
+                        "%H:%M:%S.%f"
+                    )[:-3]
+                )
+            )
+        elif visible_seconds <= 60:
             subminute_intervals = (0.5, 1, 2, 5, 10)
             interval = next(
                 value for value in subminute_intervals if visible_seconds / value <= 12

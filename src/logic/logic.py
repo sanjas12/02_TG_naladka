@@ -334,7 +334,7 @@ class MainLogic:
         )
 
     def show_plk_archive_analysis(self) -> None:
-        """Открывает сравнение архивов двух каналов PLK."""
+        """Открывает сравнение архивов двух каналов PLC."""
         if self.plk_archive_window is None:
             self.plk_archive_window = PlkArchiveWindow(self.ui)
         self.plk_archive_window.show()
