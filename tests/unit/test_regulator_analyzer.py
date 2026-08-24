@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from logic.regulator_analyzer import RegulatorAnalyzer
+from logic.regulator_analyzer import PDF_REPORT_FORMAT_VERSION, RegulatorAnalyzer
 
 
 def make_analyzer(
@@ -165,6 +165,16 @@ def test_pdf_time_grid_uses_round_constant_step():
     assert RegulatorAnalyzer._choose_time_tick_step(0.95) == pytest.approx(0.1)
     assert RegulatorAnalyzer._choose_time_tick_step(5.65) == pytest.approx(0.5)
     assert RegulatorAnalyzer._choose_time_tick_step(20.0) == pytest.approx(2.0)
+
+
+@pytest.mark.unit
+def test_pdf_overview_contains_independent_format_version():
+    analyzer = make_analyzer(np.zeros(10), np.zeros(10))
+
+    assert PDF_REPORT_FORMAT_VERSION == "0.1"
+    assert analyzer._get_report_overview_lines()[0] == (
+        "Версия формата PDF-отчёта: 0.1"
+    )
 
 
 @pytest.mark.unit

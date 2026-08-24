@@ -29,6 +29,37 @@ from model.basemodel import Model  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
+# Повышать только при изменении структуры или оформления PDF-отчёта.
+PDF_REPORT_FORMAT_VERSION = "0.1"
+
+
+class ReportCanvas(canvas.Canvas):
+    """Canvas, автоматически добавляющий номер в правый нижний угол."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self._page_number_drawn = False
+
+    def _draw_page_number(self) -> None:
+        if self._page_number_drawn:
+            return
+        page_width, _ = self._pagesize
+        self.saveState()
+        self.setFillColor(colors.HexColor("#555555"))
+        self.setFont("Helvetica", 8)
+        self.drawRightString(page_width - 24, 18, str(self.getPageNumber()))
+        self.restoreState()
+        self._page_number_drawn = True
+
+    def showPage(self) -> None:  # noqa: N802
+        self._draw_page_number()
+        super().showPage()
+        self._page_number_drawn = False
+
+    def save(self) -> None:
+        self._draw_page_number()
+        super().save()
+
 
 class RegulatorAnalyzer:
     def __init__(
@@ -336,6 +367,16 @@ class RegulatorAnalyzer:
             "По обоим каналам: удовлетворительно — {satisfactory}, "
             "неудовлетворительно хотя бы по одному — {unsatisfactory}, "
             "не оценено — {not_evaluated}.".format(**quality["overall"]),
+        ]
+
+    def _get_report_overview_lines(self) -> List[str]:
+        """Сформировать содержимое второй страницы PDF-отчёта."""
+        return [
+            f"Версия формата PDF-отчёта: {PDF_REPORT_FORMAT_VERSION}",
+            "",
+            *self._get_summary_lines(),
+            "Подробные результаты и графики приведены далее: по одной странице "
+            "на каждое учитываемое изменение задания.",
         ]
 
     def get_analysis_report(self) -> str:
@@ -710,7 +751,7 @@ class RegulatorAnalyzer:
 
         logger.info(f"Сохранение PDF-отчёта: {filename}")
         font_name = self._register_font()
-        c = canvas.Canvas(str(filename), pagesize=letter)
+        c = ReportCanvas(str(filename), pagesize=letter)
         page_width, page_height = letter
 
         # Заголовок
@@ -765,11 +806,7 @@ class RegulatorAnalyzer:
 
         # Текст отчёта
         c.showPage()
-        report_lines = self._get_summary_lines()
-        report_lines.append(
-            "Подробные результаты и графики приведены далее: по одной странице "
-            "на каждое учитываемое изменение задания."
-        )
+        report_lines = self._get_report_overview_lines()
         self._draw_wrapped_lines(
             c,
             report_lines,
