@@ -46,6 +46,8 @@ log_info "Log файл: $LOG_FILE"
 # ─── Кодировка ────────────────────────────────────────────────
 export PYTHONIOENCODING=utf-8
 export PYTHONUTF8=1
+# На Windows uv иногда не может создавать hardlink между кэшем и проектом.
+export UV_LINK_MODE=copy
 
 # ─── Git: переключаемся на master ─────────────────────────────
 echo ""
@@ -91,7 +93,6 @@ if ! uv run --frozen pytest tests/unit tests/integration tests/gui; then
     log_error "Тесты не прошли! Релиз отменён."
     exit 1
 fi
-log_ok "Все тесты прошли успешно"
 log_ok "Все тесты прошли успешно"
 
 # ─── Коммиты с последнего релиза ──────────────────────────────
@@ -210,8 +211,12 @@ verify_versions "$NEW_VERSION"
 
 # ─── Push ─────────────────────────────────────────────────────
 log_info "Пушим в remote"
-if ! git push origin master && git push origin --tags; then
-    log_error "Не удалось выполнить git push"
+if ! git push origin master; then
+    log_error "Не удалось отправить ветку master"
+    exit 1
+fi
+if ! git push origin --tags; then
+    log_error "Не удалось отправить релизные теги"
     exit 1
 fi
 

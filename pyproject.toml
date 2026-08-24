@@ -67,6 +67,9 @@ environments = [
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.dynamic]
+version = {attr = "_version.__version__"}
+
 # ─── Ruff: линтер + форматер ─────────────────────────────────────────────────
 [tool.ruff]
 line-length = 88
