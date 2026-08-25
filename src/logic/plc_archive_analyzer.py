@@ -53,6 +53,13 @@ class BinarySignalPoint:
     event: PlkEvent
 
 
+@dataclass(frozen=True)
+class CategoricalSignalPoint:
+    timestamp: datetime
+    state: str
+    event: PlkEvent
+
+
 def _read_text(path: Path) -> str:
     raw = path.read_bytes()
     for encoding in ("utf-8-sig", "cp1251"):
@@ -142,6 +149,28 @@ def extract_binary_signal(
                 f"{event.row_number} файла {event.source.name}: {event.value}"
             )
         points.append(BinarySignalPoint(event.timestamp, active, event))
+
+    return points, remaining_events
+
+
+def extract_categorical_signal(
+    events: Sequence[PlkEvent], message: str
+) -> Tuple[List[CategoricalSignalPoint], List[PlkEvent]]:
+    """Извлекает текстовый дискретный сигнал из списка обычных событий."""
+    points: List[CategoricalSignalPoint] = []
+    remaining_events: List[PlkEvent] = []
+
+    for event in events:
+        if event.message != message:
+            remaining_events.append(event)
+            continue
+        state = event.value.strip()
+        if not state:
+            raise ValueError(
+                f"Пустое состояние сигнала «{message}» в строке "
+                f"{event.row_number} файла {event.source.name}"
+            )
+        points.append(CategoricalSignalPoint(event.timestamp, state, event))
 
     return points, remaining_events
 

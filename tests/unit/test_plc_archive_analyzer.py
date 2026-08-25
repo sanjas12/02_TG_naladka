@@ -7,6 +7,7 @@ from logic.plc_archive_analyzer import (
     PlkEvent,
     compare_events,
     extract_binary_signal,
+    extract_categorical_signal,
     extract_numeric_signal,
     load_plk_archive,
 )
@@ -122,3 +123,21 @@ def test_extract_binary_signal_rejects_unknown_state():
         extract_binary_signal(
             [_event(0, "Канал ведущий", "неизвестно")], "Канал ведущий"
         )
+
+
+def test_extract_categorical_signal_separates_text_states():
+    first_mode = _event(0, "Режим работы", "ОСТАНОВ")
+    second_mode = _event(10, "Режим работы", "РПК (Наладка)")
+    ordinary = _event(20)
+
+    points, remaining = extract_categorical_signal(
+        [first_mode, second_mode, ordinary], "Режим работы"
+    )
+
+    assert [point.state for point in points] == ["ОСТАНОВ", "РПК (Наладка)"]
+    assert remaining == [ordinary]
+
+
+def test_extract_categorical_signal_rejects_empty_state():
+    with pytest.raises(ValueError, match="Пустое состояние"):
+        extract_categorical_signal([_event(0, "Режим работы", " ")], "Режим работы")

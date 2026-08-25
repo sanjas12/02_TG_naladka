@@ -30,11 +30,13 @@ from PyQt5.QtWidgets import (
 
 from logic.plc_archive_analyzer import (
     BinarySignalPoint,
+    CategoricalSignalPoint,
     ComparisonResult,
     NumericSignalPoint,
     PlkEvent,
     compare_events,
     extract_binary_signal,
+    extract_categorical_signal,
     extract_numeric_signal,
     load_plk_archive,
 )
@@ -43,6 +45,7 @@ logger = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ERROR_CODE_SIGNAL = "Код ошибки по приоритету (младшая часть)"
 LEADING_CHANNEL_SIGNAL = "Канал ведущий"
+WORK_MODE_SIGNAL = "Режим работы"
 ERROR_CODE_MAX = 66000
 MIN_TIME_WINDOW_SECONDS = 1.0
 
@@ -164,10 +167,24 @@ class PlkArchiveWindow(QMainWindow):
             leading_2, events_2 = extract_binary_signal(
                 events_2, LEADING_CHANNEL_SIGNAL
             )
+            work_modes_1, events_1 = extract_categorical_signal(
+                events_1, WORK_MODE_SIGNAL
+            )
+            work_modes_2, events_2 = extract_categorical_signal(
+                events_2, WORK_MODE_SIGNAL
+            )
             result = compare_events(
                 events_1, events_2, tolerance_ms=self.tolerance.value()
             )
-            self._draw_timeline(result, signal_1, signal_2, leading_1, leading_2)
+            self._draw_timeline(
+                result,
+                signal_1,
+                signal_2,
+                leading_1,
+                leading_2,
+                work_modes_1,
+                work_modes_2,
+            )
         except ValueError as error:
             logger.error("Ошибка числового сигнала архива PLC", exc_info=True)
             QMessageBox.critical(self, "Ошибка архива PLC", str(error))
@@ -179,6 +196,8 @@ class PlkArchiveWindow(QMainWindow):
         signal_2: List[NumericSignalPoint],
         leading_1: List[BinarySignalPoint],
         leading_2: List[BinarySignalPoint],
+        work_modes_1: List[CategoricalSignalPoint],
+        work_modes_2: List[CategoricalSignalPoint],
     ) -> None:
         self.figure.clear()
         signal_axis_1, axis, signal_axis_2 = self.figure.subplots(
@@ -213,6 +232,29 @@ class PlkArchiveWindow(QMainWindow):
         if badge_2 is not None:
             self._numeric_badges.append((signal_axis_2, signal_2, badge_2))
         signal_axis_2.invert_yaxis()
+        mode_categories = self._work_mode_categories(work_modes_1, work_modes_2)
+        mode_axis_1 = signal_axis_1.twinx()
+        mode_axis_2 = signal_axis_2.twinx()
+        self._draw_work_mode_signal(
+            mode_axis_1,
+            work_modes_1,
+            mode_categories,
+            timeline_end,
+            "Канал 1",
+            "#047857",
+        )
+        self._draw_work_mode_signal(
+            mode_axis_2,
+            work_modes_2,
+            mode_categories,
+            timeline_end,
+            "Канал 2",
+            "#c2410c",
+        )
+        signal_axis_1.set_zorder(mode_axis_1.get_zorder() + 1)
+        signal_axis_1.patch.set_visible(False)
+        signal_axis_2.set_zorder(mode_axis_2.get_zorder() + 1)
+        signal_axis_2.patch.set_visible(False)
         leading_axis = axis.twinx()
         self._draw_leading_channel_signal(
             leading_axis, leading_1, leading_2, timeline_end
@@ -271,9 +313,11 @@ class PlkArchiveWindow(QMainWindow):
         axis.set_yticklabels(["Канал 2", "Время", "Канал 1"])
         axis.set_ylim(-1.6, 1.6)
         self._lock_y_axis(signal_axis_1, (0, ERROR_CODE_MAX))
+        self._lock_y_axis(mode_axis_1, mode_axis_1.get_ylim())
         self._lock_y_axis(axis, (-1.6, 1.6))
         self._lock_y_axis(leading_axis, (-1.2, 1.2))
         self._lock_y_axis(signal_axis_2, (ERROR_CODE_MAX, 0))
+        self._lock_y_axis(mode_axis_2, mode_axis_2.get_ylim())
         axis.grid(axis="x", color="#d1d5db", alpha=0.6)
         axis.tick_params(axis="x", labelbottom=True)
         axis.set_xlabel("Дата и время")
@@ -305,6 +349,7 @@ class PlkArchiveWindow(QMainWindow):
             f"{len(result.only_channel_1) + len(result.only_channel_2)} | "
             f"точек кода: {len(signal_1)}/{len(signal_2)} | "
             f"ведущий: {len(leading_1)}/{len(leading_2)} | "
+            f"режим: {len(work_modes_1)}/{len(work_modes_2)} | "
             f"макс. сдвиг: {max_delta:.0f} мс"
         )
         annotation = axis.annotate(
@@ -600,6 +645,66 @@ class PlkArchiveWindow(QMainWindow):
                 alpha=0.1,
                 zorder=1,
             )
+
+    @staticmethod
+    def _work_mode_categories(
+        channel_1: Sequence[CategoricalSignalPoint],
+        channel_2: Sequence[CategoricalSignalPoint],
+    ) -> List[str]:
+        """Создаёт одинаковый порядок режимов для осей обоих каналов."""
+        preferred_order = ["ОСТАНОВ", "РАЗВОРОТ (Исходное)", "РПК (Наладка)"]
+        observed = {point.state for point in channel_1} | {
+            point.state for point in channel_2
+        }
+        categories = [state for state in preferred_order if state in observed]
+        categories.extend(sorted(observed - set(categories)))
+        return categories
+
+    @staticmethod
+    def _draw_work_mode_signal(
+        axis: Axes,
+        points: Sequence[CategoricalSignalPoint],
+        categories: Sequence[str],
+        timeline_end: datetime,
+        channel_name: str,
+        color: str,
+    ) -> None:
+        """Рисует режим работы на категориальной вспомогательной оси."""
+        axis.set_ylabel(f"Режим работы\n{channel_name}", color=color)
+        axis.tick_params(axis="y", colors=color, labelsize=8)
+        axis.spines["right"].set_color(color)
+        axis.grid(False)
+
+        if not categories:
+            axis.set_ylim(-0.5, 0.5)
+            axis.set_yticks([])
+            return
+
+        levels = {state: index for index, state in enumerate(categories)}
+        axis.set_ylim(-0.35, len(categories) - 0.65)
+        axis.set_yticks(list(range(len(categories))))
+        axis.set_yticklabels(categories)
+        if not points:
+            return
+
+        times = [point.timestamp for point in points]
+        values = [levels[point.state] for point in points]
+        marker_count = len(times)
+        if timeline_end > times[-1]:
+            times.append(timeline_end)
+            values.append(values[-1])
+        axis.step(
+            times,
+            values,
+            where="post",
+            color=color,
+            linewidth=1.8,
+            linestyle="--",
+            marker="s",
+            markersize=3.5,
+            markevery=range(marker_count),
+            zorder=2,
+        )
 
     @staticmethod
     def _label_horizontal_offsets(
