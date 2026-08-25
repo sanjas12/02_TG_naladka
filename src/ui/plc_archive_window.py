@@ -55,6 +55,9 @@ class PlkArchiveWindow(QMainWindow):
         self.channel_1: List[PlkEvent] = []
         self.channel_2: List[PlkEvent] = []
         self._plotted_events: List[Tuple[PlkEvent, int]] = []
+        self._numeric_badges: List[
+            Tuple[Axes, Sequence[NumericSignalPoint], Annotation]
+        ] = []
         self._annotation: Optional[Annotation] = None
         self._time_axis: Optional[Axes] = None
         self._adjusting_time_limits = False
@@ -184,18 +187,33 @@ class PlkArchiveWindow(QMainWindow):
             sharex=True,
             gridspec_kw={"height_ratios": [1, 1.5, 1]},
         )
-        self._draw_numeric_signal(
-            signal_axis_1, signal_1, "Канал 1", "#2563eb", label_offset=6
-        )
-        self._draw_numeric_signal(
-            signal_axis_2, signal_2, "Канал 2", "#9333ea", label_offset=-12
-        )
-        signal_axis_2.invert_yaxis()
-        leading_axis = axis.twinx()
         timeline_end = max(
             self.channel_1[-1].timestamp,
             self.channel_2[-1].timestamp,
         )
+        badge_1 = self._draw_numeric_signal(
+            signal_axis_1,
+            signal_1,
+            "Канал 1",
+            "#2563eb",
+            label_offset=6,
+            timeline_end=timeline_end,
+        )
+        badge_2 = self._draw_numeric_signal(
+            signal_axis_2,
+            signal_2,
+            "Канал 2",
+            "#9333ea",
+            label_offset=-12,
+            timeline_end=timeline_end,
+        )
+        self._numeric_badges = []
+        if badge_1 is not None:
+            self._numeric_badges.append((signal_axis_1, signal_1, badge_1))
+        if badge_2 is not None:
+            self._numeric_badges.append((signal_axis_2, signal_2, badge_2))
+        signal_axis_2.invert_yaxis()
+        leading_axis = axis.twinx()
         self._draw_leading_channel_signal(
             leading_axis, leading_1, leading_2, timeline_end
         )
@@ -265,11 +283,12 @@ class PlkArchiveWindow(QMainWindow):
         for shared_axis in (signal_axis_1, axis, signal_axis_2):
             shared_axis.callbacks.connect(
                 "xlim_changed",
-                lambda changed_axis, target_axis=signal_axis_2: self._update_time_axis(
-                    target_axis, changed_axis.get_xlim()
+                lambda changed_axis, target_axis=signal_axis_2: (
+                    self._on_time_limits_changed(target_axis, changed_axis.get_xlim())
                 ),
             )
         self._update_time_axis(signal_axis_2)
+        self._update_numeric_badges(signal_axis_2.get_xlim())
         event_handles, event_labels = axis.get_legend_handles_labels()
         leading_handles, leading_labels = leading_axis.get_legend_handles_labels()
         axis.legend(
@@ -377,7 +396,31 @@ class PlkArchiveWindow(QMainWindow):
         if time_axis is None:
             return
         self._update_time_axis(time_axis)
+        self._update_numeric_badges(time_axis.get_xlim())
         self.canvas.draw_idle()
+
+    def _on_time_limits_changed(
+        self, time_axis: Axes, limits: Tuple[float, float]
+    ) -> None:
+        """Обновляет формат времени и индикаторы кодов при изменении X."""
+        self._update_time_axis(time_axis, limits)
+        self._update_numeric_badges(time_axis.get_xlim())
+
+    def _update_numeric_badges(self, limits: Tuple[float, float]) -> None:
+        """Показывает значение кода ошибки на правой границе видимого участка."""
+        _, x_max = limits
+        for _axis, points, badge in self._numeric_badges:
+            visible_points = [
+                point for point in points if mdates.date2num(point.timestamp) <= x_max
+            ]
+            if not visible_points:
+                badge.set_visible(False)
+                continue
+
+            current_point = visible_points[-1]
+            badge.xy = (0.985, current_point.value)
+            badge.set_text(f"Код: {current_point.value:g}")
+            badge.set_visible(True)
 
     def _lock_y_axis(self, axis: Axes, limits: Tuple[float, float]) -> None:
         """Фиксирует диапазон Y при масштабировании и перемещении графика."""
@@ -410,7 +453,8 @@ class PlkArchiveWindow(QMainWindow):
         channel_name: str,
         color: str,
         label_offset: int,
-    ) -> None:
+        timeline_end: datetime,
+    ) -> Optional[Annotation]:
         axis.set_ylabel(f"{channel_name}\nКод ошибки")
         axis.set_ylim(0, ERROR_CODE_MAX)
         axis.set_yticks([0, 22000, 44000, ERROR_CODE_MAX])
@@ -425,10 +469,15 @@ class PlkArchiveWindow(QMainWindow):
                 va="center",
                 transform=axis.transAxes,
             )
-            return
+            return None
+        signal_times = [point.timestamp for point in points]
+        signal_values = [point.value for point in points]
+        if timeline_end > signal_times[-1]:
+            signal_times.append(timeline_end)
+            signal_values.append(signal_values[-1])
         axis.step(
-            [point.timestamp for point in points],
-            [point.value for point in points],
+            signal_times,
+            signal_values,
             where="post",
             color=color,
             linewidth=1.4,
@@ -470,6 +519,27 @@ class PlkArchiveWindow(QMainWindow):
                 ),
                 zorder=4,
             )
+        badge = axis.annotate(
+            "",
+            xy=(0.985, signal_values[-1]),
+            xycoords=("axes fraction", "data"),
+            xytext=(-4, 0),
+            textcoords="offset points",
+            ha="right",
+            va="center",
+            color="white",
+            fontsize=9,
+            fontweight="bold",
+            bbox={
+                "boxstyle": "round,pad=0.3",
+                "fc": color,
+                "ec": "white",
+                "linewidth": 0.8,
+                "alpha": 0.95,
+            },
+            zorder=6,
+        )
+        return badge
 
     @staticmethod
     def _draw_leading_channel_signal(
