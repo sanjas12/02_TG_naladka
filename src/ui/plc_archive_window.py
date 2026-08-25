@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from bisect import bisect_left, bisect_right
 from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
@@ -13,6 +14,7 @@ from matplotlib.axes import Axes
 from matplotlib.backend_bases import MouseButton, MouseEvent
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.collections import LineCollection
 from matplotlib.figure import Figure
 from matplotlib.text import Annotation, Text
 from PyQt5.QtCore import Qt
@@ -57,6 +59,8 @@ WORK_MODE_SIGNAL = "Режим работы"
 ERROR_CODE_MAX = 66000
 MIN_TIME_WINDOW_SECONDS = 0.5
 AUTO_EVENT_LABEL_WINDOW_SECONDS = 1.0
+NUMERIC_LABEL_WINDOW_SECONDS = 600.0
+MAX_VISIBLE_NUMERIC_LABELS = 30
 
 
 class PlkArchiveWindow(QMainWindow):
@@ -68,13 +72,17 @@ class PlkArchiveWindow(QMainWindow):
         self.channel_2: List[PlkEvent] = []
         self._plotted_events: List[Tuple[PlkEvent, int]] = []
         self._numeric_badges: List[
-            Tuple[Axes, Sequence[NumericSignalPoint], Annotation]
+            Tuple[Axes, Sequence[NumericSignalPoint], Annotation, str, int]
         ] = []
+        self._numeric_point_labels: List[Annotation] = []
         self._annotation: Optional[Annotation] = None
         self._time_axis: Optional[Axes] = None
         self._date_label: Optional[Text] = None
         self._event_axis: Optional[Axes] = None
         self._event_labels: List[Annotation] = []
+        self._hover_events: List[Tuple[float, PlkEvent, int]] = []
+        self._hover_event_times: List[float] = []
+        self._hovered_event_key: Optional[Tuple[Path, int]] = None
         self._adjusting_time_limits = False
         self._adjusting_y_limits = False
         self._measurement_points: List[float] = []
@@ -258,6 +266,7 @@ class PlkArchiveWindow(QMainWindow):
     ) -> None:
         self._clear_time_measurement(redraw=False)
         self._clear_event_labels()
+        self._clear_numeric_point_labels()
         self.figure.clear()
         signal_axis_1, axis, signal_axis_2 = self.figure.subplots(
             3,
@@ -276,7 +285,6 @@ class PlkArchiveWindow(QMainWindow):
             signal_1,
             "Канал 1",
             "#2563eb",
-            label_offset=6,
             timeline_end=timeline_end,
         )
         badge_2 = self._draw_numeric_signal(
@@ -284,14 +292,17 @@ class PlkArchiveWindow(QMainWindow):
             signal_2,
             "Канал 2",
             "#9333ea",
-            label_offset=-12,
             timeline_end=timeline_end,
         )
         self._numeric_badges = []
         if badge_1 is not None:
-            self._numeric_badges.append((signal_axis_1, signal_1, badge_1))
+            self._numeric_badges.append(
+                (signal_axis_1, signal_1, badge_1, "#2563eb", 6)
+            )
         if badge_2 is not None:
-            self._numeric_badges.append((signal_axis_2, signal_2, badge_2))
+            self._numeric_badges.append(
+                (signal_axis_2, signal_2, badge_2, "#9333ea", -12)
+            )
         signal_axis_2.invert_yaxis()
         mode_categories = self._work_mode_categories(work_modes_1, work_modes_2)
         mode_axis_1 = signal_axis_1.twinx()
@@ -324,14 +335,22 @@ class PlkArchiveWindow(QMainWindow):
         axis.patch.set_visible(False)
         axis.axhline(0, color="#374151", linewidth=1.2)
 
-        for pair in result.pairs:
-            axis.plot(
-                [pair.channel_1.timestamp, pair.channel_2.timestamp],
-                [1, -1],
-                color="#94a3b8",
-                alpha=0.35,
-                linewidth=0.7,
-                zorder=1,
+        pair_segments = [
+            [
+                (mdates.date2num(pair.channel_1.timestamp), 1),
+                (mdates.date2num(pair.channel_2.timestamp), -1),
+            ]
+            for pair in result.pairs
+        ]
+        if pair_segments:
+            axis.add_collection(
+                LineCollection(
+                    pair_segments,
+                    colors="#94a3b8",
+                    alpha=0.35,
+                    linewidths=0.7,
+                    zorder=1,
+                )
             )
 
         matched_1 = [pair.channel_1.timestamp for pair in result.pairs]
@@ -370,6 +389,15 @@ class PlkArchiveWindow(QMainWindow):
             + [(event, 1) for event in result.only_channel_1]
             + [(event, -1) for event in result.only_channel_2]
         )
+        self._hover_events = sorted(
+            (
+                (mdates.date2num(event.timestamp), event, channel_y)
+                for event, channel_y in self._plotted_events
+            ),
+            key=lambda item: item[0],
+        )
+        self._hover_event_times = [item[0] for item in self._hover_events]
+        self._hovered_event_key = None
         axis.set_yticks([-1, 0, 1])
         axis.set_yticklabels(["Канал 2", "Время", "Канал 1"])
         axis.set_ylim(-1.6, 1.6)
@@ -416,6 +444,7 @@ class PlkArchiveWindow(QMainWindow):
             )
         self._update_time_axis(signal_axis_2)
         self._update_numeric_badges(signal_axis_2.get_xlim())
+        self._update_numeric_point_labels(signal_axis_2.get_xlim())
         self._update_date_label(signal_axis_2.get_xlim())
         self._update_time_range_label(signal_axis_2.get_xlim())
         self._update_event_labels(signal_axis_2.get_xlim())
@@ -532,6 +561,7 @@ class PlkArchiveWindow(QMainWindow):
             return
         self._update_time_axis(time_axis)
         self._update_numeric_badges(time_axis.get_xlim())
+        self._update_numeric_point_labels(time_axis.get_xlim())
         self._update_date_label(time_axis.get_xlim())
         self._update_time_range_label(time_axis.get_xlim())
         self._update_event_labels(time_axis.get_xlim())
@@ -733,7 +763,6 @@ class PlkArchiveWindow(QMainWindow):
         self._update_numeric_badges(time_axis.get_xlim())
         self._update_date_label(time_axis.get_xlim())
         self._update_time_range_label(time_axis.get_xlim())
-        self._update_event_labels(time_axis.get_xlim())
 
     def _update_date_label(self, limits: Tuple[float, float]) -> None:
         """Сохраняет дату под средней осью при любом масштабе времени."""
@@ -860,7 +889,7 @@ class PlkArchiveWindow(QMainWindow):
     def _update_numeric_badges(self, limits: Tuple[float, float]) -> None:
         """Показывает значение кода ошибки на правой границе видимого участка."""
         _, x_max = limits
-        for _axis, points, badge in self._numeric_badges:
+        for _axis, points, badge, _color, _label_offset in self._numeric_badges:
             visible_points = [
                 point for point in points if mdates.date2num(point.timestamp) <= x_max
             ]
@@ -872,6 +901,65 @@ class PlkArchiveWindow(QMainWindow):
             badge.xy = (0.985, current_point.value)
             badge.set_text(f"Код: {current_point.value:g}")
             badge.set_visible(True)
+
+    def _clear_numeric_point_labels(self) -> None:
+        """Удаляет динамические числовые подписи кодов ошибки."""
+        for label in self._numeric_point_labels:
+            with suppress(ValueError):
+                label.remove()
+        self._numeric_point_labels.clear()
+
+    def _update_numeric_point_labels(self, limits: Tuple[float, float]) -> None:
+        """Подписывает только разреженные точки кода в видимом диапазоне."""
+        self._clear_numeric_point_labels()
+        x_min, x_max = sorted(limits)
+        visible_seconds = (x_max - x_min) * 24 * 60 * 60
+        if visible_seconds > NUMERIC_LABEL_WINDOW_SECONDS:
+            return
+
+        for axis, points, _badge, color, label_offset in self._numeric_badges:
+            visible_points = [
+                point
+                for point in points
+                if x_min <= mdates.date2num(point.timestamp) <= x_max
+            ]
+            if not visible_points or len(visible_points) > MAX_VISIBLE_NUMERIC_LABELS:
+                continue
+
+            horizontal_offsets = self._label_horizontal_offsets(visible_points)
+            for point, horizontal_offset in zip(visible_points, horizontal_offsets):
+                label = axis.annotate(
+                    f"{point.value:g}",
+                    xy=(point.timestamp, point.value),
+                    xytext=(horizontal_offset, label_offset),
+                    textcoords="offset points",
+                    ha="center",
+                    va="bottom" if label_offset > 0 else "top",
+                    color=color,
+                    fontsize=7.5,
+                    bbox={
+                        "boxstyle": "round,pad=0.12",
+                        "fc": "white",
+                        "ec": "none",
+                        "alpha": 0.85,
+                    },
+                    arrowprops=(
+                        {
+                            "arrowstyle": "-",
+                            "color": color,
+                            "alpha": 0.55,
+                            "linewidth": 0.6,
+                        }
+                        if horizontal_offset
+                        else None
+                    ),
+                    annotation_clip=True,
+                    clip_on=True,
+                    zorder=4,
+                )
+                label.set_in_layout(False)
+                label.set_clip_path(axis.patch)
+                self._numeric_point_labels.append(label)
 
     def _lock_y_axis(self, axis: Axes, limits: Tuple[float, float]) -> None:
         """Фиксирует диапазон Y при масштабировании и перемещении графика."""
@@ -903,7 +991,6 @@ class PlkArchiveWindow(QMainWindow):
         points: Sequence[NumericSignalPoint],
         channel_name: str,
         color: str,
-        label_offset: int,
         timeline_end: datetime,
     ) -> Optional[Annotation]:
         axis.set_ylabel(f"{channel_name}\nКод ошибки")
@@ -940,36 +1027,6 @@ class PlkArchiveWindow(QMainWindow):
             s=13,
             zorder=3,
         )
-        horizontal_offsets = PlkArchiveWindow._label_horizontal_offsets(points)
-        for point, horizontal_offset in zip(points, horizontal_offsets):
-            value_label = f"{point.value:g}"
-            axis.annotate(
-                value_label,
-                xy=(point.timestamp, point.value),
-                xytext=(horizontal_offset, label_offset),
-                textcoords="offset points",
-                ha="center",
-                va="bottom" if label_offset > 0 else "top",
-                color=color,
-                fontsize=7.5,
-                bbox={
-                    "boxstyle": "round,pad=0.12",
-                    "fc": "white",
-                    "ec": "none",
-                    "alpha": 0.85,
-                },
-                arrowprops=(
-                    {
-                        "arrowstyle": "-",
-                        "color": color,
-                        "alpha": 0.55,
-                        "linewidth": 0.6,
-                    }
-                    if horizontal_offset
-                    else None
-                ),
-                zorder=4,
-            )
         badge = axis.annotate(
             "",
             xy=(0.985, signal_values[-1]),
@@ -1145,35 +1202,62 @@ class PlkArchiveWindow(QMainWindow):
 
     def _on_hover(self, mouse_event: MouseEvent) -> None:
         annotation = self._annotation
+        event_axis = self._event_axis
         if (
             annotation is None
-            or mouse_event.inaxes is None
+            or event_axis is None
+            or mouse_event.inaxes is not event_axis
             or mouse_event.xdata is None
+            or self._dragging_measurement_index is not None
         ):
+            self._hide_hover_annotation()
             return
-        axis = mouse_event.inaxes
-        x_min, x_max = axis.get_xlim()
+
+        x_min, x_max = event_axis.get_xlim()
         tolerance = (x_max - x_min) * 0.008
-        nearest = min(
-            self._plotted_events,
-            key=lambda item: abs(
-                mdates.date2num(item[0].timestamp) - mouse_event.xdata
-            ),
-            default=None,
-        )
-        if (
-            nearest is None
-            or abs(mdates.date2num(nearest[0].timestamp) - mouse_event.xdata)
-            > tolerance
-        ):
-            annotation.set_visible(False)
-            self.canvas.draw_idle()
+        insertion = bisect_left(self._hover_event_times, mouse_event.xdata)
+        candidate_indexes = [
+            index
+            for index in (insertion - 1, insertion)
+            if 0 <= index < len(self._hover_events)
+        ]
+        if not candidate_indexes:
+            self._hide_hover_annotation()
             return
-        event, channel_y = nearest
-        annotation.xy = (mdates.date2num(event.timestamp), channel_y)
+
+        nearest_time = min(
+            (self._hover_events[index][0] for index in candidate_indexes),
+            key=lambda value: abs(value - mouse_event.xdata),
+        )
+        if abs(nearest_time - mouse_event.xdata) > tolerance:
+            self._hide_hover_annotation()
+            return
+
+        first = bisect_left(self._hover_event_times, nearest_time)
+        last = bisect_right(self._hover_event_times, nearest_time)
+        same_time_events = self._hover_events[first:last]
+        mouse_y = mouse_event.ydata if mouse_event.ydata is not None else 0
+        _, event, channel_y = min(
+            same_time_events, key=lambda item: abs(item[2] - mouse_y)
+        )
+        event_key = (event.source, event.row_number)
+        if self._hovered_event_key == event_key and annotation.get_visible():
+            return
+
+        annotation.xy = (nearest_time, channel_y)
         timestamp_text = f"{event.timestamp:%Y-%m-%d %H:%M:%S.%f}"[:-3]
         annotation.set_text(
             f"{timestamp_text}\n{event.message}\nЗначение: {event.value}"
         )
         annotation.set_visible(True)
+        self._hovered_event_key = event_key
+        self.canvas.draw_idle()
+
+    def _hide_hover_annotation(self) -> None:
+        """Скрывает подсказку без лишней перерисовки холста."""
+        annotation = self._annotation
+        self._hovered_event_key = None
+        if annotation is None or not annotation.get_visible():
+            return
+        annotation.set_visible(False)
         self.canvas.draw_idle()
