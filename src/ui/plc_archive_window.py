@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import logging
+from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Sequence, Tuple
 
 import matplotlib.dates as mdates
 import matplotlib.ticker as ticker
+from matplotlib.artist import Artist
 from matplotlib.axes import Axes
-from matplotlib.backend_bases import MouseEvent
+from matplotlib.backend_bases import MouseButton, MouseEvent
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
@@ -66,6 +68,9 @@ class PlkArchiveWindow(QMainWindow):
         self._date_label: Optional[Text] = None
         self._adjusting_time_limits = False
         self._adjusting_y_limits = False
+        self._measurement_points: List[float] = []
+        self._measurement_artists: List[Artist] = []
+        self._measurement_axes: List[Axes] = []
 
         self.setWindowTitle("Анализ архивов PLC")
         self.resize(1280, 760)
@@ -104,6 +109,19 @@ class PlkArchiveWindow(QMainWindow):
         self.tolerance.valueChanged.connect(self._refresh_plot)
         controls.addWidget(self.tolerance)
         controls.addSpacing(20)
+        self.measurement_button = QPushButton("Измерить Δt")
+        self.measurement_button.setCheckable(True)
+        self.measurement_button.toggled.connect(self._toggle_time_measurement)
+        controls.addWidget(self.measurement_button)
+        self.clear_measurement_button = QPushButton("Очистить")
+        self.clear_measurement_button.setEnabled(False)
+        self.clear_measurement_button.clicked.connect(
+            lambda: self._clear_time_measurement()
+        )
+        controls.addWidget(self.clear_measurement_button)
+        self.measurement_status = QLabel("")
+        controls.addWidget(self.measurement_status)
+        controls.addSpacing(20)
         self.summary = QLabel("Выберите два архива")
         controls.addWidget(self.summary)
         controls.addStretch()
@@ -117,6 +135,7 @@ class PlkArchiveWindow(QMainWindow):
         self.canvas.mpl_connect("motion_notify_event", self._on_hover)
         self.canvas.mpl_connect("button_release_event", self._on_view_changed)
         self.canvas.mpl_connect("scroll_event", self._on_view_changed)
+        self.canvas.mpl_connect("button_press_event", self._on_measurement_click)
 
     def _load_default_archives(self) -> None:
         log_root = PROJECT_ROOT / "input" / "Logs"
@@ -200,6 +219,7 @@ class PlkArchiveWindow(QMainWindow):
         work_modes_1: List[CategoricalSignalPoint],
         work_modes_2: List[CategoricalSignalPoint],
     ) -> None:
+        self._clear_time_measurement(redraw=False)
         self.figure.clear()
         signal_axis_1, axis, signal_axis_2 = self.figure.subplots(
             3,
@@ -207,6 +227,7 @@ class PlkArchiveWindow(QMainWindow):
             sharex=True,
             gridspec_kw={"height_ratios": [1, 1.5, 1]},
         )
+        self._measurement_axes = [signal_axis_1, axis, signal_axis_2]
         timeline_end = max(
             self.channel_1[-1].timestamp,
             self.channel_2[-1].timestamp,
@@ -468,6 +489,125 @@ class PlkArchiveWindow(QMainWindow):
         self._update_numeric_badges(time_axis.get_xlim())
         self._update_date_label(time_axis.get_xlim())
         self.canvas.draw_idle()
+
+    def _toggle_time_measurement(self, enabled: bool) -> None:
+        """Включает выбор двух временных точек или очищает измерение."""
+        self._clear_time_measurement(redraw=True)
+        if enabled:
+            self.measurement_status.setText("Выберите начало")
+
+    def _clear_time_measurement(self, redraw: bool = True) -> None:
+        """Удаляет линии, заливку и информационный блок измерения."""
+        for artist in self._measurement_artists:
+            with suppress(ValueError):
+                artist.remove()
+        self._measurement_artists.clear()
+        self._measurement_points.clear()
+        self.clear_measurement_button.setEnabled(False)
+        self.measurement_status.setText(
+            "Выберите начало" if self.measurement_button.isChecked() else ""
+        )
+        if redraw:
+            self.canvas.draw_idle()
+
+    def _on_measurement_click(self, mouse_event: MouseEvent) -> None:
+        """Устанавливает начальный и конечный маркеры измерения времени."""
+        if (
+            not self.measurement_button.isChecked()
+            or mouse_event.button != MouseButton.LEFT
+            or mouse_event.inaxes is None
+            or mouse_event.xdata is None
+            or bool(self.toolbar.mode)
+        ):
+            return
+
+        if len(self._measurement_points) == 2:
+            self._clear_time_measurement(redraw=False)
+
+        timestamp = mouse_event.xdata
+        self._measurement_points.append(timestamp)
+        marker_color = "#e11d48" if len(self._measurement_points) == 1 else "#7c3aed"
+        for axis in self._measurement_axes:
+            line = axis.axvline(
+                timestamp,
+                color=marker_color,
+                linewidth=1.5,
+                linestyle="--",
+                zorder=8,
+            )
+            self._measurement_artists.append(line)
+
+        if len(self._measurement_points) == 1:
+            self.measurement_status.setText("Выберите конец")
+        else:
+            self._complete_time_measurement()
+        self.clear_measurement_button.setEnabled(True)
+        self.canvas.draw_idle()
+
+    def _complete_time_measurement(self) -> None:
+        """Подсвечивает выбранный интервал и выводит рассчитанную дельту."""
+        start, end = self._measurement_points
+        interval_start, interval_end = sorted((start, end))
+        for axis in self._measurement_axes:
+            span = axis.axvspan(
+                interval_start,
+                interval_end,
+                color="#f59e0b",
+                alpha=0.12,
+                zorder=0.5,
+            )
+            self._measurement_artists.append(span)
+
+        start_time = mdates.num2date(start).replace(tzinfo=None)
+        end_time = mdates.num2date(end).replace(tzinfo=None)
+        delta_seconds = abs(end - start) * 24 * 60 * 60
+        text = (
+            f"Начало: {self._format_measurement_time(start_time)}\n"
+            f"Конец: {self._format_measurement_time(end_time)}\n"
+            f"Δt: {self._format_time_delta(delta_seconds)}"
+        )
+
+        middle_axis = self._measurement_axes[1]
+        x_min, x_max = middle_axis.get_xlim()
+        place_on_right = end <= (x_min + x_max) / 2
+        horizontal_offset = 14 if place_on_right else -14
+        annotation = middle_axis.annotate(
+            text,
+            xy=(end, 0),
+            xytext=(horizontal_offset, 24),
+            textcoords="offset points",
+            ha="left" if place_on_right else "right",
+            va="bottom",
+            fontsize=8.5,
+            bbox={
+                "boxstyle": "round,pad=0.35",
+                "fc": "white",
+                "ec": "#7c3aed",
+                "alpha": 0.97,
+            },
+            arrowprops={"arrowstyle": "->", "color": "#7c3aed"},
+            annotation_clip=False,
+            zorder=10,
+        )
+        self._measurement_artists.append(annotation)
+        self.measurement_status.setText(f"Δt: {self._format_time_delta(delta_seconds)}")
+
+    @staticmethod
+    def _format_measurement_time(value: datetime) -> str:
+        return f"{value:%Y-%m-%d %H:%M:%S.%f}"[:-3]
+
+    @staticmethod
+    def _format_time_delta(seconds: float) -> str:
+        """Форматирует длительность с точностью до миллисекунд."""
+        total_milliseconds = round(seconds * 1000)
+        hours, remainder = divmod(total_milliseconds, 3_600_000)
+        minutes, remainder = divmod(remainder, 60_000)
+        whole_seconds, milliseconds = divmod(remainder, 1000)
+        if hours:
+            return f"{hours:02d}:{minutes:02d}:{whole_seconds:02d}.{milliseconds:03d}"
+        if minutes:
+            return f"{minutes:02d}:{whole_seconds:02d}.{milliseconds:03d}"
+        return f"{whole_seconds}.{milliseconds:03d} с"
 
     def _on_time_limits_changed(
         self, time_axis: Axes, limits: Tuple[float, float]
