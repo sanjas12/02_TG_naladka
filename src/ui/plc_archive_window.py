@@ -71,6 +71,7 @@ class PlkArchiveWindow(QMainWindow):
         self._measurement_points: List[float] = []
         self._measurement_artists: List[Artist] = []
         self._measurement_axes: List[Axes] = []
+        self._dragging_measurement_index: Optional[int] = None
 
         self.setWindowTitle("Анализ архивов PLC")
         self.resize(1280, 760)
@@ -133,6 +134,7 @@ class PlkArchiveWindow(QMainWindow):
         layout.addWidget(self.toolbar)
         layout.addWidget(self.canvas, 1)
         self.canvas.mpl_connect("motion_notify_event", self._on_hover)
+        self.canvas.mpl_connect("motion_notify_event", self._on_measurement_drag)
         self.canvas.mpl_connect("button_release_event", self._on_view_changed)
         self.canvas.mpl_connect("scroll_event", self._on_view_changed)
         self.canvas.mpl_connect("button_press_event", self._on_measurement_click)
@@ -482,6 +484,10 @@ class PlkArchiveWindow(QMainWindow):
 
     def _on_view_changed(self, _mouse_event: MouseEvent) -> None:
         """Обновляет формат времени после завершения масштабирования и прокрутки."""
+        was_dragging_measurement = self._dragging_measurement_index is not None
+        self._dragging_measurement_index = None
+        if was_dragging_measurement:
+            self._render_time_measurement()
         time_axis = self._time_axis
         if time_axis is None:
             return
@@ -498,17 +504,22 @@ class PlkArchiveWindow(QMainWindow):
 
     def _clear_time_measurement(self, redraw: bool = True) -> None:
         """Удаляет линии, заливку и информационный блок измерения."""
-        for artist in self._measurement_artists:
-            with suppress(ValueError):
-                artist.remove()
-        self._measurement_artists.clear()
+        self._remove_measurement_artists()
         self._measurement_points.clear()
+        self._dragging_measurement_index = None
         self.clear_measurement_button.setEnabled(False)
         self.measurement_status.setText(
             "Выберите начало" if self.measurement_button.isChecked() else ""
         )
         if redraw:
             self.canvas.draw_idle()
+
+    def _remove_measurement_artists(self) -> None:
+        """Удаляет только графические элементы, сохраняя выбранные точки."""
+        for artist in self._measurement_artists:
+            with suppress(ValueError):
+                artist.remove()
+        self._measurement_artists.clear()
 
     def _on_measurement_click(self, mouse_event: MouseEvent) -> None:
         """Устанавливает начальный и конечный маркеры измерения времени."""
@@ -521,28 +532,93 @@ class PlkArchiveWindow(QMainWindow):
         ):
             return
 
+        marker_index = self._measurement_marker_at(mouse_event)
+        if marker_index is not None:
+            self._dragging_measurement_index = marker_index
+            self.measurement_status.setText("Перемещение маркера…")
+            return
+
         if len(self._measurement_points) == 2:
             self._clear_time_measurement(redraw=False)
 
-        timestamp = mouse_event.xdata
-        self._measurement_points.append(timestamp)
-        marker_color = "#e11d48" if len(self._measurement_points) == 1 else "#7c3aed"
-        for axis in self._measurement_axes:
-            line = axis.axvline(
-                timestamp,
+        self._measurement_points.append(mouse_event.xdata)
+        self._render_time_measurement()
+        self.canvas.draw_idle()
+
+    def _measurement_marker_at(self, mouse_event: MouseEvent) -> Optional[int]:
+        """Находит маркер рядом с курсором с допуском десять пикселей."""
+        axis = mouse_event.inaxes
+        if axis is None or mouse_event.x is None:
+            return None
+        distances = [
+            abs(axis.transData.transform((timestamp, 0))[0] - mouse_event.x)
+            for timestamp in self._measurement_points
+        ]
+        if not distances:
+            return None
+        nearest_index = min(range(len(distances)), key=distances.__getitem__)
+        return nearest_index if distances[nearest_index] <= 10 else None
+
+    def _on_measurement_drag(self, mouse_event: MouseEvent) -> None:
+        """Перемещает выбранный маркер и пересчитывает дельту в реальном времени."""
+        marker_index = self._dragging_measurement_index
+        if (
+            marker_index is None
+            or mouse_event.inaxes is None
+            or mouse_event.xdata is None
+        ):
+            return
+        self._measurement_points[marker_index] = mouse_event.xdata
+        self._render_time_measurement()
+        self.canvas.draw_idle()
+
+    def _render_time_measurement(self) -> None:
+        """Перерисовывает маркеры, захваты и выбранный временной интервал."""
+        self._remove_measurement_artists()
+        middle_axis = self._measurement_axes[1]
+        colors = ("#e11d48", "#7c3aed")
+        labels = ("A", "B")
+
+        for index, timestamp in enumerate(self._measurement_points):
+            marker_color = colors[index]
+            for axis in self._measurement_axes:
+                line = axis.axvline(
+                    timestamp,
+                    color=marker_color,
+                    linewidth=1.5,
+                    linestyle="--",
+                    zorder=8,
+                )
+                self._measurement_artists.append(line)
+            (handle,) = middle_axis.plot(
+                [timestamp],
+                [0],
+                marker="o",
+                markersize=7,
                 color=marker_color,
-                linewidth=1.5,
-                linestyle="--",
-                zorder=8,
+                markeredgecolor="white",
+                zorder=9,
             )
-            self._measurement_artists.append(line)
+            self._measurement_artists.append(handle)
+            marker_label = middle_axis.annotate(
+                labels[index],
+                xy=(timestamp, 0),
+                xytext=(0, 8),
+                textcoords="offset points",
+                ha="center",
+                va="bottom",
+                color=marker_color,
+                fontweight="bold",
+                fontsize=8,
+                zorder=9,
+            )
+            self._measurement_artists.append(marker_label)
 
         if len(self._measurement_points) == 1:
             self.measurement_status.setText("Выберите конец")
-        else:
+        elif len(self._measurement_points) == 2:
             self._complete_time_measurement()
-        self.clear_measurement_button.setEnabled(True)
-        self.canvas.draw_idle()
+        self.clear_measurement_button.setEnabled(bool(self._measurement_points))
 
     def _complete_time_measurement(self) -> None:
         """Подсвечивает выбранный интервал и выводит рассчитанную дельту."""
@@ -568,16 +644,13 @@ class PlkArchiveWindow(QMainWindow):
         )
 
         middle_axis = self._measurement_axes[1]
-        x_min, x_max = middle_axis.get_xlim()
-        place_on_right = end <= (x_min + x_max) / 2
-        horizontal_offset = 14 if place_on_right else -14
         annotation = middle_axis.annotate(
             text,
             xy=(end, 0),
-            xytext=(horizontal_offset, 24),
+            xytext=(16, -28),
             textcoords="offset points",
-            ha="left" if place_on_right else "right",
-            va="bottom",
+            ha="left",
+            va="top",
             fontsize=8.5,
             bbox={
                 "boxstyle": "round,pad=0.35",
@@ -590,7 +663,9 @@ class PlkArchiveWindow(QMainWindow):
             zorder=10,
         )
         self._measurement_artists.append(annotation)
-        self.measurement_status.setText(f"Δt: {self._format_time_delta(delta_seconds)}")
+        self.measurement_status.setText(
+            f"Δt: {self._format_time_delta(delta_seconds)} — перетащите A или B"
+        )
 
     @staticmethod
     def _format_measurement_time(value: datetime) -> str:
