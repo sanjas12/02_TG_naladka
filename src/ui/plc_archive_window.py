@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Sequence, Tuple
 
@@ -191,7 +192,13 @@ class PlkArchiveWindow(QMainWindow):
         )
         signal_axis_2.invert_yaxis()
         leading_axis = axis.twinx()
-        self._draw_leading_channel_signal(leading_axis, leading_1, leading_2)
+        timeline_end = max(
+            self.channel_1[-1].timestamp,
+            self.channel_2[-1].timestamp,
+        )
+        self._draw_leading_channel_signal(
+            leading_axis, leading_1, leading_2, timeline_end
+        )
         axis.set_zorder(leading_axis.get_zorder() + 1)
         axis.patch.set_visible(False)
         axis.axhline(0, color="#374151", linewidth=1.2)
@@ -469,6 +476,7 @@ class PlkArchiveWindow(QMainWindow):
         axis: Axes,
         channel_1: Sequence[BinarySignalPoint],
         channel_2: Sequence[BinarySignalPoint],
+        timeline_end: datetime,
     ) -> None:
         """Рисует состояние ведущего канала относительно центральной оси."""
         axis.set_ylim(-1.2, 1.2)
@@ -478,8 +486,9 @@ class PlkArchiveWindow(QMainWindow):
         axis.grid(False)
 
         if channel_1:
-            times_1 = [point.timestamp for point in channel_1]
+            times_1 = [point.timestamp for point in channel_1] + [timeline_end]
             values_1 = [1 if point.active else 0 for point in channel_1]
+            values_1.append(values_1[-1])
             axis.step(
                 times_1,
                 values_1,
@@ -500,8 +509,9 @@ class PlkArchiveWindow(QMainWindow):
             )
 
         if channel_2:
-            times_2 = [point.timestamp for point in channel_2]
+            times_2 = [point.timestamp for point in channel_2] + [timeline_end]
             values_2 = [-1 if point.active else 0 for point in channel_2]
+            values_2.append(values_2[-1])
             axis.step(
                 times_2,
                 values_2,
