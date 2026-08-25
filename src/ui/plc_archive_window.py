@@ -12,7 +12,7 @@ from matplotlib.backend_bases import MouseEvent
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
-from matplotlib.text import Annotation
+from matplotlib.text import Annotation, Text
 from PyQt5.QtWidgets import (
     QFileDialog,
     QGridLayout,
@@ -63,6 +63,7 @@ class PlkArchiveWindow(QMainWindow):
         ] = []
         self._annotation: Optional[Annotation] = None
         self._time_axis: Optional[Axes] = None
+        self._date_label: Optional[Text] = None
         self._adjusting_time_limits = False
         self._adjusting_y_limits = False
 
@@ -323,6 +324,28 @@ class PlkArchiveWindow(QMainWindow):
         axis.set_xlabel("Дата и время")
         signal_axis_2.tick_params(axis="x", labelbottom=False)
         signal_axis_2.set_xlabel("")
+        for date_axis in (
+            signal_axis_1,
+            mode_axis_1,
+            axis,
+            leading_axis,
+            signal_axis_2,
+            mode_axis_2,
+        ):
+            date_axis.xaxis.get_offset_text().set_visible(False)
+        date_label = axis.text(
+            1.0,
+            -0.13,
+            "",
+            transform=axis.transAxes,
+            ha="right",
+            va="top",
+            fontsize=8.5,
+            fontweight="bold",
+            color="#374151",
+            clip_on=False,
+        )
+        self._date_label = date_label
         self._time_axis = signal_axis_2
         for shared_axis in (signal_axis_1, axis, signal_axis_2):
             shared_axis.callbacks.connect(
@@ -333,6 +356,7 @@ class PlkArchiveWindow(QMainWindow):
             )
         self._update_time_axis(signal_axis_2)
         self._update_numeric_badges(signal_axis_2.get_xlim())
+        self._update_date_label(signal_axis_2.get_xlim())
         event_handles, event_labels = axis.get_legend_handles_labels()
         leading_handles, leading_labels = leading_axis.get_legend_handles_labels()
         axis.legend(
@@ -442,6 +466,7 @@ class PlkArchiveWindow(QMainWindow):
             return
         self._update_time_axis(time_axis)
         self._update_numeric_badges(time_axis.get_xlim())
+        self._update_date_label(time_axis.get_xlim())
         self.canvas.draw_idle()
 
     def _on_time_limits_changed(
@@ -450,6 +475,22 @@ class PlkArchiveWindow(QMainWindow):
         """Обновляет формат времени и индикаторы кодов при изменении X."""
         self._update_time_axis(time_axis, limits)
         self._update_numeric_badges(time_axis.get_xlim())
+        self._update_date_label(time_axis.get_xlim())
+
+    def _update_date_label(self, limits: Tuple[float, float]) -> None:
+        """Сохраняет дату под средней осью при любом масштабе времени."""
+        date_label = self._date_label
+        if date_label is None:
+            return
+
+        x_min, x_max = sorted(limits)
+        start_date = mdates.num2date(x_min).date()
+        end_date = mdates.num2date(x_max).date()
+        if start_date == end_date:
+            label = f"Дата: {start_date:%d.%m.%Y}"
+        else:
+            label = f"Дата: {start_date:%d.%m.%Y} — {end_date:%d.%m.%Y}"
+        date_label.set_text(label)
 
     def _update_numeric_badges(self, limits: Tuple[float, float]) -> None:
         """Показывает значение кода ошибки на правой границе видимого участка."""
