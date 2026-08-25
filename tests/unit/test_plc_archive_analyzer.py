@@ -6,6 +6,7 @@ import pytest
 from logic.plc_archive_analyzer import (
     PlkEvent,
     compare_events,
+    extract_binary_signal,
     extract_numeric_signal,
     load_plk_archive,
 )
@@ -90,3 +91,34 @@ def test_extract_numeric_signal_rejects_non_numeric_value():
 
     with pytest.raises(ValueError, match="Нечисловое значение"):
         extract_numeric_signal([_event(0, signal_name, "ошибка")], signal_name)
+
+
+def test_extract_binary_signal_converts_states_and_separates_events():
+    signal_name = "Канал ведущий"
+    active = _event(0, signal_name, "Акт")
+    passive = _event(10, signal_name, "Пас")
+    ordinary = _event(20)
+
+    points, remaining = extract_binary_signal([active, passive, ordinary], signal_name)
+
+    assert [point.active for point in points] == [True, False]
+    assert remaining == [ordinary]
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [("1", True), ("Активный", True), ("0", False), ("Пассивный", False)],
+)
+def test_extract_binary_signal_supports_full_and_numeric_states(value, expected):
+    points, _ = extract_binary_signal(
+        [_event(0, "Канал ведущий", value)], "Канал ведущий"
+    )
+
+    assert points[0].active is expected
+
+
+def test_extract_binary_signal_rejects_unknown_state():
+    with pytest.raises(ValueError, match="Неизвестное состояние"):
+        extract_binary_signal(
+            [_event(0, "Канал ведущий", "неизвестно")], "Канал ведущий"
+        )

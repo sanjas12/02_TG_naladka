@@ -46,6 +46,13 @@ class NumericSignalPoint:
     event: PlkEvent
 
 
+@dataclass(frozen=True)
+class BinarySignalPoint:
+    timestamp: datetime
+    active: bool
+    event: PlkEvent
+
+
 def _read_text(path: Path) -> str:
     raw = path.read_bytes()
     for encoding in ("utf-8-sig", "cp1251"):
@@ -107,6 +114,35 @@ def extract_numeric_signal(
                 f"{event.row_number} файла {event.source.name}: {event.value}"
             ) from error
         points.append(NumericSignalPoint(event.timestamp, value, event))
+    return points, remaining_events
+
+
+def extract_binary_signal(
+    events: Sequence[PlkEvent], message: str
+) -> Tuple[List[BinarySignalPoint], List[PlkEvent]]:
+    """Извлекает дискретный сигнал с активным и пассивным состояниями."""
+    active_values = {"1", "акт", "активный"}
+    passive_values = {"0", "пас", "пассивный"}
+    points: List[BinarySignalPoint] = []
+    remaining_events: List[PlkEvent] = []
+
+    for event in events:
+        if event.message != message:
+            remaining_events.append(event)
+            continue
+
+        normalized_value = event.value.strip().casefold()
+        if normalized_value in active_values:
+            active = True
+        elif normalized_value in passive_values:
+            active = False
+        else:
+            raise ValueError(
+                f"Неизвестное состояние сигнала «{message}» в строке "
+                f"{event.row_number} файла {event.source.name}: {event.value}"
+            )
+        points.append(BinarySignalPoint(event.timestamp, active, event))
+
     return points, remaining_events
 
 

@@ -28,10 +28,12 @@ from PyQt5.QtWidgets import (
 )
 
 from logic.plc_archive_analyzer import (
+    BinarySignalPoint,
     ComparisonResult,
     NumericSignalPoint,
     PlkEvent,
     compare_events,
+    extract_binary_signal,
     extract_numeric_signal,
     load_plk_archive,
 )
@@ -39,6 +41,7 @@ from logic.plc_archive_analyzer import (
 logger = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ERROR_CODE_SIGNAL = "Код ошибки по приоритету (младшая часть)"
+LEADING_CHANNEL_SIGNAL = "Канал ведущий"
 ERROR_CODE_MAX = 66000
 MIN_TIME_WINDOW_SECONDS = 1.0
 
@@ -150,10 +153,16 @@ class PlkArchiveWindow(QMainWindow):
             signal_2, events_2 = extract_numeric_signal(
                 self.channel_2, ERROR_CODE_SIGNAL
             )
+            leading_1, events_1 = extract_binary_signal(
+                events_1, LEADING_CHANNEL_SIGNAL
+            )
+            leading_2, events_2 = extract_binary_signal(
+                events_2, LEADING_CHANNEL_SIGNAL
+            )
             result = compare_events(
                 events_1, events_2, tolerance_ms=self.tolerance.value()
             )
-            self._draw_timeline(result, signal_1, signal_2)
+            self._draw_timeline(result, signal_1, signal_2, leading_1, leading_2)
         except ValueError as error:
             logger.error("Ошибка числового сигнала архива PLC", exc_info=True)
             QMessageBox.critical(self, "Ошибка архива PLC", str(error))
@@ -163,6 +172,8 @@ class PlkArchiveWindow(QMainWindow):
         result: ComparisonResult,
         signal_1: List[NumericSignalPoint],
         signal_2: List[NumericSignalPoint],
+        leading_1: List[BinarySignalPoint],
+        leading_2: List[BinarySignalPoint],
     ) -> None:
         self.figure.clear()
         signal_axis_1, axis, signal_axis_2 = self.figure.subplots(
@@ -178,6 +189,10 @@ class PlkArchiveWindow(QMainWindow):
             signal_axis_2, signal_2, "Канал 2", "#9333ea", label_offset=-12
         )
         signal_axis_2.invert_yaxis()
+        leading_axis = axis.twinx()
+        self._draw_leading_channel_signal(leading_axis, leading_1, leading_2)
+        axis.set_zorder(leading_axis.get_zorder() + 1)
+        axis.patch.set_visible(False)
         axis.axhline(0, color="#374151", linewidth=1.2)
 
         for pair in result.pairs:
@@ -240,7 +255,13 @@ class PlkArchiveWindow(QMainWindow):
                 ),
             )
         self._update_time_axis(signal_axis_2)
-        axis.legend(loc="upper right")
+        event_handles, event_labels = axis.get_legend_handles_labels()
+        leading_handles, leading_labels = leading_axis.get_legend_handles_labels()
+        axis.legend(
+            event_handles + leading_handles,
+            event_labels + leading_labels,
+            loc="upper right",
+        )
 
         deltas = [abs(pair.delta_ms) for pair in result.pairs]
         max_delta = max(deltas) if deltas else 0
@@ -249,6 +270,7 @@ class PlkArchiveWindow(QMainWindow):
             f"пар: {len(result.pairs)} | расхождений: "
             f"{len(result.only_channel_1) + len(result.only_channel_2)} | "
             f"точек кода: {len(signal_1)}/{len(signal_2)} | "
+            f"ведущий: {len(leading_1)}/{len(leading_2)} | "
             f"макс. сдвиг: {max_delta:.0f} мс"
         )
         annotation = axis.annotate(
@@ -408,6 +430,63 @@ class PlkArchiveWindow(QMainWindow):
                     else None
                 ),
                 zorder=4,
+            )
+
+    @staticmethod
+    def _draw_leading_channel_signal(
+        axis: Axes,
+        channel_1: Sequence[BinarySignalPoint],
+        channel_2: Sequence[BinarySignalPoint],
+    ) -> None:
+        """Рисует состояние ведущего канала относительно центральной оси."""
+        axis.set_ylim(-1.2, 1.2)
+        axis.set_yticks([-1, 0, 1])
+        axis.set_yticklabels(["Канал 2 ведущий", "Пассивный", "Канал 1 ведущий"])
+        axis.set_ylabel("Канал ведущий")
+        axis.grid(False)
+
+        if channel_1:
+            times_1 = [point.timestamp for point in channel_1]
+            values_1 = [1 if point.active else 0 for point in channel_1]
+            axis.step(
+                times_1,
+                values_1,
+                where="post",
+                color="#2563eb",
+                linewidth=2,
+                label="Ведущий: канал 1",
+                zorder=2,
+            )
+            axis.fill_between(
+                times_1,
+                0,
+                values_1,
+                step="post",
+                color="#2563eb",
+                alpha=0.1,
+                zorder=1,
+            )
+
+        if channel_2:
+            times_2 = [point.timestamp for point in channel_2]
+            values_2 = [-1 if point.active else 0 for point in channel_2]
+            axis.step(
+                times_2,
+                values_2,
+                where="post",
+                color="#9333ea",
+                linewidth=2,
+                label="Ведущий: канал 2",
+                zorder=2,
+            )
+            axis.fill_between(
+                times_2,
+                0,
+                values_2,
+                step="post",
+                color="#9333ea",
+                alpha=0.1,
+                zorder=1,
             )
 
     @staticmethod
