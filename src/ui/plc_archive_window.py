@@ -417,6 +417,7 @@ class PlkArchiveWindow(QMainWindow):
         self._update_time_axis(signal_axis_2)
         self._update_numeric_badges(signal_axis_2.get_xlim())
         self._update_date_label(signal_axis_2.get_xlim())
+        self._update_time_range_label(signal_axis_2.get_xlim())
         self._update_event_labels(signal_axis_2.get_xlim())
         event_handles, event_labels = axis.get_legend_handles_labels()
         leading_handles, leading_labels = leading_axis.get_legend_handles_labels()
@@ -532,6 +533,7 @@ class PlkArchiveWindow(QMainWindow):
         self._update_time_axis(time_axis)
         self._update_numeric_badges(time_axis.get_xlim())
         self._update_date_label(time_axis.get_xlim())
+        self._update_time_range_label(time_axis.get_xlim())
         self._update_event_labels(time_axis.get_xlim())
         self.canvas.draw_idle()
 
@@ -730,6 +732,7 @@ class PlkArchiveWindow(QMainWindow):
         self._update_time_axis(time_axis, limits)
         self._update_numeric_badges(time_axis.get_xlim())
         self._update_date_label(time_axis.get_xlim())
+        self._update_time_range_label(time_axis.get_xlim())
         self._update_event_labels(time_axis.get_xlim())
 
     def _update_date_label(self, limits: Tuple[float, float]) -> None:
@@ -746,6 +749,16 @@ class PlkArchiveWindow(QMainWindow):
         else:
             label = f"Дата: {start_date:%d.%m.%Y} — {end_date:%d.%m.%Y}"
         date_label.set_text(label)
+
+    def _update_time_range_label(self, limits: Tuple[float, float]) -> None:
+        """Добавляет текущую ширину временного диапазона в подпись оси X."""
+        event_axis = self._event_axis
+        if event_axis is None:
+            return
+        x_min, x_max = limits
+        visible_seconds = abs(x_max - x_min) * 24 * 60 * 60
+        formatted_range = self._format_time_delta(visible_seconds)
+        event_axis.set_xlabel(f"Дата и время (диапазон: {formatted_range})")
 
     def _clear_event_labels(self) -> None:
         """Удаляет динамические подписи событий среднего графика."""
