@@ -49,6 +49,22 @@ pip install -r requirements.txt
 python main.py
 ```
 
+### 4. Сборка Windows-приложения
+
+```bash
+# Из заранее подготовленной .venv, без скачивания зависимостей
+bash scripts/build.sh
+
+# С подготовкой зависимостей через интернет
+bash scripts/build.sh --prepare
+
+# Только из локального кэша uv
+bash scripts/build.sh --prepare-offline
+```
+
+Подробное описание анализа регулятора, PDF-отчёта и выпуска версий приведено в
+[руководстве пользователя](docs/USER_MANUAL.md).
+
 ---
 
 ## Использование (Windows — exe)
