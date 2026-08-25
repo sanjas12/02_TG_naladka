@@ -80,6 +80,7 @@ class PlkArchiveWindow(QMainWindow):
         self._date_label: Optional[Text] = None
         self._event_axis: Optional[Axes] = None
         self._event_labels: List[Annotation] = []
+        self._event_label_colors: List[str] = []
         self._hover_events: List[Tuple[float, PlkEvent, int]] = []
         self._hover_event_times: List[float] = []
         self._hovered_event_key: Optional[Tuple[Path, int]] = None
@@ -159,6 +160,10 @@ class PlkArchiveWindow(QMainWindow):
         )
         self.event_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.event_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.event_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.event_table.itemSelectionChanged.connect(
+            self._highlight_selected_event_labels
+        )
         self.event_table.setWordWrap(False)
         self.event_table.verticalHeader().hide()
         event_header = self.event_table.horizontalHeader()
@@ -797,6 +802,7 @@ class PlkArchiveWindow(QMainWindow):
             with suppress(ValueError):
                 label.remove()
         self._event_labels.clear()
+        self._event_label_colors.clear()
         self.event_table.setRowCount(0)
         self.event_inspector.setTitle("События — увеличьте до ≤ 1 с")
 
@@ -887,6 +893,29 @@ class PlkArchiveWindow(QMainWindow):
             label.set_in_layout(False)
             label.set_clip_path(event_axis.patch)
             self._event_labels.append(label)
+            self._event_label_colors.append(marker_color)
+
+    def _highlight_selected_event_labels(self) -> None:
+        """Подсвечивает на графике номера выбранных строк таблицы."""
+        selected_rows = {item.row() for item in self.event_table.selectedItems()}
+        for row, (label, marker_color) in enumerate(
+            zip(self._event_labels, self._event_label_colors)
+        ):
+            is_selected = row in selected_rows
+            bbox_patch = label.get_bbox_patch()
+            if bbox_patch is not None:
+                bbox_patch.set_facecolor("#2563eb" if is_selected else marker_color)
+                bbox_patch.set_edgecolor("#93c5fd" if is_selected else "white")
+                bbox_patch.set_linewidth(1.8 if is_selected else 0.5)
+
+            arrow_patch = label.arrow_patch
+            if arrow_patch is not None:
+                arrow_patch.set_color("#2563eb" if is_selected else marker_color)
+                arrow_patch.set_linewidth(1.3 if is_selected else 0.5)
+            label.set_zorder(10 if is_selected else 7)
+
+        if self._event_labels:
+            self.canvas.draw_idle()
 
     def _update_numeric_badges(self, limits: Tuple[float, float]) -> None:
         """Показывает значение кода ошибки на правой границе видимого участка."""
