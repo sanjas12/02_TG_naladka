@@ -250,7 +250,10 @@ class PlkArchiveWindow(QMainWindow):
         self._lock_y_axis(leading_axis, (-1.2, 1.2))
         self._lock_y_axis(signal_axis_2, (ERROR_CODE_MAX, 0))
         axis.grid(axis="x", color="#d1d5db", alpha=0.6)
-        signal_axis_2.set_xlabel("Дата и время")
+        axis.tick_params(axis="x", labelbottom=True)
+        axis.set_xlabel("Дата и время")
+        signal_axis_2.tick_params(axis="x", labelbottom=False)
+        signal_axis_2.set_xlabel("")
         self._time_axis = signal_axis_2
         for shared_axis in (signal_axis_1, axis, signal_axis_2):
             shared_axis.callbacks.connect(
