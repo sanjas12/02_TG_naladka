@@ -9,7 +9,7 @@
 # а затем отправляет релиз в origin. Для обычной разработки не запускать.
 
 # 1. Логирование        — пишет лог в logs/release_ДАТА.log
-# 2. Git checkout       — переключается на master и pull
+# 2. Git checkout       — переключается на master, pull и проверяет develop
 # 3. Проверки           — синтаксис, все тесты, pre-commit и mypy
 # 4. Коммиты            — показывает что войдёт в релиз
 # 5. Меню               — авто / PATCH / MINOR / MAJOR / вручную
@@ -43,6 +43,8 @@ log_info "Рабочая папка: $(pwd)"
 log_info "Git версия: $(git --version)"
 log_info "Log файл: $LOG_FILE"
 
+START_BRANCH=$(git branch --show-current)
+
 # ─── Кодировка ────────────────────────────────────────────────
 export PYTHONIOENCODING=utf-8
 export PYTHONUTF8=1
@@ -70,6 +72,25 @@ if ! git pull origin master; then
     exit 1
 fi
 log_ok "master актуален"
+
+# release.sh не объединяет ветки автоматически, но не должен выпускать
+# устаревший master, если в локальном develop остались неслитые изменения.
+if git show-ref --verify --quiet refs/heads/develop; then
+    if ! git merge-base --is-ancestor develop master; then
+        log_error "Ветка develop содержит изменения, которых ещё нет в master."
+        log_error "Релиз из устаревшего master отменён. Выполни:"
+        log_error "  git checkout master"
+        log_error "  git merge --ff-only develop"
+        log_error "Затем повторно запусти bash scripts/release.sh."
+        exit 1
+    fi
+    log_ok "Все локальные изменения develop уже включены в master"
+elif [ "$START_BRANCH" = "develop" ]; then
+    log_error "До переключения была активна develop, но локальная ветка больше не найдена."
+    exit 1
+else
+    log_warn "Локальная ветка develop не найдена — проверка её слияния пропущена."
+fi
 
 # ─── Проверка новых коммитов ──────────────────────────────────
 # Commitizen не создаёт обычный релиз, если после последнего тега нет коммитов.
