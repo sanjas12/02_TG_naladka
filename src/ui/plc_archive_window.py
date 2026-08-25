@@ -57,6 +57,7 @@ class PlkArchiveWindow(QMainWindow):
         self._annotation: Optional[Annotation] = None
         self._time_axis: Optional[Axes] = None
         self._adjusting_time_limits = False
+        self._adjusting_y_limits = False
 
         self.setWindowTitle("Анализ архивов PLC")
         self.resize(1280, 760)
@@ -244,6 +245,10 @@ class PlkArchiveWindow(QMainWindow):
         axis.set_yticks([-1, 0, 1])
         axis.set_yticklabels(["Канал 2", "Время", "Канал 1"])
         axis.set_ylim(-1.6, 1.6)
+        self._lock_y_axis(signal_axis_1, (0, ERROR_CODE_MAX))
+        self._lock_y_axis(axis, (-1.6, 1.6))
+        self._lock_y_axis(leading_axis, (-1.2, 1.2))
+        self._lock_y_axis(signal_axis_2, (ERROR_CODE_MAX, 0))
         axis.grid(axis="x", color="#d1d5db", alpha=0.6)
         signal_axis_2.set_xlabel("Дата и время")
         self._time_axis = signal_axis_2
@@ -363,6 +368,30 @@ class PlkArchiveWindow(QMainWindow):
             return
         self._update_time_axis(time_axis)
         self.canvas.draw_idle()
+
+    def _lock_y_axis(self, axis: Axes, limits: Tuple[float, float]) -> None:
+        """Фиксирует диапазон Y при масштабировании и перемещении графика."""
+        axis.set_ylim(*limits)
+        axis.callbacks.connect(
+            "ylim_changed",
+            lambda changed_axis, fixed_limits=limits: self._restore_y_limits(
+                changed_axis, fixed_limits
+            ),
+        )
+
+    def _restore_y_limits(self, axis: Axes, limits: Tuple[float, float]) -> None:
+        """Возвращает зафиксированный Y-диапазон после действий навигации."""
+        if self._adjusting_y_limits:
+            return
+        current_limits = axis.get_ylim()
+        if current_limits == limits:
+            return
+
+        self._adjusting_y_limits = True
+        try:
+            axis.set_ylim(*limits)
+        finally:
+            self._adjusting_y_limits = False
 
     @staticmethod
     def _draw_numeric_signal(
