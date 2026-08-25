@@ -15,17 +15,23 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from matplotlib.text import Annotation, Text
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
+    QAbstractItemView,
     QFileDialog,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QLineEdit,
     QMainWindow,
     QMessageBox,
     QPushButton,
     QSpinBox,
+    QSplitter,
+    QTableWidget,
+    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -50,6 +56,7 @@ LEADING_CHANNEL_SIGNAL = "Канал ведущий"
 WORK_MODE_SIGNAL = "Режим работы"
 ERROR_CODE_MAX = 66000
 MIN_TIME_WINDOW_SECONDS = 0.5
+AUTO_EVENT_LABEL_WINDOW_SECONDS = 1.0
 
 
 class PlkArchiveWindow(QMainWindow):
@@ -66,6 +73,8 @@ class PlkArchiveWindow(QMainWindow):
         self._annotation: Optional[Annotation] = None
         self._time_axis: Optional[Axes] = None
         self._date_label: Optional[Text] = None
+        self._event_axis: Optional[Axes] = None
+        self._event_labels: List[Annotation] = []
         self._adjusting_time_limits = False
         self._adjusting_y_limits = False
         self._measurement_points: List[float] = []
@@ -132,7 +141,33 @@ class PlkArchiveWindow(QMainWindow):
         self.canvas = FigureCanvas(self.figure)
         self.toolbar = NavigationToolbar(self.canvas, self)
         layout.addWidget(self.toolbar)
-        layout.addWidget(self.canvas, 1)
+        content_splitter = QSplitter(Qt.Horizontal)
+        content_splitter.addWidget(self.canvas)
+        self.event_inspector = QGroupBox("События — увеличьте до ≤ 1 с")
+        event_inspector_layout = QVBoxLayout(self.event_inspector)
+        self.event_table = QTableWidget(0, 5)
+        self.event_table.setHorizontalHeaderLabels(
+            ["№", "Канал", "Время", "Сообщение", "Значение"]
+        )
+        self.event_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.event_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.event_table.setWordWrap(False)
+        self.event_table.verticalHeader().hide()
+        event_header = self.event_table.horizontalHeader()
+        event_header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        event_header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        event_header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        event_header.setSectionResizeMode(3, QHeaderView.Stretch)
+        event_header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        event_inspector_layout.addWidget(self.event_table)
+        self.event_inspector.setMinimumWidth(370)
+        self.event_inspector.setMaximumWidth(520)
+        content_splitter.addWidget(self.event_inspector)
+        content_splitter.setCollapsible(1, False)
+        content_splitter.setStretchFactor(0, 1)
+        content_splitter.setStretchFactor(1, 0)
+        content_splitter.setSizes([950, 370])
+        layout.addWidget(content_splitter, 1)
         self.canvas.mpl_connect("motion_notify_event", self._on_hover)
         self.canvas.mpl_connect("motion_notify_event", self._on_measurement_drag)
         self.canvas.mpl_connect("button_release_event", self._on_view_changed)
@@ -222,6 +257,7 @@ class PlkArchiveWindow(QMainWindow):
         work_modes_2: List[CategoricalSignalPoint],
     ) -> None:
         self._clear_time_measurement(redraw=False)
+        self._clear_event_labels()
         self.figure.clear()
         signal_axis_1, axis, signal_axis_2 = self.figure.subplots(
             3,
@@ -230,6 +266,7 @@ class PlkArchiveWindow(QMainWindow):
             gridspec_kw={"height_ratios": [1, 1.5, 1]},
         )
         self._measurement_axes = [signal_axis_1, axis, signal_axis_2]
+        self._event_axis = axis
         timeline_end = max(
             self.channel_1[-1].timestamp,
             self.channel_2[-1].timestamp,
@@ -380,6 +417,7 @@ class PlkArchiveWindow(QMainWindow):
         self._update_time_axis(signal_axis_2)
         self._update_numeric_badges(signal_axis_2.get_xlim())
         self._update_date_label(signal_axis_2.get_xlim())
+        self._update_event_labels(signal_axis_2.get_xlim())
         event_handles, event_labels = axis.get_legend_handles_labels()
         leading_handles, leading_labels = leading_axis.get_legend_handles_labels()
         axis.legend(
@@ -494,6 +532,7 @@ class PlkArchiveWindow(QMainWindow):
         self._update_time_axis(time_axis)
         self._update_numeric_badges(time_axis.get_xlim())
         self._update_date_label(time_axis.get_xlim())
+        self._update_event_labels(time_axis.get_xlim())
         self.canvas.draw_idle()
 
     def _toggle_time_measurement(self, enabled: bool) -> None:
@@ -691,6 +730,7 @@ class PlkArchiveWindow(QMainWindow):
         self._update_time_axis(time_axis, limits)
         self._update_numeric_badges(time_axis.get_xlim())
         self._update_date_label(time_axis.get_xlim())
+        self._update_event_labels(time_axis.get_xlim())
 
     def _update_date_label(self, limits: Tuple[float, float]) -> None:
         """Сохраняет дату под средней осью при любом масштабе времени."""
@@ -706,6 +746,103 @@ class PlkArchiveWindow(QMainWindow):
         else:
             label = f"Дата: {start_date:%d.%m.%Y} — {end_date:%d.%m.%Y}"
         date_label.set_text(label)
+
+    def _clear_event_labels(self) -> None:
+        """Удаляет динамические подписи событий среднего графика."""
+        for label in self._event_labels:
+            with suppress(ValueError):
+                label.remove()
+        self._event_labels.clear()
+        self.event_table.setRowCount(0)
+        self.event_inspector.setTitle("События — увеличьте до ≤ 1 с")
+
+    def _update_event_labels(self, limits: Tuple[float, float]) -> None:
+        """Подписывает все видимые события при масштабе не более секунды."""
+        self._clear_event_labels()
+        event_axis = self._event_axis
+        if event_axis is None:
+            return
+
+        x_min, x_max = sorted(limits)
+        visible_seconds = (x_max - x_min) * 24 * 60 * 60
+        if visible_seconds > AUTO_EVENT_LABEL_WINDOW_SECONDS:
+            return
+
+        visible_events = sorted(
+            (
+                (event, channel_y)
+                for event, channel_y in self._plotted_events
+                if x_min <= mdates.date2num(event.timestamp) <= x_max
+            ),
+            key=lambda item: (item[0].timestamp, -item[1]),
+        )
+        self.event_inspector.setTitle(
+            f"События видимого участка: {len(visible_events)}"
+        )
+        self.event_table.setRowCount(len(visible_events))
+        channel_positions = {-1: 0, 1: 0}
+        vertical_slots = (7, 19, 31, 43)
+        x_span = max(x_max - x_min, 1e-12)
+
+        for row, (event, channel_y) in enumerate(visible_events):
+            event_number = row + 1
+            channel_number = "1" if channel_y > 0 else "2"
+            event_time = f"{event.timestamp:%H:%M:%S.%f}"[:-3]
+            for column, value in enumerate(
+                (
+                    str(event_number),
+                    channel_number,
+                    event_time,
+                    event.message,
+                    event.value,
+                )
+            ):
+                self.event_table.setItem(row, column, QTableWidgetItem(value))
+
+            position = channel_positions[channel_y]
+            channel_positions[channel_y] += 1
+            event_x = mdates.date2num(event.timestamp)
+            relative_x = (event_x - x_min) / x_span
+            if relative_x < 0.25:
+                horizontal_offset, alignment = 5, "left"
+            elif relative_x > 0.75 or position % 2:
+                horizontal_offset, alignment = -5, "right"
+            else:
+                horizontal_offset, alignment = 5, "left"
+
+            vertical_offset = vertical_slots[position % len(vertical_slots)]
+            if channel_y < 0:
+                vertical_offset = -vertical_offset
+            marker_color = "#dc2626" if channel_y > 0 else "#d97706"
+            label = event_axis.annotate(
+                str(event_number),
+                xy=(event.timestamp, channel_y),
+                xytext=(horizontal_offset, vertical_offset),
+                textcoords="offset points",
+                ha=alignment,
+                va="bottom" if channel_y > 0 else "top",
+                fontsize=6.5,
+                fontweight="bold",
+                color="white",
+                bbox={
+                    "boxstyle": "circle,pad=0.18",
+                    "fc": marker_color,
+                    "ec": "white",
+                    "linewidth": 0.5,
+                    "alpha": 0.95,
+                },
+                arrowprops={
+                    "arrowstyle": "-",
+                    "color": marker_color,
+                    "linewidth": 0.5,
+                },
+                annotation_clip=True,
+                clip_on=True,
+                zorder=7,
+            )
+            label.set_in_layout(False)
+            label.set_clip_path(event_axis.patch)
+            self._event_labels.append(label)
 
     def _update_numeric_badges(self, limits: Tuple[float, float]) -> None:
         """Показывает значение кода ошибки на правой границе видимого участка."""
