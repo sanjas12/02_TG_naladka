@@ -73,6 +73,7 @@ _DEFAULTS: Final[Dict[str, Any]] = {
     "ANALYS_AIM": "Значение развертки. Положение ГСМ",
     "GSM_A_CUR": "ГСМ-А.Текущее положение",
     "GSM_B_CUR": "ГСМ-Б.Текущее положение",
+    "PLC_ARCHIVE_SHORTCUT": "D",
 }
 
 
@@ -128,6 +129,7 @@ def load_runtime_settings() -> None:
     """
     global ANALYS_AIM, FONT_FAMILY, FONT_SIZE, GSM_A_CUR, GSM_B_CUR
     global JUMP_THRESHOLD_MM, LEVEL_LOG, MAX_JUMP_THRESHOLD_MM
+    global PLC_ARCHIVE_SHORTCUT
     global TICK_MARK_COUNT_X, TICK_MARK_COUNT_Y
     global _SETTINGS
 
@@ -159,6 +161,8 @@ def load_runtime_settings() -> None:
     ANALYS_AIM = str(_get("ANALYS_AIM", _DEFAULTS["ANALYS_AIM"]))
     GSM_A_CUR = str(_get("GSM_A_CUR", _DEFAULTS["GSM_A_CUR"]))
     GSM_B_CUR = str(_get("GSM_B_CUR", _DEFAULTS["GSM_B_CUR"]))
+    loaded_shortcut = str(_get("PLC_ARCHIVE_SHORTCUT", "D")).strip()
+    PLC_ARCHIVE_SHORTCUT = loaded_shortcut or "D"
     try:
         JUMP_THRESHOLD_MM = float(_get("JUMP_THRESHOLD_MM", 9.0))
         if JUMP_THRESHOLD_MM < 0:
@@ -208,6 +212,23 @@ ANALYS_AIM: str = _get(
 GSM_A_CUR: str = _get("GSM_A_CUR", "ГСМ-А.Текущее положение")
 
 GSM_B_CUR: str = _get("GSM_B_CUR", "ГСМ-Б.Текущее положение")
+
+PLC_ARCHIVE_SHORTCUT: str = str(_get("PLC_ARCHIVE_SHORTCUT", "D"))
+
+
+def save_plc_archive_shortcut(shortcut: str) -> None:
+    """Сохраняет горячую клавишу анализа архивов PLC."""
+    normalized_shortcut = shortcut.strip()
+    if not normalized_shortcut:
+        raise ValueError("Горячая клавиша не может быть пустой")
+
+    global PLC_ARCHIVE_SHORTCUT, _SETTINGS
+    updated_settings = {**_DEFAULTS, **_SETTINGS}
+    updated_settings["PLC_ARCHIVE_SHORTCUT"] = normalized_shortcut
+    _save_settings(updated_settings)
+    _SETTINGS = updated_settings
+    PLC_ARCHIVE_SHORTCUT = normalized_shortcut
+
 
 # Значение обновляется и валидируется в load_runtime_settings().
 JUMP_THRESHOLD_MM: float = 9.0

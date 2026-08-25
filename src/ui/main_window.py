@@ -2,12 +2,14 @@ import sys
 import time
 from typing import Callable, Dict, Optional, Union
 
-from PyQt5.QtCore import Qt, QThread, pyqtSignal
+from PyQt5.QtCore import QEvent, QObject, Qt, QThread, pyqtSignal
+from PyQt5.QtGui import QKeyEvent
 from PyQt5.QtWidgets import (
     QAbstractItemView,
     QAction,
     QApplication,
     QCheckBox,
+    QDialog,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
@@ -24,8 +26,10 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
+import config.config as cfg
 from _version import __revision__, __version__
 from config.config import AxeName
+from ui.shortcut_settings_dialog import ShortcutSettingsDialog
 from ui.styles import MENU_BAR_STYLE
 
 FuncType = Union[Callable[[], None], Callable[[QTableWidget, Dict[str, int]], None]]
@@ -68,6 +72,9 @@ class MainWindowUI(QMainWindow):
         self._version = version
         print(version)
         self.setup_ui(version)
+        application = QApplication.instance()
+        if application is not None:
+            application.installEventFilter(self)
 
     def setup_ui(self, version: str) -> None:
         self.setWindowTitle(version)
@@ -166,6 +173,7 @@ class MainWindowUI(QMainWindow):
         sarz_kuaes_menu.addAction(self.action_analysis_sarz_gsm)
 
         self.action_analysis_plk_archives = QAction("Анализ архивов PLC", self)
+        self.action_analysis_plk_archives.setShortcut(cfg.PLC_ARCHIVE_SHORTCUT)
         sarz_kuaes_menu.addAction(self.action_analysis_plk_archives)
 
         ## “Тест” — это НЕ QAction, а логическая группа
@@ -187,12 +195,39 @@ class MainWindowUI(QMainWindow):
         self.vd = QAction("VD", self)
         rk_kalina4_menu.addAction(self.vd)
 
+        # ── Настройки ────────────────────────────────────────────────────────
+        settings_menu: QMenu = menu_bar.addMenu("Настройки")
+
+        self.action_shortcut_settings = QAction("Горячие клавиши…", self)
+        self.action_shortcut_settings.triggered.connect(self._show_shortcut_settings)
+        settings_menu.addAction(self.action_shortcut_settings)
+
         # ── О программе ───────────────────────────────────────────────────────
         about_menu: QMenu = menu_bar.addMenu("О программе")
 
         self.action_about = QAction("О программе", self)
         self.action_about.triggered.connect(self._show_about)
         about_menu.addAction(self.action_about)
+
+    def _show_shortcut_settings(self) -> None:
+        """Открывает окно переназначения горячих клавиш."""
+        dialog = ShortcutSettingsDialog(
+            self.action_analysis_plk_archives.shortcut().toString(), self
+        )
+        if dialog.exec_() != QDialog.Accepted:
+            return
+
+        shortcut = dialog.shortcut()
+        try:
+            cfg.save_plc_archive_shortcut(shortcut)
+        except (OSError, ValueError) as error:
+            QMessageBox.critical(
+                self,
+                "Ошибка сохранения настроек",
+                f"Не удалось сохранить горячую клавишу:\n{error}",
+            )
+            return
+        self.action_analysis_plk_archives.setShortcut(shortcut)
 
     def _show_about(self) -> None:
         """Показывает диалог с информацией о программе."""
@@ -202,6 +237,21 @@ class MainWindowUI(QMainWindow):
             f"<b>Версия:</b> {self._version}<br><br>"
             "Программа для анализа и визуализации сигналов.",
         )
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802
+        """Перехватывает глобальный хоткей PLC до активного поля ввода."""
+        if (
+            event.type() == QEvent.KeyPress
+            and isinstance(event, QKeyEvent)
+            and not event.isAutoRepeat()
+            and QApplication.activeModalWidget() is None
+        ):
+            shortcut = self.action_analysis_plk_archives.shortcut()
+            pressed_key = event.key() | int(event.modifiers())
+            if shortcut.count() == 1 and shortcut[0] == pressed_key:
+                self.action_analysis_plk_archives.trigger()
+                return True
+        return super().eventFilter(watched, event)
 
     # ================= Модальный прогресс ===================
     def start_modal_progress(

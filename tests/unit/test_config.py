@@ -411,6 +411,27 @@ class TestPublicConstants:
 
         assert result == "fallback"
 
+    def test_save_plc_archive_shortcut_persists_setting(self, tmp_path, monkeypatch):
+        import config.config as cfg
+
+        settings_file = tmp_path / "settings.json"
+        monkeypatch.setattr(cfg, "_SETTINGS_FILE", settings_file)
+        monkeypatch.setattr(cfg, "_SETTINGS", {"FONT_SIZE": 12})
+        monkeypatch.setattr(cfg, "PLC_ARCHIVE_SHORTCUT", "D")
+
+        cfg.save_plc_archive_shortcut("Ctrl+Shift+D")
+
+        saved = json.loads(settings_file.read_text(encoding="utf-8"))
+        assert saved["FONT_SIZE"] == 12
+        assert saved["PLC_ARCHIVE_SHORTCUT"] == "Ctrl+Shift+D"
+        assert cfg.PLC_ARCHIVE_SHORTCUT == "Ctrl+Shift+D"
+
+    def test_save_plc_archive_shortcut_rejects_empty_value(self):
+        import config.config as cfg
+
+        with pytest.raises(ValueError, match="не может быть пустой"):
+            cfg.save_plc_archive_shortcut("   ")
+
 
 # ===========================================================================
 # Строковые константы модуля
