@@ -49,7 +49,7 @@ ERROR_CODE_SIGNAL = "Код ошибки по приоритету (младша
 LEADING_CHANNEL_SIGNAL = "Канал ведущий"
 WORK_MODE_SIGNAL = "Режим работы"
 ERROR_CODE_MAX = 66000
-MIN_TIME_WINDOW_SECONDS = 1.0
+MIN_TIME_WINDOW_SECONDS = 0.5
 
 
 class PlkArchiveWindow(QMainWindow):
