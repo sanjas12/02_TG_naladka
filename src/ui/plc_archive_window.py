@@ -67,7 +67,6 @@ ERROR_CODE_SIGNAL = "Код ошибки по приоритету (младша
 LEADING_CHANNEL_SIGNAL = "Канал ведущий"
 WORK_MODE_SIGNAL = "Режим работы"
 ERROR_CODE_MAX = 66000
-MIN_TIME_WINDOW_SECONDS = 0.5
 NUMERIC_LABEL_WINDOW_SECONDS = 600.0
 MAX_VISIBLE_NUMERIC_LABELS = 30
 
@@ -137,6 +136,7 @@ class PlkArchiveWindow(QMainWindow):
         self._event_cursor_lines: List[Line2D] = []
         self._dragging_event_cursor = False
         self._event_display_window_seconds = cfg.PLC_ARCHIVE_EVENT_WINDOW_SECONDS
+        self._min_time_window_seconds = cfg.PLC_ARCHIVE_MIN_TIME_WINDOW_SECONDS
 
         self.setWindowTitle("Анализ архивов PLC")
         self.resize(1280, 760)
@@ -249,12 +249,18 @@ class PlkArchiveWindow(QMainWindow):
 
     def _show_display_settings(self) -> None:
         """Открывает настройки отображения событий архива PLC."""
-        dialog = PlcArchiveSettingsDialog(self._event_display_window_seconds, self)
+        dialog = PlcArchiveSettingsDialog(
+            self._event_display_window_seconds,
+            self._min_time_window_seconds,
+            self,
+        )
         if dialog.exec_() != QDialog.Accepted:
             return
         seconds = dialog.event_window_seconds()
+        min_time_window = dialog.min_time_window_seconds()
         try:
             cfg.save_plc_archive_event_window(seconds)
+            cfg.save_plc_archive_min_time_window(min_time_window)
         except (OSError, ValueError) as error:
             QMessageBox.critical(
                 self,
@@ -263,8 +269,10 @@ class PlkArchiveWindow(QMainWindow):
             )
             return
         self._event_display_window_seconds = seconds
+        self._min_time_window_seconds = min_time_window
         time_axis = self._time_axis
         if time_axis is not None:
+            self._update_time_axis(time_axis)
             self._update_event_labels(time_axis.get_xlim())
             self.canvas.draw_idle()
 
@@ -592,12 +600,12 @@ class PlkArchiveWindow(QMainWindow):
 
         x_min, x_max = limits if limits is not None else axis.get_xlim()
         visible_seconds = abs(x_max - x_min) * 24 * 60 * 60
-        if visible_seconds < MIN_TIME_WINDOW_SECONDS:
+        if visible_seconds < self._min_time_window_seconds:
             center = (x_min + x_max) / 2
-            half_window = MIN_TIME_WINDOW_SECONDS / (2 * 24 * 60 * 60)
+            half_window = self._min_time_window_seconds / (2 * 24 * 60 * 60)
             x_min = center - half_window
             x_max = center + half_window
-            visible_seconds = MIN_TIME_WINDOW_SECONDS
+            visible_seconds = self._min_time_window_seconds
             self._adjusting_time_limits = True
             try:
                 axis.set_xlim(x_min, x_max)
@@ -606,8 +614,11 @@ class PlkArchiveWindow(QMainWindow):
 
         axis.xaxis.set_minor_locator(ticker.NullLocator())
 
-        if visible_seconds <= MIN_TIME_WINDOW_SECONDS * 1.001:
-            axis.xaxis.set_major_locator(mdates.MicrosecondLocator(interval=100000))
+        if visible_seconds <= self._min_time_window_seconds * 1.001:
+            tick_interval = 50000 if visible_seconds <= 0.25 else 100000
+            axis.xaxis.set_major_locator(
+                mdates.MicrosecondLocator(interval=tick_interval)
+            )
             axis.xaxis.set_major_formatter(
                 ticker.FuncFormatter(
                     lambda value, _position: mdates.num2date(value).strftime(

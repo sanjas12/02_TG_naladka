@@ -10,5 +10,6 @@
   "GSM_A_CUR": "ГСМ-А.Текущее положение",
   "GSM_B_CUR": "ГСМ-Б.Текущее положение",
   "PLC_ARCHIVE_SHORTCUT": "D",
-  "PLC_ARCHIVE_EVENT_WINDOW_SECONDS": 3.0
+  "PLC_ARCHIVE_EVENT_WINDOW_SECONDS": 3.0,
+  "PLC_ARCHIVE_MIN_TIME_WINDOW_SECONDS": 0.2
 }

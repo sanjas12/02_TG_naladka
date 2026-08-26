@@ -75,6 +75,7 @@ _DEFAULTS: Final[Dict[str, Any]] = {
     "GSM_B_CUR": "ГСМ-Б.Текущее положение",
     "PLC_ARCHIVE_SHORTCUT": "D",
     "PLC_ARCHIVE_EVENT_WINDOW_SECONDS": 1.0,
+    "PLC_ARCHIVE_MIN_TIME_WINDOW_SECONDS": 0.2,
 }
 
 
@@ -130,7 +131,8 @@ def load_runtime_settings() -> None:
     """
     global ANALYS_AIM, FONT_FAMILY, FONT_SIZE, GSM_A_CUR, GSM_B_CUR
     global JUMP_THRESHOLD_MM, LEVEL_LOG, MAX_JUMP_THRESHOLD_MM
-    global PLC_ARCHIVE_EVENT_WINDOW_SECONDS, PLC_ARCHIVE_SHORTCUT
+    global PLC_ARCHIVE_EVENT_WINDOW_SECONDS, PLC_ARCHIVE_MIN_TIME_WINDOW_SECONDS
+    global PLC_ARCHIVE_SHORTCUT
     global TICK_MARK_COUNT_X, TICK_MARK_COUNT_Y
     global _SETTINGS
 
@@ -175,6 +177,18 @@ def load_runtime_settings() -> None:
         logger.warning(
             "PLC_ARCHIVE_EVENT_WINDOW_SECONDS должен быть от 0.1 до 60; "
             "используется 1.0"
+        )
+    try:
+        PLC_ARCHIVE_MIN_TIME_WINDOW_SECONDS = float(
+            _get("PLC_ARCHIVE_MIN_TIME_WINDOW_SECONDS", 0.2)
+        )
+        if not 0.1 <= PLC_ARCHIVE_MIN_TIME_WINDOW_SECONDS <= 10.0:
+            raise ValueError
+    except (TypeError, ValueError):
+        PLC_ARCHIVE_MIN_TIME_WINDOW_SECONDS = 0.2
+        logger.warning(
+            "PLC_ARCHIVE_MIN_TIME_WINDOW_SECONDS должен быть от 0.1 до 10; "
+            "используется 0.2"
         )
     try:
         JUMP_THRESHOLD_MM = float(_get("JUMP_THRESHOLD_MM", 9.0))
@@ -230,6 +244,9 @@ PLC_ARCHIVE_SHORTCUT: str = str(_get("PLC_ARCHIVE_SHORTCUT", "D"))
 PLC_ARCHIVE_EVENT_WINDOW_SECONDS: float = float(
     _get("PLC_ARCHIVE_EVENT_WINDOW_SECONDS", 1.0)
 )
+PLC_ARCHIVE_MIN_TIME_WINDOW_SECONDS: float = float(
+    _get("PLC_ARCHIVE_MIN_TIME_WINDOW_SECONDS", 0.2)
+)
 
 
 def save_plc_archive_shortcut(shortcut: str) -> None:
@@ -258,6 +275,20 @@ def save_plc_archive_event_window(seconds: float) -> None:
     _save_settings(updated_settings)
     _SETTINGS = updated_settings
     PLC_ARCHIVE_EVENT_WINDOW_SECONDS = normalized_seconds
+
+
+def save_plc_archive_min_time_window(seconds: float) -> None:
+    """Сохраняет минимальный диапазон X при максимальном увеличении."""
+    normalized_seconds = float(seconds)
+    if not 0.1 <= normalized_seconds <= 10.0:
+        raise ValueError("Максимальное увеличение должно быть от 0,1 до 10 секунд")
+
+    global PLC_ARCHIVE_MIN_TIME_WINDOW_SECONDS, _SETTINGS
+    updated_settings = {**_DEFAULTS, **_SETTINGS}
+    updated_settings["PLC_ARCHIVE_MIN_TIME_WINDOW_SECONDS"] = normalized_seconds
+    _save_settings(updated_settings)
+    _SETTINGS = updated_settings
+    PLC_ARCHIVE_MIN_TIME_WINDOW_SECONDS = normalized_seconds
 
 
 # Значение обновляется и валидируется в load_runtime_settings().

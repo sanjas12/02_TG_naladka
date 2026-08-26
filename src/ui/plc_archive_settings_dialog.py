@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import (
     QDoubleSpinBox,
     QFormLayout,
     QLabel,
+    QSpinBox,
     QVBoxLayout,
 )
 
@@ -11,7 +12,12 @@ from PyQt5.QtWidgets import (
 class PlcArchiveSettingsDialog(QDialog):
     """Настройки отображения анализа архивов PLC."""
 
-    def __init__(self, event_window_seconds: float, parent=None) -> None:
+    def __init__(
+        self,
+        event_window_seconds: float,
+        min_time_window_seconds: float,
+        parent=None,
+    ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Настройки анализа архивов PLC")
         self.setMinimumWidth(470)
@@ -31,6 +37,12 @@ class PlcArchiveSettingsDialog(QDialog):
         self.event_window.setSuffix(" с")
         self.event_window.setValue(event_window_seconds)
         form.addRow("Показывать события при масштабе до:", self.event_window)
+        self.min_time_window = QSpinBox(self)
+        self.min_time_window.setRange(100, 10000)
+        self.min_time_window.setSingleStep(100)
+        self.min_time_window.setSuffix(" мс")
+        self.min_time_window.setValue(round(min_time_window_seconds * 1000))
+        form.addRow("Минимальный диапазон оси времени:", self.min_time_window)
         layout.addLayout(form)
 
         buttons = QDialogButtonBox(
@@ -43,3 +55,7 @@ class PlcArchiveSettingsDialog(QDialog):
     def event_window_seconds(self) -> float:
         """Возвращает выбранный порог видимого диапазона."""
         return self.event_window.value()
+
+    def min_time_window_seconds(self) -> float:
+        """Возвращает диапазон X при максимальном увеличении."""
+        return self.min_time_window.value() / 1000

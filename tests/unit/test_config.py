@@ -22,6 +22,7 @@ DEFAULTS = {
     "GSM_B_CUR": "ГСМ-Б.Текущее положение",
     "PLC_ARCHIVE_SHORTCUT": "D",
     "PLC_ARCHIVE_EVENT_WINDOW_SECONDS": 1.0,
+    "PLC_ARCHIVE_MIN_TIME_WINDOW_SECONDS": 0.2,
 }
 
 
@@ -454,6 +455,27 @@ class TestPublicConstants:
 
         with pytest.raises(ValueError, match="от 0,1 до 60"):
             cfg.save_plc_archive_event_window(0.0)
+
+    def test_save_plc_archive_min_time_window_persists_setting(
+        self, tmp_path, monkeypatch
+    ):
+        import config.config as cfg
+
+        settings_file = tmp_path / "settings.json"
+        monkeypatch.setattr(cfg, "_SETTINGS_FILE", settings_file)
+        monkeypatch.setattr(cfg, "_SETTINGS", {})
+
+        cfg.save_plc_archive_min_time_window(0.2)
+
+        saved = json.loads(settings_file.read_text(encoding="utf-8"))
+        assert saved["PLC_ARCHIVE_MIN_TIME_WINDOW_SECONDS"] == 0.2
+        assert cfg.PLC_ARCHIVE_MIN_TIME_WINDOW_SECONDS == 0.2
+
+    def test_save_plc_archive_min_time_window_rejects_out_of_range(self):
+        import config.config as cfg
+
+        with pytest.raises(ValueError, match="от 0,1 до 10"):
+            cfg.save_plc_archive_min_time_window(0.0)
 
 
 # ===========================================================================
