@@ -18,7 +18,7 @@ from matplotlib.collections import LineCollection
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 from matplotlib.text import Annotation, Text
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import QItemSelectionModel, QSignalBlocker, Qt
 from PyQt5.QtWidgets import (
     QAbstractItemView,
     QAction,
@@ -123,6 +123,7 @@ class PlkArchiveWindow(QMainWindow):
         self._event_axis: Optional[Axes] = None
         self._event_labels: List[Annotation] = []
         self._event_label_colors: List[str] = []
+        self._visible_event_times: List[float] = []
         self._hover_events: List[Tuple[float, PlkEvent, int]] = []
         self._hover_event_times: List[float] = []
         self._hovered_event_key: Optional[Tuple[Path, int]] = None
@@ -736,6 +737,7 @@ class PlkArchiveWindow(QMainWindow):
         if cursor_time == self._event_cursor_time:
             return
         self._event_cursor_time = cursor_time
+        self._select_cursor_events_in_table(cursor_time)
 
         if not self._event_cursor_lines:
             self._event_cursor_lines = [
@@ -775,6 +777,24 @@ class PlkArchiveWindow(QMainWindow):
             annotation.set_visible(True)
             annotation.set_zorder(11)
         self.canvas.draw_idle()
+
+    def _select_cursor_events_in_table(self, cursor_time: float) -> None:
+        """Выделяет строки событий, совпавших со временем курсора."""
+        table = self.event_table
+        blocker = QSignalBlocker(table)
+        table.clearSelection()
+        selection_model = table.selectionModel()
+        if selection_model is not None:
+            for row, event_time in enumerate(self._visible_event_times):
+                if event_time != cursor_time:
+                    continue
+                index = table.model().index(row, 0)
+                selection_model.select(
+                    index,
+                    QItemSelectionModel.Select | QItemSelectionModel.Rows,
+                )
+        del blocker
+        self._highlight_selected_event_labels()
 
     def _clear_time_measurement(self, redraw: bool = True) -> None:
         """Удаляет линии, заливку и информационный блок измерения."""
@@ -999,6 +1019,7 @@ class PlkArchiveWindow(QMainWindow):
                 label.remove()
         self._event_labels.clear()
         self._event_label_colors.clear()
+        self._visible_event_times.clear()
         self.event_table.setRowCount(0)
         self.event_inspector.setTitle(self._event_inspector_idle_title())
 
@@ -1022,6 +1043,9 @@ class PlkArchiveWindow(QMainWindow):
             ),
             key=lambda item: (item[0].timestamp, -item[1]),
         )
+        self._visible_event_times = [
+            mdates.date2num(event.timestamp) for event, _channel_y in visible_events
+        ]
         self.event_inspector.setTitle(
             f"События видимого участка: {len(visible_events)}"
         )
@@ -1075,6 +1099,9 @@ class PlkArchiveWindow(QMainWindow):
             label.set_clip_path(event_axis.patch)
             self._event_labels.append(label)
             self._event_label_colors.append(marker_color)
+        cursor_time = self._event_cursor_time
+        if cursor_time is not None:
+            self._select_cursor_events_in_table(cursor_time)
 
     def _layout_event_label_offsets(
         self, axis: Axes, events: Sequence[Tuple[PlkEvent, int]]
