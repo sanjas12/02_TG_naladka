@@ -53,6 +53,11 @@ from logic.plc_archive_analyzer import (
 
 logger = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PLC_ARCHIVE_ROOT = PROJECT_ROOT / "input" / "plc_logs"
+PLC_CHANNEL_DIRECTORIES = {
+    1: PLC_ARCHIVE_ROOT / "шур81",
+    2: PLC_ARCHIVE_ROOT / "шур82",
+}
 ERROR_CODE_SIGNAL = "Код ошибки по приоритету (младшая часть)"
 LEADING_CHANNEL_SIGNAL = "Канал ведущий"
 WORK_MODE_SIGNAL = "Режим работы"
@@ -190,17 +195,34 @@ class PlkArchiveWindow(QMainWindow):
         self.canvas.mpl_connect("button_press_event", self._on_measurement_click)
 
     def _load_default_archives(self) -> None:
-        log_root = PROJECT_ROOT / "input" / "Logs"
-        files = sorted(log_root.rglob("*.csv")) if log_root.is_dir() else []
-        if len(files) >= 2:
-            self._load_channel(1, files[0], refresh=False)
-            self._load_channel(2, files[1], refresh=True)
+        """Загружает новейший архив из каталога каждого канала."""
+        archive_paths = {
+            channel: self._latest_archive(directory)
+            for channel, directory in PLC_CHANNEL_DIRECTORIES.items()
+        }
+        channel_1_path = archive_paths[1]
+        channel_2_path = archive_paths[2]
+        if channel_1_path is None or channel_2_path is None:
+            return
+        self._load_channel(1, channel_1_path, refresh=False)
+        self._load_channel(2, channel_2_path, refresh=True)
+
+    @staticmethod
+    def _latest_archive(directory: Path) -> Optional[Path]:
+        """Возвращает CSV с наиболее поздней датой и временем в имени."""
+        if not directory.is_dir():
+            return None
+        files = list(directory.glob("*.csv"))
+        if not files:
+            return None
+        return max(files, key=lambda path: path.name)
 
     def _select_file(self, channel: int) -> None:
+        initial_directory = PLC_CHANNEL_DIRECTORIES.get(channel, PLC_ARCHIVE_ROOT)
         filename, _ = QFileDialog.getOpenFileName(
             self,
             f"Выбор архива канала {channel}",
-            str(PROJECT_ROOT / "input" / "Logs"),
+            str(initial_directory),
             "Архивы (*.csv *.txt);;Все файлы (*.*)",
         )
         if filename:
