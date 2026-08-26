@@ -69,6 +69,7 @@ WORK_MODE_SIGNAL = "Режим работы"
 ERROR_CODE_MAX = 66000
 NUMERIC_LABEL_WINDOW_SECONDS = 600.0
 MAX_VISIBLE_NUMERIC_LABELS = 30
+TIME_AXIS_TICK_COUNT = 11
 
 
 class ArchiveNavigationToolbar(NavigationToolbar):
@@ -594,7 +595,7 @@ class PlkArchiveWindow(QMainWindow):
     def _update_time_axis(
         self, axis: Axes, limits: Optional[Tuple[float, float]] = None
     ) -> None:
-        """Ограничивает приближение одной секундой и подбирает деления времени."""
+        """Ограничивает приближение и сохраняет постоянное число делений времени."""
         if self._adjusting_time_limits:
             return
 
@@ -613,57 +614,26 @@ class PlkArchiveWindow(QMainWindow):
                 self._adjusting_time_limits = False
 
         axis.xaxis.set_minor_locator(ticker.NullLocator())
+        axis.xaxis.set_major_locator(ticker.LinearLocator(TIME_AXIS_TICK_COUNT))
+        axis.xaxis.set_major_formatter(
+            ticker.FuncFormatter(
+                lambda value, _position: self._format_time_axis_tick(
+                    value, visible_seconds
+                )
+            )
+        )
 
-        if visible_seconds <= self._min_time_window_seconds * 1.001:
-            tick_interval = 50000 if visible_seconds <= 0.25 else 100000
-            axis.xaxis.set_major_locator(
-                mdates.MicrosecondLocator(interval=tick_interval)
-            )
-            axis.xaxis.set_major_formatter(
-                ticker.FuncFormatter(
-                    lambda value, _position: mdates.num2date(value).strftime(
-                        "%H:%M:%S.%f"
-                    )[:-3]
-                )
-            )
-        elif visible_seconds <= 60:
-            subminute_intervals = (0.5, 1, 2, 5, 10)
-            interval = next(
-                value for value in subminute_intervals if visible_seconds / value <= 12
-            )
-            if interval == 0.5:
-                axis.xaxis.set_major_locator(mdates.MicrosecondLocator(interval=500000))
-            else:
-                axis.xaxis.set_major_locator(
-                    mdates.SecondLocator(interval=int(interval))
-                )
-                axis.xaxis.set_minor_locator(mdates.MicrosecondLocator(interval=500000))
-            axis.xaxis.set_major_formatter(
-                ticker.FuncFormatter(
-                    lambda value, _position: mdates.num2date(value).strftime(
-                        "%H:%M:%S.%f"
-                    )[:-3]
-                )
-            )
-        elif visible_seconds <= 300:
-            second_intervals = (1, 2, 5, 10, 15, 30)
-            interval = next(
-                value for value in second_intervals if visible_seconds / value <= 12
-            )
-            axis.xaxis.set_major_locator(mdates.SecondLocator(interval=interval))
-            axis.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
-        elif visible_seconds <= 7200:
-            minute_intervals = (1, 2, 5, 10, 15, 30)
-            visible_minutes = visible_seconds / 60
-            interval = next(
-                value for value in minute_intervals if visible_minutes / value <= 12
-            )
-            axis.xaxis.set_major_locator(mdates.MinuteLocator(interval=interval))
-            axis.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
-        else:
-            locator = mdates.AutoDateLocator(minticks=5, maxticks=12)
-            axis.xaxis.set_major_locator(locator)
-            axis.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
+    @staticmethod
+    def _format_time_axis_tick(value: float, visible_seconds: float) -> str:
+        """Подбирает точность подписи при неизменном числе тиков."""
+        timestamp = mdates.num2date(value)
+        if visible_seconds <= 10:
+            return timestamp.strftime("%H:%M:%S.%f")[:-3]
+        if visible_seconds <= 600:
+            return timestamp.strftime("%H:%M:%S")
+        if visible_seconds <= 86400:
+            return timestamp.strftime("%H:%M")
+        return timestamp.strftime("%d.%m %H:%M")
 
     def _on_view_changed(self, _mouse_event: MouseEvent) -> None:
         """Обновляет формат времени после завершения масштабирования и прокрутки."""
