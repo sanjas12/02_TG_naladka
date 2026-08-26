@@ -1067,11 +1067,11 @@ class PlkArchiveWindow(QMainWindow):
                 textcoords="offset points",
                 ha=alignment,
                 va="bottom" if channel_y > 0 else "top",
-                fontsize=6.5,
+                fontsize=12,
                 fontweight="bold",
                 color="white",
                 bbox={
-                    "boxstyle": "circle,pad=0.18",
+                    "boxstyle": "circle,pad=0.24",
                     "fc": marker_color,
                     "ec": "white",
                     "linewidth": 0.5,
