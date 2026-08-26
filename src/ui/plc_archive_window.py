@@ -68,6 +68,39 @@ NUMERIC_LABEL_WINDOW_SECONDS = 600.0
 MAX_VISIBLE_NUMERIC_LABELS = 30
 
 
+class ArchiveNavigationToolbar(NavigationToolbar):
+    """Панель Matplotlib, сохраняющая графики вместе с таблицей событий."""
+
+    def __init__(
+        self, canvas: FigureCanvas, parent: QWidget, capture_widget: QWidget
+    ) -> None:
+        super().__init__(canvas, parent)
+        self._capture_widget = capture_widget
+
+    def save_figure(self, *args) -> None:
+        """Сохраняет снимок всей рабочей области анализа."""
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            "Сохранить графики и таблицу событий",
+            str(PROJECT_ROOT / "PLC_archive.png"),
+            "Изображение PNG (*.png);;Изображение JPEG (*.jpg *.jpeg);;"
+            "Изображение BMP (*.bmp)",
+        )
+        if not filename:
+            return
+
+        output_path = Path(filename)
+        if not output_path.suffix:
+            output_path = output_path.with_suffix(".png")
+        screenshot = self._capture_widget.grab()
+        if not screenshot.save(str(output_path)):
+            QMessageBox.critical(
+                self,
+                "Ошибка сохранения",
+                f"Не удалось сохранить изображение:\n{output_path}",
+            )
+
+
 class PlkArchiveWindow(QMainWindow):
     """Сравнение синхронизированных архивов двух каналов PLC."""
 
@@ -153,8 +186,6 @@ class PlkArchiveWindow(QMainWindow):
 
         self.figure = Figure(figsize=(12, 6), constrained_layout=True)
         self.canvas = FigureCanvas(self.figure)
-        self.toolbar = NavigationToolbar(self.canvas, self)
-        layout.addWidget(self.toolbar)
         content_splitter = QSplitter(Qt.Horizontal)
         content_splitter.addWidget(self.canvas)
         self.event_inspector = QGroupBox("События — увеличьте до ≤ 1 с")
@@ -187,6 +218,8 @@ class PlkArchiveWindow(QMainWindow):
         content_splitter.setStretchFactor(0, 1)
         content_splitter.setStretchFactor(1, 0)
         content_splitter.setSizes([850, 560])
+        self.toolbar = ArchiveNavigationToolbar(self.canvas, self, content_splitter)
+        layout.addWidget(self.toolbar)
         layout.addWidget(content_splitter, 1)
         self.canvas.mpl_connect("motion_notify_event", self._on_hover)
         self.canvas.mpl_connect("motion_notify_event", self._on_measurement_drag)
