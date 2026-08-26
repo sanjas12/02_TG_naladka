@@ -21,6 +21,8 @@ from matplotlib.text import Annotation, Text
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QAbstractItemView,
+    QAction,
+    QDialog,
     QFileDialog,
     QGridLayout,
     QGroupBox,
@@ -39,6 +41,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
+import config.config as cfg
 from logic.plc_archive_analyzer import (
     BinarySignalPoint,
     CategoricalSignalPoint,
@@ -51,6 +54,7 @@ from logic.plc_archive_analyzer import (
     extract_numeric_signal,
     load_plk_archive,
 )
+from ui.plc_archive_settings_dialog import PlcArchiveSettingsDialog
 
 logger = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -64,7 +68,6 @@ LEADING_CHANNEL_SIGNAL = "Канал ведущий"
 WORK_MODE_SIGNAL = "Режим работы"
 ERROR_CODE_MAX = 66000
 MIN_TIME_WINDOW_SECONDS = 0.5
-AUTO_EVENT_LABEL_WINDOW_SECONDS = 1.0
 NUMERIC_LABEL_WINDOW_SECONDS = 600.0
 MAX_VISIBLE_NUMERIC_LABELS = 30
 
@@ -132,6 +135,7 @@ class PlkArchiveWindow(QMainWindow):
         self._event_cursor_time: Optional[float] = None
         self._event_cursor_lines: List[Line2D] = []
         self._dragging_event_cursor = False
+        self._event_display_window_seconds = cfg.PLC_ARCHIVE_EVENT_WINDOW_SECONDS
 
         self.setWindowTitle("Анализ архивов PLC")
         self.resize(1280, 760)
@@ -139,6 +143,11 @@ class PlkArchiveWindow(QMainWindow):
         self._load_default_archives()
 
     def _setup_ui(self) -> None:
+        settings_menu = self.menuBar().addMenu("Настройки")
+        display_settings_action = QAction("Параметры отображения…", self)
+        display_settings_action.triggered.connect(self._show_display_settings)
+        settings_menu.addAction(display_settings_action)
+
         central = QWidget(self)
         self.setCentralWidget(central)
         layout = QVBoxLayout(central)
@@ -192,7 +201,7 @@ class PlkArchiveWindow(QMainWindow):
         self.canvas = FigureCanvas(self.figure)
         content_splitter = QSplitter(Qt.Horizontal)
         content_splitter.addWidget(self.canvas)
-        self.event_inspector = QGroupBox("События — увеличьте до ≤ 1 с")
+        self.event_inspector = QGroupBox(self._event_inspector_idle_title())
         event_inspector_layout = QVBoxLayout(self.event_inspector)
         self.event_table = QTableWidget(0, 5)
         self.event_table.setHorizontalHeaderLabels(
@@ -232,6 +241,31 @@ class PlkArchiveWindow(QMainWindow):
         self.canvas.mpl_connect("button_release_event", self._on_view_changed)
         self.canvas.mpl_connect("scroll_event", self._on_view_changed)
         self.canvas.mpl_connect("button_press_event", self._on_measurement_click)
+
+    def _event_inspector_idle_title(self) -> str:
+        threshold = f"{self._event_display_window_seconds:g}"
+        return f"События — увеличьте до ≤ {threshold} с"
+
+    def _show_display_settings(self) -> None:
+        """Открывает настройки отображения событий архива PLC."""
+        dialog = PlcArchiveSettingsDialog(self._event_display_window_seconds, self)
+        if dialog.exec_() != QDialog.Accepted:
+            return
+        seconds = dialog.event_window_seconds()
+        try:
+            cfg.save_plc_archive_event_window(seconds)
+        except (OSError, ValueError) as error:
+            QMessageBox.critical(
+                self,
+                "Ошибка сохранения настроек",
+                f"Не удалось сохранить параметры отображения:\n{error}",
+            )
+            return
+        self._event_display_window_seconds = seconds
+        time_axis = self._time_axis
+        if time_axis is not None:
+            self._update_event_labels(time_axis.get_xlim())
+            self.canvas.draw_idle()
 
     def _load_default_archives(self) -> None:
         """Загружает новейший архив из каталога каждого канала."""
@@ -966,7 +1000,7 @@ class PlkArchiveWindow(QMainWindow):
         self._event_labels.clear()
         self._event_label_colors.clear()
         self.event_table.setRowCount(0)
-        self.event_inspector.setTitle("События — увеличьте до ≤ 1 с")
+        self.event_inspector.setTitle(self._event_inspector_idle_title())
 
     def _update_event_labels(self, limits: Tuple[float, float]) -> None:
         """Подписывает все видимые события при масштабе не более секунды."""
@@ -977,7 +1011,7 @@ class PlkArchiveWindow(QMainWindow):
 
         x_min, x_max = sorted(limits)
         visible_seconds = (x_max - x_min) * 24 * 60 * 60
-        if visible_seconds > AUTO_EVENT_LABEL_WINDOW_SECONDS:
+        if visible_seconds > self._event_display_window_seconds:
             return
 
         visible_events = sorted(

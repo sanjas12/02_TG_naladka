@@ -74,6 +74,7 @@ _DEFAULTS: Final[Dict[str, Any]] = {
     "GSM_A_CUR": "ГСМ-А.Текущее положение",
     "GSM_B_CUR": "ГСМ-Б.Текущее положение",
     "PLC_ARCHIVE_SHORTCUT": "D",
+    "PLC_ARCHIVE_EVENT_WINDOW_SECONDS": 1.0,
 }
 
 
@@ -129,7 +130,7 @@ def load_runtime_settings() -> None:
     """
     global ANALYS_AIM, FONT_FAMILY, FONT_SIZE, GSM_A_CUR, GSM_B_CUR
     global JUMP_THRESHOLD_MM, LEVEL_LOG, MAX_JUMP_THRESHOLD_MM
-    global PLC_ARCHIVE_SHORTCUT
+    global PLC_ARCHIVE_EVENT_WINDOW_SECONDS, PLC_ARCHIVE_SHORTCUT
     global TICK_MARK_COUNT_X, TICK_MARK_COUNT_Y
     global _SETTINGS
 
@@ -163,6 +164,18 @@ def load_runtime_settings() -> None:
     GSM_B_CUR = str(_get("GSM_B_CUR", _DEFAULTS["GSM_B_CUR"]))
     loaded_shortcut = str(_get("PLC_ARCHIVE_SHORTCUT", "D")).strip()
     PLC_ARCHIVE_SHORTCUT = loaded_shortcut or "D"
+    try:
+        PLC_ARCHIVE_EVENT_WINDOW_SECONDS = float(
+            _get("PLC_ARCHIVE_EVENT_WINDOW_SECONDS", 1.0)
+        )
+        if not 0.1 <= PLC_ARCHIVE_EVENT_WINDOW_SECONDS <= 60.0:
+            raise ValueError
+    except (TypeError, ValueError):
+        PLC_ARCHIVE_EVENT_WINDOW_SECONDS = 1.0
+        logger.warning(
+            "PLC_ARCHIVE_EVENT_WINDOW_SECONDS должен быть от 0.1 до 60; "
+            "используется 1.0"
+        )
     try:
         JUMP_THRESHOLD_MM = float(_get("JUMP_THRESHOLD_MM", 9.0))
         if JUMP_THRESHOLD_MM < 0:
@@ -214,6 +227,9 @@ GSM_A_CUR: str = _get("GSM_A_CUR", "ГСМ-А.Текущее положение"
 GSM_B_CUR: str = _get("GSM_B_CUR", "ГСМ-Б.Текущее положение")
 
 PLC_ARCHIVE_SHORTCUT: str = str(_get("PLC_ARCHIVE_SHORTCUT", "D"))
+PLC_ARCHIVE_EVENT_WINDOW_SECONDS: float = float(
+    _get("PLC_ARCHIVE_EVENT_WINDOW_SECONDS", 1.0)
+)
 
 
 def save_plc_archive_shortcut(shortcut: str) -> None:
@@ -228,6 +244,20 @@ def save_plc_archive_shortcut(shortcut: str) -> None:
     _save_settings(updated_settings)
     _SETTINGS = updated_settings
     PLC_ARCHIVE_SHORTCUT = normalized_shortcut
+
+
+def save_plc_archive_event_window(seconds: float) -> None:
+    """Сохраняет порог показа событий видимого участка."""
+    normalized_seconds = float(seconds)
+    if not 0.1 <= normalized_seconds <= 60.0:
+        raise ValueError("Диапазон показа событий должен быть от 0,1 до 60 секунд")
+
+    global PLC_ARCHIVE_EVENT_WINDOW_SECONDS, _SETTINGS
+    updated_settings = {**_DEFAULTS, **_SETTINGS}
+    updated_settings["PLC_ARCHIVE_EVENT_WINDOW_SECONDS"] = normalized_seconds
+    _save_settings(updated_settings)
+    _SETTINGS = updated_settings
+    PLC_ARCHIVE_EVENT_WINDOW_SECONDS = normalized_seconds
 
 
 # Значение обновляется и валидируется в load_runtime_settings().
