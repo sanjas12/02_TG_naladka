@@ -16,6 +16,7 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.collections import LineCollection
 from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
 from matplotlib.text import Annotation, Text
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
@@ -128,6 +129,9 @@ class PlkArchiveWindow(QMainWindow):
         self._measurement_artists: List[Artist] = []
         self._measurement_axes: List[Axes] = []
         self._dragging_measurement_index: Optional[int] = None
+        self._event_cursor_time: Optional[float] = None
+        self._event_cursor_lines: List[Line2D] = []
+        self._dragging_event_cursor = False
 
         self.setWindowTitle("Анализ архивов PLC")
         self.resize(1280, 760)
@@ -221,7 +225,9 @@ class PlkArchiveWindow(QMainWindow):
         self.toolbar = ArchiveNavigationToolbar(self.canvas, self, content_splitter)
         layout.addWidget(self.toolbar)
         layout.addWidget(content_splitter, 1)
-        self.canvas.mpl_connect("motion_notify_event", self._on_hover)
+        self.canvas.mpl_connect("button_press_event", self._on_event_cursor_press)
+        self.canvas.mpl_connect("motion_notify_event", self._on_event_cursor_drag)
+        self.canvas.mpl_connect("button_release_event", self._on_event_cursor_release)
         self.canvas.mpl_connect("motion_notify_event", self._on_measurement_drag)
         self.canvas.mpl_connect("button_release_event", self._on_view_changed)
         self.canvas.mpl_connect("scroll_event", self._on_view_changed)
@@ -327,6 +333,7 @@ class PlkArchiveWindow(QMainWindow):
         work_modes_2: List[CategoricalSignalPoint],
     ) -> None:
         self._clear_time_measurement(redraw=False)
+        self._clear_event_cursor(redraw=False)
         self._clear_event_labels()
         self._clear_numeric_point_labels()
         self.figure.clear()
@@ -633,7 +640,107 @@ class PlkArchiveWindow(QMainWindow):
         """Включает выбор двух временных точек или очищает измерение."""
         self._clear_time_measurement(redraw=True)
         if enabled:
+            self._clear_event_cursor(redraw=True)
             self.measurement_status.setText("Выберите начало")
+
+    def _clear_event_cursor(self, redraw: bool = True) -> None:
+        """Удаляет перемещаемый курсор просмотра событий."""
+        for line in self._event_cursor_lines:
+            with suppress(ValueError):
+                line.remove()
+        self._event_cursor_lines.clear()
+        self._event_cursor_time = None
+        self._dragging_event_cursor = False
+        annotation = self._annotation
+        if annotation is not None:
+            annotation.set_visible(False)
+        if redraw:
+            self.canvas.draw_idle()
+
+    def _on_event_cursor_press(self, mouse_event: MouseEvent) -> None:
+        """Устанавливает курсор на ближайшую временную отметку событий."""
+        if (
+            self.measurement_button.isChecked()
+            or mouse_event.button != MouseButton.LEFT
+            or mouse_event.inaxes is None
+            or mouse_event.xdata is None
+            or bool(self.toolbar.mode)
+            or not self._hover_event_times
+        ):
+            return
+        self._dragging_event_cursor = True
+        self._set_event_cursor(mouse_event.xdata)
+
+    def _on_event_cursor_drag(self, mouse_event: MouseEvent) -> None:
+        """Смещает курсор по временным отметкам при удержании мыши."""
+        if (
+            not self._dragging_event_cursor
+            or mouse_event.inaxes is None
+            or mouse_event.xdata is None
+        ):
+            return
+        self._set_event_cursor(mouse_event.xdata)
+
+    def _on_event_cursor_release(self, _mouse_event: MouseEvent) -> None:
+        """Завершает перемещение временного курсора."""
+        self._dragging_event_cursor = False
+
+    def _set_event_cursor(self, requested_time: float) -> None:
+        """Привязывает курсор к ближайшему событию и показывает всю группу."""
+        insertion = bisect_left(self._hover_event_times, requested_time)
+        candidate_indexes = [
+            index
+            for index in (insertion - 1, insertion)
+            if 0 <= index < len(self._hover_event_times)
+        ]
+        if not candidate_indexes:
+            return
+        cursor_time = min(
+            (self._hover_event_times[index] for index in candidate_indexes),
+            key=lambda value: abs(value - requested_time),
+        )
+        if cursor_time == self._event_cursor_time:
+            return
+        self._event_cursor_time = cursor_time
+
+        if not self._event_cursor_lines:
+            self._event_cursor_lines = [
+                axis.axvline(
+                    cursor_time,
+                    color="#0891b2",
+                    linewidth=1.4,
+                    linestyle="--",
+                    zorder=8,
+                )
+                for axis in self._measurement_axes
+            ]
+        else:
+            for line in self._event_cursor_lines:
+                line.set_xdata([cursor_time, cursor_time])
+
+        first = bisect_left(self._hover_event_times, cursor_time)
+        last = bisect_right(self._hover_event_times, cursor_time)
+        grouped_events = self._hover_events[first:last]
+        event_time = mdates.num2date(cursor_time).replace(tzinfo=None)
+        message_lines = [self._format_measurement_time(event_time)]
+        message_lines.extend(
+            f"Канал {1 if channel_y > 0 else 2}: {event.message} — {event.value}"
+            for _, event, channel_y in grouped_events
+        )
+
+        annotation = self._annotation
+        event_axis = self._event_axis
+        if annotation is not None and event_axis is not None:
+            x_min, x_max = event_axis.get_xlim()
+            place_left = cursor_time > x_min + (x_max - x_min) * 0.62
+            annotation.xy = (cursor_time, 0)
+            annotation.set_position((-16, -24) if place_left else (16, -24))
+            annotation.set_horizontalalignment("right" if place_left else "left")
+            annotation.set_verticalalignment("top")
+            annotation.set_text("\n".join(message_lines))
+            annotation.set_visible(True)
+            annotation.set_zorder(11)
+        self.canvas.draw_idle()
 
     def _clear_time_measurement(self, redraw: bool = True) -> None:
         """Удаляет линии, заливку и информационный блок измерения."""
