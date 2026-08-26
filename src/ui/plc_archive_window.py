@@ -1026,9 +1026,7 @@ class PlkArchiveWindow(QMainWindow):
             f"События видимого участка: {len(visible_events)}"
         )
         self.event_table.setRowCount(len(visible_events))
-        channel_positions = {-1: 0, 1: 0}
-        vertical_slots = (7, 19, 31, 43)
-        x_span = max(x_max - x_min, 1e-12)
+        label_offsets = self._layout_event_label_offsets(event_axis, visible_events)
 
         for row, (event, channel_y) in enumerate(visible_events):
             event_number = row + 1
@@ -1045,28 +1043,15 @@ class PlkArchiveWindow(QMainWindow):
             ):
                 self.event_table.setItem(row, column, QTableWidgetItem(value))
 
-            position = channel_positions[channel_y]
-            channel_positions[channel_y] += 1
-            event_x = mdates.date2num(event.timestamp)
-            relative_x = (event_x - x_min) / x_span
-            if relative_x < 0.25:
-                horizontal_offset, alignment = 5, "left"
-            elif relative_x > 0.75 or position % 2:
-                horizontal_offset, alignment = -5, "right"
-            else:
-                horizontal_offset, alignment = 5, "left"
-
-            vertical_offset = vertical_slots[position % len(vertical_slots)]
-            if channel_y < 0:
-                vertical_offset = -vertical_offset
+            horizontal_offset, vertical_offset = label_offsets[row]
             marker_color = "#dc2626" if channel_y > 0 else "#d97706"
             label = event_axis.annotate(
                 str(event_number),
                 xy=(event.timestamp, channel_y),
                 xytext=(horizontal_offset, vertical_offset),
                 textcoords="offset points",
-                ha=alignment,
-                va="bottom" if channel_y > 0 else "top",
+                ha="center",
+                va="center",
                 fontsize=12,
                 fontweight="bold",
                 color="white",
@@ -1090,6 +1075,93 @@ class PlkArchiveWindow(QMainWindow):
             label.set_clip_path(event_axis.patch)
             self._event_labels.append(label)
             self._event_label_colors.append(marker_color)
+
+    def _layout_event_label_offsets(
+        self, axis: Axes, events: Sequence[Tuple[PlkEvent, int]]
+    ) -> List[Tuple[float, float]]:
+        """Раскладывает номера событий без взаимного перекрытия."""
+        pixels_per_point = self.figure.dpi / 72
+        axis_box = axis.bbox
+        occupied: dict[int, List[Tuple[float, float, float, float]]] = {
+            -1: [],
+            1: [],
+        }
+        offsets: List[Tuple[float, float]] = []
+
+        for event_number, (event, channel_y) in enumerate(events, start=1):
+            event_x = mdates.date2num(event.timestamp)
+            anchor_x, anchor_y = axis.transData.transform((event_x, channel_y))
+            label_size = max(30.0, 10.0 + 9.0 * len(str(event_number)))
+            half_size = label_size / 2
+            direction = 1 if channel_y > 0 else -1
+            available_height = (
+                axis_box.y1 - anchor_y if direction > 0 else anchor_y - axis_box.y0
+            )
+            vertical_centers = [18.0]
+            for center in (48.0, 78.0, 108.0):
+                if center + half_size <= available_height:
+                    vertical_centers.append(center)
+
+            selected_offset: Optional[Tuple[float, float]] = None
+            for vertical_center in vertical_centers:
+                for horizontal_step in range(41):
+                    if horizontal_step == 0:
+                        horizontal_center = 0.0
+                    else:
+                        magnitude = ((horizontal_step + 1) // 2) * 36.0
+                        horizontal_center = (
+                            -magnitude if horizontal_step % 2 else magnitude
+                        )
+                    center_x = anchor_x + horizontal_center
+                    center_y = anchor_y + direction * vertical_center
+                    candidate_box = (
+                        center_x - half_size,
+                        center_y - half_size,
+                        center_x + half_size,
+                        center_y + half_size,
+                    )
+                    if (
+                        candidate_box[0] < axis_box.x0
+                        or candidate_box[2] > axis_box.x1
+                        or candidate_box[1] < axis_box.y0
+                        or candidate_box[3] > axis_box.y1
+                        or any(
+                            self._boxes_overlap(candidate_box, previous_box, padding=4)
+                            for previous_box in occupied[channel_y]
+                        )
+                    ):
+                        continue
+                    occupied[channel_y].append(candidate_box)
+                    selected_offset = (
+                        horizontal_center / pixels_per_point,
+                        direction * vertical_center / pixels_per_point,
+                    )
+                    break
+                if selected_offset is not None:
+                    break
+
+            if selected_offset is None:
+                fallback_direction = -1 if event_number % 2 else 1
+                selected_offset = (
+                    fallback_direction * 18.0 / pixels_per_point,
+                    direction * 18.0 / pixels_per_point,
+                )
+            offsets.append(selected_offset)
+        return offsets
+
+    @staticmethod
+    def _boxes_overlap(
+        first: Tuple[float, float, float, float],
+        second: Tuple[float, float, float, float],
+        padding: float,
+    ) -> bool:
+        """Проверяет пересечение двух экранных областей с отступом."""
+        return not (
+            first[2] + padding <= second[0]
+            or second[2] + padding <= first[0]
+            or first[3] + padding <= second[1]
+            or second[3] + padding <= first[1]
+        )
 
     def _highlight_selected_event_labels(self) -> None:
         """Подсвечивает на графике номера выбранных строк таблицы."""
