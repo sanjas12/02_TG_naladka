@@ -1099,52 +1099,51 @@ class PlkArchiveWindow(QMainWindow):
         for event_number, (event, channel_y) in enumerate(events, start=1):
             event_x = mdates.date2num(event.timestamp)
             anchor_x, anchor_y = axis.transData.transform((event_x, channel_y))
-            label_size = max(30.0, 10.0 + 9.0 * len(str(event_number)))
+            label_size = max(32.0, 10.0 + 9.0 * len(str(event_number)))
             half_size = label_size / 2
-            direction = 1 if channel_y > 0 else -1
-            available_height = (
-                axis_box.y1 - anchor_y if direction > 0 else anchor_y - axis_box.y0
-            )
-            vertical_centers = [18.0]
-            for center in (48.0, 78.0, 108.0):
-                if center + half_size <= available_height:
-                    vertical_centers.append(center)
+            # Метки располагаются внутрь полосы канала, где между событием и
+            # центральной осью достаточно места для двух читаемых рядов.
+            direction = -1 if channel_y > 0 else 1
+            vertical_centers = (20.0, 58.0)
 
             selected_offset: Optional[Tuple[float, float]] = None
-            for vertical_center in vertical_centers:
-                for horizontal_step in range(41):
-                    if horizontal_step == 0:
-                        horizontal_center = 0.0
-                    else:
-                        magnitude = ((horizontal_step + 1) // 2) * 36.0
-                        horizontal_center = (
-                            -magnitude if horizontal_step % 2 else magnitude
+            for horizontal_step in range(21):
+                horizontal_centers = (
+                    (0.0,)
+                    if horizontal_step == 0
+                    else (-horizontal_step * 42.0, horizontal_step * 42.0)
+                )
+                for horizontal_center in horizontal_centers:
+                    for vertical_center in vertical_centers:
+                        center_x = anchor_x + horizontal_center
+                        center_y = anchor_y + direction * vertical_center
+                        candidate_box = (
+                            center_x - half_size,
+                            center_y - half_size,
+                            center_x + half_size,
+                            center_y + half_size,
                         )
-                    center_x = anchor_x + horizontal_center
-                    center_y = anchor_y + direction * vertical_center
-                    candidate_box = (
-                        center_x - half_size,
-                        center_y - half_size,
-                        center_x + half_size,
-                        center_y + half_size,
-                    )
-                    if (
-                        candidate_box[0] < axis_box.x0
-                        or candidate_box[2] > axis_box.x1
-                        or candidate_box[1] < axis_box.y0
-                        or candidate_box[3] > axis_box.y1
-                        or any(
-                            self._boxes_overlap(candidate_box, previous_box, padding=4)
-                            for previous_box in occupied[channel_y]
+                        if (
+                            candidate_box[0] < axis_box.x0
+                            or candidate_box[2] > axis_box.x1
+                            or candidate_box[1] < axis_box.y0
+                            or candidate_box[3] > axis_box.y1
+                            or any(
+                                self._boxes_overlap(
+                                    candidate_box, previous_box, padding=5
+                                )
+                                for previous_box in occupied[channel_y]
+                            )
+                        ):
+                            continue
+                        occupied[channel_y].append(candidate_box)
+                        selected_offset = (
+                            horizontal_center / pixels_per_point,
+                            direction * vertical_center / pixels_per_point,
                         )
-                    ):
-                        continue
-                    occupied[channel_y].append(candidate_box)
-                    selected_offset = (
-                        horizontal_center / pixels_per_point,
-                        direction * vertical_center / pixels_per_point,
-                    )
-                    break
+                        break
+                    if selected_offset is not None:
+                        break
                 if selected_offset is not None:
                     break
 
