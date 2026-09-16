@@ -7,4 +7,4 @@ echo "=== Шаг 1: зависимости ==="
 bash "$SCRIPTS_DIR/venv_pip.sh"
 
 echo "=== Шаг 2: сборка ==="
-bash "$SCRIPTS_DIR/toexe.sh"
+bash "$SCRIPTS_DIR/build.sh"
