@@ -24,6 +24,8 @@ from ui.graph_matplot import WindowGraph  # noqa: E402
 from ui.main_window import MainWindowUI, MyGroupBox  # noqa: E402
 from ui.plc_archive_window import PlkArchiveWindow  # noqa: E402
 
+TIME_COLUMN_ALIASES = (cfg.DEFAULT_TIME, "timestamp")
+
 
 class FileHandler:
     """Обработчик работы с файлами данных"""
@@ -33,7 +35,13 @@ class FileHandler:
 
     def open_files(self, parent_ui) -> bool:
         """Открывает диалог выбора файлов и сохраняет выбранные файлы в модель"""
-        file_filters = ["GZ Files (*.gz)", "CSV Files (*.csv)", "Text Files (*.txt)"]
+        file_filters = [
+            "Все поддерживаемые архивы (*.csv *.gz *.txt *.log)",
+            "LOG Files (*.log)",
+            "GZ Files (*.gz)",
+            "CSV Files (*.csv)",
+            "Text Files (*.txt)",
+        ]
 
         filenames, selected_filter = QFileDialog.getOpenFileNames(
             parent_ui, caption="Выбор данных:", filter=";;".join(file_filters)
@@ -70,7 +78,7 @@ class FileHandler:
         """Открывает файл с учетом сжатия"""
         return (
             gzip.open(filepath, "rb")
-            if filepath.endswith(".gz")
+            if filepath.lower().endswith(".gz")
             else open(filepath, "rb")
         )
 
@@ -81,15 +89,27 @@ class FileHandler:
         if not self.model.encoding:
             raise ValueError("Не удалось определить кодировку файла")
 
-        sample_str = sample[:200].decode(self.model.encoding, errors="ignore")
+        sample_str = sample.decode(self.model.encoding, errors="ignore")
         second_row_str = second_row.decode(self.model.encoding)
 
         self.model.is_kol_1_2 = sample_str.startswith("Count=")
-        self.model.delimiter = (
-            ";" if sample_str.count(";") > sample_str.count("\t") else "\t"
+        header = sample_str.splitlines()[1 if self.model.is_kol_1_2 else 0]
+        delimiter_counts = {
+            ";": header.count(";"),
+            "\t": header.count("\t"),
+            ",": header.count(","),
+        }
+        self.model.delimiter = max(
+            delimiter_counts, key=lambda delimiter: delimiter_counts[delimiter]
         )
+        if delimiter_counts[self.model.delimiter] == 0:
+            raise ValueError("Не удалось определить разделитель столбцов")
+
         self.model.decimal = (
-            "." if second_row_str.count(".") > second_row_str.count(",") else ","
+            "."
+            if self.model.delimiter == ","
+            or second_row_str.count(".") > second_row_str.count(",")
+            else ","
         )
 
     def get_file_params(self) -> Dict[str, Union[str, bool, List[str], None]]:
@@ -148,10 +168,22 @@ class SignalManager:
         df = df.loc[:, ~df.columns.str.contains("^Unnamed")]
         self.model.dict_all_signals = {sig: i for i, sig in enumerate(df.columns, 1)}
 
-        self.model.is_time = cfg.DEFAULT_TIME in self.model.dict_all_signals
+        headers_by_normalized_name = {
+            str(column).strip().casefold(): str(column) for column in df.columns
+        }
+        time_signal = next(
+            (
+                headers_by_normalized_name[alias.casefold()]
+                for alias in TIME_COLUMN_ALIASES
+                if alias.casefold() in headers_by_normalized_name
+            ),
+            None,
+        )
+        self.model.time_signal = time_signal
+        self.model.is_time = time_signal is not None
         self.model.is_ms = cfg.DEFAULT_MS in self.model.dict_all_signals
 
-        if self.model.is_time and self.model.is_ms:
+        if time_signal == cfg.DEFAULT_TIME and self.model.is_ms:
             self.model.dict_all_signals[cfg.COMBINED_TIME] = (
                 len(self.model.dict_all_signals) + 1
             )
@@ -250,7 +282,9 @@ class PlotManager:
         if self.model.is_ms:
             usecols.extend([cfg.DEFAULT_TIME, cfg.DEFAULT_MS])
         else:
-            usecols.extend([cfg.DEFAULT_TIME])
+            time_signal = self.model.time_signal
+            if time_signal is not None:
+                usecols.append(time_signal)
 
         # print(f"{usecols=}")
 
@@ -474,19 +508,18 @@ class MainLogic:
 
         # Определяем сигнал времени в зависимости от доступных данных
         if self.model.is_ms:
-            self.model.time_signal = cfg.COMBINED_TIME
+            time_signal = cfg.COMBINED_TIME
         else:
-            self.model.time_signal = cfg.DEFAULT_TIME
+            time_signal = self.model.time_signal or cfg.DEFAULT_TIME
+        self.model.time_signal = time_signal
 
         # # Проверяем, что сигнал времени существует в данных
-        if self.model.time_signal not in self.model.dict_all_signals:
-            self._show_error(
-                f"Сигнал времени '{self.model.time_signal}' не найден в данных"
-            )
+        if time_signal not in self.model.dict_all_signals:
+            self._show_error(f"Сигнал времени '{time_signal}' не найден в данных")
             return
 
         # Получаем индекс сигнала времени
-        time_idx = self.model.dict_all_signals[self.model.time_signal]
+        time_idx = self.model.dict_all_signals[time_signal]
         # print(f"{time_idx=}")
 
         # Добавляем сигнал времени в таблицу оси X
@@ -494,12 +527,12 @@ class MainLogic:
         self.ui.gb_x_axe.qtable_axe.insertRow(row)
 
         self.ui.gb_x_axe.qtable_axe.setItem(row, 0, QTableWidgetItem(str(time_idx)))
-        item = QTableWidgetItem(self.model.time_signal)
-        item.setToolTip(f"Сигнал времени: {self.model.time_signal}")
+        item = QTableWidgetItem(time_signal)
+        item.setToolTip(f"Сигнал времени: {time_signal}")
         self.ui.gb_x_axe.qtable_axe.setItem(row, 1, item)
 
         # Удаляем сигнал времени из общего списка сигналов
-        self.model.dict_all_signals.pop(self.model.time_signal, None)
+        self.model.dict_all_signals.pop(time_signal, None)
         # del self.model.dict_all_signals[time_signal]
 
         # Обновляем таблицу сигналов
@@ -641,7 +674,7 @@ def test_file_handker():
     fh = FileHandler(model)
 
     test_gz_file = (
-        "tg-naladka\src\DATA_in\sarz\смол\step\ШУР11-2025-07-11_115842_1.csv.gz"
+        r"tg-naladka\src\DATA_in\sarz\смол\step\ШУР11-2025-07-11_115842_1.csv.gz"
     )
 
     print("\n=== Тест GZ файла ===")
