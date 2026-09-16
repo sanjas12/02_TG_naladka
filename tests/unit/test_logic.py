@@ -2,7 +2,12 @@ from types import SimpleNamespace
 
 import pandas as pd
 
-from logic.logic import FileHandler, PlotManager, SignalManager
+from logic.logic import (
+    FileHandler,
+    PlotManager,
+    SignalManager,
+    unwrap_timestamp_counter,
+)
 from model.basemodel import Model
 
 
@@ -54,3 +59,43 @@ def test_plot_manager_loads_log_values_and_none_as_nan(tmp_path) -> None:
     assert result["timestamp"].tolist() == [8652, 8684]
     assert result["Driver Current"].iloc[0] == 0.0471145
     assert pd.isna(result["Driver Current"].iloc[1])
+
+
+def test_timestamp_counter_is_unwrapped_after_multiple_overflows() -> None:
+    source = pd.Series([65518, 13, 65509, 5, 100])
+
+    result = unwrap_timestamp_counter(source)
+
+    assert result.tolist() == [65518, 65549, 131045, 131077, 131172]
+
+
+def test_small_timestamp_decrease_is_not_treated_as_overflow() -> None:
+    source = pd.Series([1000, 995, 1010])
+
+    result = unwrap_timestamp_counter(source)
+
+    assert result.tolist() == [1000, 995, 1010]
+
+
+def test_plot_manager_unwraps_timestamp_in_log_file(tmp_path) -> None:
+    archive = tmp_path / "overflow.log"
+    archive.write_text(
+        "timestamp,Driver Current\n65518,0.1\n13,0.2\n20,0.3\n",
+        encoding="utf-8",
+    )
+    model = Model(
+        encoding="utf-8",
+        delimiter=",",
+        decimal=".",
+        filenames=[str(archive)],
+        first_filename=str(archive),
+        is_time=True,
+        time_signal="timestamp",
+    )
+    manager = PlotManager(
+        model, SimpleNamespace(set_modal_progress=lambda _value: None)
+    )
+
+    result = manager._load_data(["timestamp", "Driver Current"])
+
+    assert result["timestamp"].tolist() == [65518, 65549, 65556]

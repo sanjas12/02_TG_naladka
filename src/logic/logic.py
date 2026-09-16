@@ -25,6 +25,31 @@ from ui.main_window import MainWindowUI, MyGroupBox  # noqa: E402
 from ui.plc_archive_window import PlkArchiveWindow  # noqa: E402
 
 TIME_COLUMN_ALIASES = (cfg.DEFAULT_TIME, "timestamp")
+TIMESTAMP_COUNTER_MODULUS = 65_536
+
+
+def unwrap_timestamp_counter(series: pd.Series) -> pd.Series:
+    """Разворачивает переполнения 16-битного счётчика timestamp."""
+    numeric = pd.to_numeric(series, errors="coerce")
+    if numeric.isna().any():
+        return series
+
+    raw_values = numeric.to_numpy(dtype=float, copy=True)
+    values = raw_values.copy()
+    offset = 0
+    previous: Optional[float] = None
+    overflow_threshold = TIMESTAMP_COUNTER_MODULUS / 2
+
+    for index, raw_value in enumerate(raw_values):
+        if previous is not None and previous - raw_value > overflow_threshold:
+            offset += TIMESTAMP_COUNTER_MODULUS
+        values[index] = raw_value + offset
+        previous = raw_value
+
+    result = pd.Series(values, index=series.index, name=series.name)
+    if pd.api.types.is_integer_dtype(numeric.dtype):
+        return result.astype("int64")
+    return result
 
 
 class FileHandler:
@@ -318,6 +343,10 @@ class PlotManager:
             return pd.DataFrame(columns=pd.Index(list(usecols_set)))
 
         df = pd.concat(dfs, ignore_index=True)
+
+        time_signal = self.model.time_signal
+        if time_signal is not None and time_signal.strip().casefold() == "timestamp":
+            df[time_signal] = unwrap_timestamp_counter(df[time_signal])
 
         # создаем Обобщенное время
         if self.model.is_ms:
