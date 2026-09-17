@@ -3,6 +3,7 @@ import os
 import platform
 import shutil
 import sys
+import zipfile
 from typing import List, Tuple
 
 # ── Убеждаемся, что CWD совпадает с расположением build.py ──────────────────
@@ -54,6 +55,14 @@ build_options = {
         "matplotlib.tests",
         "matplotlib.testing",
         "matplotlib.sphinxext",
+        "matplotlib.backends.backend_gtk3",
+        "matplotlib.backends.backend_gtk3agg",
+        "matplotlib.backends.backend_gtk4",
+        "matplotlib.backends.backend_gtk4agg",
+        "matplotlib.backends.backend_macosx",
+        "matplotlib.backends.backend_tkagg",
+        "matplotlib.backends.backend_wx",
+        "matplotlib.backends.backend_wxagg",
         "pandas.tests",
         "scipy",
         "setuptools",
@@ -72,6 +81,26 @@ build_options = {
         "PyQt5.QtOpenGL",
         "PyQt5.QtPrintSupport",
         "PyQt5.QtQml",
+        "PySide",
+        "PySide2",
+        "PySide6",
+        "IPython",
+        "_pytest",
+        "argcomplete",
+        "commitizen",
+        "coverage",
+        "identify",
+        "iniconfig",
+        "jupyter",
+        "nodeenv",
+        "notebook",
+        "pluggy",
+        "pre_commit",
+        "pygments",
+        "pytest",
+        "rich",
+        "semantic_release",
+        "tkinter",
         "debugpy",
         "distutils",
         "unittest",
@@ -81,6 +110,21 @@ build_options = {
     "optimize": 2,
     "include_files": get_include_files(),
     "build_exe": build_dir,
+    # Чистые модули стандартной библиотеки хранятся в сжатом library.zip.
+    # Пакеты с DLL и файлами данных cx_Freeze оставляет рядом с приложением.
+    "zip_include_packages": [
+        "collections",
+        "concurrent",
+        "email",
+        "encodings",
+        "html",
+        "http",
+        "importlib",
+        "json",
+        "logging",
+        "urllib",
+        "xml",
+    ],
 }
 
 setup(
@@ -113,6 +157,25 @@ REMOVE_DIRS = [
     "mpl_toolkits/mplot3d/tests",
     "ctypes/test",
     "unittest/test",
+    "numpy/distutils",
+    "numpy/f2py",
+    "numpy/testing",
+    "numpy/tests",
+    # Неиспользуемые плагины Qt. Обязательные platforms, styles и imageformats
+    # сохраняются для нормальной работы GUI и диалогов Windows.
+    "PyQt5/Qt5/plugins/bearer",
+    "PyQt5/Qt5/plugins/canbus",
+    "PyQt5/Qt5/plugins/geoservices",
+    "PyQt5/Qt5/plugins/networkinformation",
+    "PyQt5/Qt5/plugins/position",
+    "PyQt5/Qt5/plugins/printsupport",
+    "PyQt5/Qt5/plugins/qmltooling",
+    "PyQt5/Qt5/plugins/scenegraph",
+    "PyQt5/Qt5/plugins/sqldrivers",
+    "PyQt5/Qt5/plugins/texttospeech",
+    "PyQt5/Qt5/plugins/tls",
+    "PyQt5/Qt5/plugins/virtualkeyboard",
+    "PyQt5/Qt5/plugins/webview",
 ]
 
 lib_dir = os.path.join(build_dir, "lib")
@@ -134,3 +197,82 @@ if os.path.isdir(cx_lib_dir):
 for egg_info in glob.glob(os.path.join(project_root, "src", "*.egg-info")):
     shutil.rmtree(egg_info)
     print(f"[CLEAN] Удалено: {egg_info}")
+
+# Отладочные символы не требуются для запуска приложения и могут быть крупными.
+for pattern in ("*.pdb", "*.lib", "*.exp"):
+    for development_file in glob.glob(
+        os.path.join(build_dir, "**", pattern), recursive=True
+    ):
+        os.remove(development_file)
+        print(f"[CLEAN] Удалено: {development_file}")
+
+# cx_Freeze копирует некоторые DLL Qt транзитивно вместе с PyQt5, хотя приложение
+# не использует QML/Quick, DBus и WebSockets. Базовые QtCore/Gui/Widgets,
+# QtNetwork, QtSvg и плагины Windows сохраняются.
+REMOVE_QT_FILES = [
+    "Qt5DBus.dll",
+    "Qt5Qml.dll",
+    "Qt5QmlModels.dll",
+    "Qt5Quick.dll",
+    "Qt5WebSockets.dll",
+]
+qt_bin_dir = os.path.join(lib_dir, "PyQt5", "Qt5", "bin")
+for filename in REMOVE_QT_FILES:
+    path = os.path.join(qt_bin_dir, filename)
+    if os.path.isfile(path):
+        os.remove(path)
+        print(f"[CLEAN] Удалено: {path}")
+
+
+def get_directory_size(path: str) -> int:
+    """Возвращает суммарный размер файлов каталога."""
+    return sum(
+        os.path.getsize(os.path.join(root, filename))
+        for root, _directories, filenames in os.walk(path)
+        for filename in filenames
+    )
+
+
+def format_megabytes(size: int) -> str:
+    """Форматирует размер в мегабайтах для лога сборки."""
+    return f"{size / (1024 * 1024):.1f} МБ"
+
+
+build_size = get_directory_size(build_dir)
+print(f"[SIZE] Распакованная сборка: {format_megabytes(build_size)}")
+
+largest_files = sorted(
+    (
+        (os.path.getsize(path), path)
+        for path in glob.glob(os.path.join(build_dir, "**", "*"), recursive=True)
+        if os.path.isfile(path)
+    ),
+    reverse=True,
+)[:15]
+print("[SIZE] Самые крупные файлы:")
+for size, path in largest_files:
+    relative_path = os.path.relpath(path, build_dir)
+    print(f"[SIZE]   {format_megabytes(size):>10}  {relative_path}")
+
+# ZIP уменьшает размер файла для переноса, но не меняет содержимое standalone-папки.
+archive_path = os.path.join("build", f"{output_name}.zip")
+if os.path.exists(archive_path):
+    os.remove(archive_path)
+with zipfile.ZipFile(
+    archive_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9
+) as archive:
+    for root, _directories, filenames in os.walk(build_dir):
+        for filename in filenames:
+            source_path = os.path.join(root, filename)
+            archive_name = os.path.join(
+                output_name, os.path.relpath(source_path, build_dir)
+            )
+            archive.write(source_path, archive_name)
+
+archive_size = os.path.getsize(archive_path)
+ratio = archive_size / build_size * 100 if build_size else 0
+print(
+    f"[SIZE] ZIP-архив: {format_megabytes(archive_size)} "
+    f"({ratio:.1f}% от распакованной сборки)"
+)
+print(f"[OK] Архив создан: {os.path.abspath(archive_path)}")
