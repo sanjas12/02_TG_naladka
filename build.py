@@ -3,7 +3,6 @@ import os
 import platform
 import shutil
 import sys
-import zipfile
 from typing import List, Tuple
 
 # ── Убеждаемся, что CWD совпадает с расположением build.py ──────────────────
@@ -253,26 +252,3 @@ print("[SIZE] Самые крупные файлы:")
 for size, path in largest_files:
     relative_path = os.path.relpath(path, build_dir)
     print(f"[SIZE]   {format_megabytes(size):>10}  {relative_path}")
-
-# ZIP уменьшает размер файла для переноса, но не меняет содержимое standalone-папки.
-archive_path = os.path.join("build", f"{output_name}.zip")
-if os.path.exists(archive_path):
-    os.remove(archive_path)
-with zipfile.ZipFile(
-    archive_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9
-) as archive:
-    for root, _directories, filenames in os.walk(build_dir):
-        for filename in filenames:
-            source_path = os.path.join(root, filename)
-            archive_name = os.path.join(
-                output_name, os.path.relpath(source_path, build_dir)
-            )
-            archive.write(source_path, archive_name)
-
-archive_size = os.path.getsize(archive_path)
-ratio = archive_size / build_size * 100 if build_size else 0
-print(
-    f"[SIZE] ZIP-архив: {format_megabytes(archive_size)} "
-    f"({ratio:.1f}% от распакованной сборки)"
-)
-print(f"[OK] Архив создан: {os.path.abspath(archive_path)}")
