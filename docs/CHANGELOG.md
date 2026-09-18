@@ -1,3 +1,10 @@
+## 0.5.2 (2026-09-18)
+
+### Feat
+
+- **graphs**: переработаны графики
+- add support for LOG files and timestamp-based time axis
+
 ## 0.5.1 (2026-08-26)
 
 ### Feat
