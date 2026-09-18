@@ -113,7 +113,7 @@ install_with_uv() {
 install_with_pip() {
     log "установка через pip"
 
-    python -m venv .venv
+    py -3.8 -m venv .venv
     activate_venv
 
     # обновление pip
