@@ -29,8 +29,7 @@ def filled_model(sample_df):
 
     model.df = sample_df.copy()
     model.dict_all_signals = {"A": 1, "B": 2}
-    model.dict_base_signals = {"A": 1}
-    model.dict_secondary_signals = {"B": 2}
+    model.dict_selected_signals = {"A": 1, "B": 2}
     model.time_signal = "time"
     model.step = 10
 
@@ -45,8 +44,7 @@ def test_model_init_default_state_is_empty():
     # Assert
     assert model.df is None
     assert model.dict_all_signals == {}
-    assert model.dict_base_signals == {}
-    assert model.dict_secondary_signals == {}
+    assert model.dict_selected_signals == {}
     assert model.filenames == []
     assert model.ready_plot is False
     assert model.step is None
@@ -63,8 +61,7 @@ def test_clear_state_clears_dataframe_and_dicts(filled_model):
     # Assert
     assert model.df is None
     assert model.dict_all_signals == {}
-    assert model.dict_base_signals == {}
-    assert model.dict_secondary_signals == {}
+    assert model.dict_selected_signals == {}
 
 
 @pytest.mark.unit

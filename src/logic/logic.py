@@ -236,26 +236,22 @@ class PlotManager:
         # self.model.clear_state()
 
         # Получаем выбранные сигналы
-        base_signals = self._get_signals_from_table(
-            self.ui.gb_base_axe.qtable_axe, self.model.dict_base_signals
-        )
-        secondary_signals = self._get_signals_from_table(
-            self.ui.gb_secondary_axe.qtable_axe, self.model.dict_secondary_signals
+        selected_signals = self._get_signals_from_table(
+            self.ui.gb_selected_signals.qtable_axe,
+            self.model.dict_selected_signals,
         )
 
         # Если архивы не сожержат колонки "дата время" берем из Qtable_time
         self.model.time_signal = self.ui.gb_x_axe.qtable_axe.item(0, 1).text()
 
-        if not base_signals and not secondary_signals:
+        if not selected_signals:
             self.ui.show_error("Не выбраны сигналы для построения графика")
             return False
 
         self.model.step = 10
 
         # Проверка, если среди выбранных сигналов есть дла АНАЛИЗА РЕГУлятора
-        all_signals: List[str] = (
-            base_signals + secondary_signals + [self.model.time_signal]
-        )
+        all_signals: List[str] = selected_signals + [self.model.time_signal]
 
         required_analysis_signals = {
             cfg.ANALYS_AIM,
@@ -382,8 +378,8 @@ class MainLogic:
         self.ui.button_graph.clicked.connect(self.plot_graph)
 
         for group_box, dict_signal in zip(
-            (self.ui.gb_base_axe, self.ui.gb_secondary_axe, self.ui.gb_x_axe),
-            (self.model.dict_base_signals, self.model.dict_secondary_signals, dict()),
+            (self.ui.gb_selected_signals, self.ui.gb_x_axe),
+            (self.model.dict_selected_signals, dict()),
         ):
             group_box.btn_first.clicked.connect(
                 lambda _, gb=group_box, ds=dict_signal: self.add_signal(gb, ds)
@@ -391,7 +387,9 @@ class MainLogic:
             group_box.btn_second.clicked.connect(
                 lambda _, gb=group_box, ds=dict_signal: self.remove_signal(gb, ds)
             )
-        self.ui.gb_base_axe.ch_analyzer.stateChanged.connect(self.on_checkbox_changed)
+        self.ui.gb_selected_signals.ch_analyzer.stateChanged.connect(
+            self.on_checkbox_changed
+        )
         self.ui.action_analysis_plk_archives.triggered.connect(
             self.show_plk_archive_analysis
         )
@@ -405,19 +403,23 @@ class MainLogic:
         self.plk_archive_window.activateWindow()
 
     def on_checkbox_changed(self):
-        if self.ui.gb_base_axe.ch_analyzer.isChecked():
+        if self.ui.gb_selected_signals.ch_analyzer.isChecked():
             # Добавляем сигналы только если они существуют в общем списке
             for signal_name in [cfg.ANALYS_AIM, cfg.GSM_A_CUR, cfg.GSM_B_CUR]:
                 if signal_name in self.model.dict_all_signals:
                     self.add_signal(
-                        self.ui.gb_base_axe, self.model.dict_base_signals, signal_name
+                        self.ui.gb_selected_signals,
+                        self.model.dict_selected_signals,
+                        signal_name,
                     )
         else:
             # Удаляем сигналы только если они есть в группе
             for signal_name in [cfg.ANALYS_AIM, cfg.GSM_A_CUR, cfg.GSM_B_CUR]:
-                if signal_name in self.model.dict_base_signals:
+                if signal_name in self.model.dict_selected_signals:
                     self.remove_signal(
-                        self.ui.gb_base_axe, self.model.dict_base_signals, signal_name
+                        self.ui.gb_selected_signals,
+                        self.model.dict_selected_signals,
+                        signal_name,
                     )
 
     def load_and_prepare_data(self) -> None:
@@ -456,14 +458,13 @@ class MainLogic:
         self.model.clear_state()
         self.ui.ql_info.setText("")
         self.ui.button_graph.setEnabled(False)
-        self.ui.gb_base_axe.ch_analyzer.setEnabled(False)
-        self.ui.gb_base_axe.ch_analyzer.setChecked(False)
+        self.ui.gb_selected_signals.ch_analyzer.setEnabled(False)
+        self.ui.gb_selected_signals.ch_analyzer.setChecked(False)
         self.ui.gb_x_axe.enable_first_btn = False
         self.ui.gb_x_axe.enable_second_btn = False
 
         for group_box in (
-            self.ui.gb_base_axe,
-            self.ui.gb_secondary_axe,
+            self.ui.gb_selected_signals,
             self.ui.gb_x_axe,
             self.ui.gb_signals,
         ):
@@ -484,7 +485,7 @@ class MainLogic:
             cfg.GSM_B_CUR,
         }
         if required_analysis_signals.issubset(self.model.dict_all_signals):
-            self.ui.gb_base_axe.ch_analyzer.setEnabled(True)
+            self.ui.gb_selected_signals.ch_analyzer.setEnabled(True)
 
     def _update_qtable(
         self, group_box: MyGroupBox, dict_signals: Dict[str, int]
@@ -678,8 +679,7 @@ class MainLogic:
 
             graph_window = WindowGraph(
                 self.model.df,
-                base_signals=list(self.model.dict_base_signals.keys()),
-                secondary_signals=list(self.model.dict_secondary_signals.keys()),
+                selected_signals=list(self.model.dict_selected_signals.keys()),
                 # time_signals=next(iter(self.model.dict_time_axe.items()))[0],
                 time_signals=self.model.time_signal,
                 step=self.model.step,

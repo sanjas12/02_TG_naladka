@@ -90,10 +90,7 @@ class MainWindowUI(QMainWindow):
             enable_analyzer=False,
             enable_filter=True,
         )
-        self.gb_base_axe = MyGroupBox(title=AxeName.BASE_AXE.value)
-        self.gb_secondary_axe = MyGroupBox(
-            title=AxeName.SECONDARY_AXE.value, enable_analyzer=False
-        )
+        self.gb_selected_signals = MyGroupBox(title=AxeName.SELECTED_SIGNALS.value)
         self.gb_x_axe = MyGroupBox(
             title=AxeName.TIME_AXE.value,
             enable_first_btn=False,
@@ -105,8 +102,7 @@ class MainWindowUI(QMainWindow):
         first_layout = QHBoxLayout()
         for box in (
             self.gb_signals,
-            self.gb_base_axe,
-            self.gb_secondary_axe,
+            self.gb_selected_signals,
             self.gb_x_axe,
         ):
             first_layout.addWidget(box)
@@ -375,7 +371,7 @@ class MyGroupBox(QGroupBox):
                 self.qtable_axe.setRowHidden(row, True)
 
 
-# для тестирования 3-x myGroupBox
+# Для тестирования групп выбора сигналов
 class TestMyGroupBox(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -383,11 +379,10 @@ class TestMyGroupBox(QMainWindow):
 
         self.layout = QHBoxLayout()
 
-        self.gb_base_axe = MyGroupBox("Base Axe")
-        self.gb_secondary_axe = MyGroupBox("Secondary Axe")
+        self.gb_selected_signals = MyGroupBox("Выбранные сигналы")
         self.gb_x_axe = MyGroupBox("X Axe")
         self.gb_x_axe.enable_first_btn = False
-        for box in [self.gb_base_axe, self.gb_secondary_axe, self.gb_x_axe]:
+        for box in [self.gb_selected_signals, self.gb_x_axe]:
             self.layout.addWidget(box)
         container = QWidget()
         container.setLayout(self.layout)
@@ -409,11 +404,13 @@ if __name__ == "__main__":
     def disable_button(gb: MyGroupBox) -> None:
         gb.enable_first_btn = True
 
-    main_window.gb_base_axe.add_func_to_btn(
-        main_window.gb_base_axe.btn_first, lambda: test("add to base axe")
+    main_window.gb_selected_signals.add_func_to_btn(
+        main_window.gb_selected_signals.btn_first,
+        lambda: test("add selected signal"),
     )
-    main_window.gb_base_axe.add_func_to_btn(
-        main_window.gb_base_axe.btn_second, lambda: test("remove from base axe")
+    main_window.gb_selected_signals.add_func_to_btn(
+        main_window.gb_selected_signals.btn_second,
+        lambda: test("remove selected signal"),
     )
     main_window.gb_signals.add_func_to_btn(
         main_window.gb_signals.btn_first,

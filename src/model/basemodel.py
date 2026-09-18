@@ -26,8 +26,7 @@ class Model:
     # Данные
     df: Optional[pd.DataFrame] = None
     dict_all_signals: Dict[str, int] = field(default_factory=dict)
-    dict_base_signals: Dict[str, int] = field(default_factory=dict)
-    dict_secondary_signals: Dict[str, int] = field(default_factory=dict)
+    dict_selected_signals: Dict[str, int] = field(default_factory=dict)
     time_signal: Optional[str] = None
 
     # Отображение графиков
@@ -45,8 +44,7 @@ class Model:
         # self.is_ms = False
         self.df = None
         self.dict_all_signals.clear()
-        self.dict_base_signals.clear()
-        self.dict_secondary_signals.clear()
+        self.dict_selected_signals.clear()
         # self.time_signal = None
         self.ready_plot = False
         self.ready_to_analysis = False

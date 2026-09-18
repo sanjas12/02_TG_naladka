@@ -40,25 +40,20 @@ class TestAxeName:
         # Assert
         assert AxeName.LIST_SIGNALS.value == "Список сигналов"
 
-    def test_axename_base_axe_value(self):
+    def test_axename_selected_signals_value(self):
         from config.config import AxeName
 
-        assert AxeName.BASE_AXE.value == "Основная Ось"
-
-    def test_axename_secondary_axe_value(self):
-        from config.config import AxeName
-
-        assert AxeName.SECONDARY_AXE.value == "Вспомогательная Ось"
+        assert AxeName.SELECTED_SIGNALS.value == "Выбранные сигналы"
 
     def test_axename_time_axe_value(self):
         from config.config import AxeName
 
         assert AxeName.TIME_AXE.value == "Ось Времени"
 
-    def test_axename_has_exactly_four_members(self):
+    def test_axename_has_exactly_three_members(self):
         from config.config import AxeName
 
-        assert len(AxeName) == 4
+        assert len(AxeName) == 3
 
     def test_axename_members_are_unique(self):
         from config.config import AxeName

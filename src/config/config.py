@@ -12,8 +12,7 @@ class AxeName(Enum):
     """Названия осей графика."""
 
     LIST_SIGNALS = "Список сигналов"
-    BASE_AXE = "Основная Ось"
-    SECONDARY_AXE = "Вспомогательная Ось"
+    SELECTED_SIGNALS = "Выбранные сигналы"
     TIME_AXE = "Ось Времени"
 
 
