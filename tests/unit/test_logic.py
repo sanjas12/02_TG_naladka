@@ -1,3 +1,4 @@
+from pathlib import Path
 from types import SimpleNamespace
 
 import pandas as pd
@@ -9,6 +10,13 @@ from logic.logic import (
     unwrap_timestamp_counter,
 )
 from model.basemodel import Model
+
+VEIK_DIAGRAM = (
+    Path(__file__).resolve().parents[2]
+    / "input"
+    / "veik"
+    / "diagram_1789700659884-2-1_22092026_203708_206256.csv"
+)
 
 
 def test_log_format_detects_comma_delimiter_and_decimal_point() -> None:
@@ -32,6 +40,94 @@ def test_timestamp_header_is_recognized_as_time_axis() -> None:
 
     assert model.is_time is True
     assert model.time_signal == "timestamp"
+
+
+def test_veik_diagram_detects_complete_time_axis_and_all_columns() -> None:
+    model = Model(filenames=[str(VEIK_DIAGRAM)], first_filename=str(VEIK_DIAGRAM))
+    handler = FileHandler(model)
+
+    assert handler.analyze_file(str(VEIK_DIAGRAM))
+    assert model.delimiter == ";"
+    assert model.decimal == "."
+
+    manager = SignalManager(model, SimpleNamespace())
+    assert manager.load_all_signals()
+    assert model.is_time
+    assert model.time_signal == "Время ЭМП, с"
+    assert model.has_veik_dual_time
+    assert list(model.dict_all_signals) == [
+        "Напряжение заряда ГИТ, кВ",
+        "Время ЭМП, с",
+        "Положение верхнего пуансона, мм",
+        "Положение нижнего пуансона, мм",
+        "Усилие верхнего ЭМП, кН",
+        "Усилие нижнего ЭМП, кН",
+    ]
+
+    plot_manager = PlotManager(
+        model, SimpleNamespace(set_modal_progress=lambda _value: None)
+    )
+    loaded = plot_manager._load_data(list(model.dict_all_signals))
+    assert len(loaded) == 6280
+    assert set(loaded.columns) == set(model.dict_all_signals) | {"Время ГИТ, с"}
+    assert loaded["Время ЭМП, с"].notna().all()
+    assert loaded["Время ГИТ, с"].notna().sum() == 247
+
+
+def test_plot_step_is_one_only_for_veik_dual_time_diagram(monkeypatch) -> None:
+    class Table:
+        def __init__(self, signals):
+            self.signals = signals
+
+        def rowCount(self):  # noqa: N802 - имитация метода QTableWidget
+            return len(self.signals)
+
+        def item(self, row, column):
+            value = row + 1 if column == 0 else self.signals[row]
+            return SimpleNamespace(text=lambda value=value: str(value))
+
+    def make_ui(time_signal):
+        return SimpleNamespace(
+            gb_selected_signals=SimpleNamespace(qtable_axe=Table(["Signal"])),
+            gb_x_axe=SimpleNamespace(qtable_axe=Table([time_signal])),
+            start_modal_progress=lambda maximum: None,
+            stop_modal_progress=lambda: None,
+        )
+
+    for dual_time, time_signal, expected_step in (
+        (True, "Время ЭМП, с", 1),
+        (False, "timestamp", 10),
+    ):
+        model = Model(
+            filenames=["archive.csv"],
+            has_veik_dual_time=dual_time,
+        )
+        manager = PlotManager(model, make_ui(time_signal))
+        monkeypatch.setattr(
+            manager,
+            "_load_data",
+            lambda signals: pd.DataFrame({signal: [1.0] for signal in signals}),
+        )
+
+        assert manager.prepare_plot_data()
+        assert model.step == expected_step
+
+
+def test_veik_voltage_loads_its_own_time_column() -> None:
+    model = Model(filenames=[str(VEIK_DIAGRAM)], first_filename=str(VEIK_DIAGRAM))
+    handler = FileHandler(model)
+    assert handler.analyze_file(str(VEIK_DIAGRAM))
+    assert SignalManager(model, SimpleNamespace()).load_all_signals()
+
+    manager = PlotManager(
+        model, SimpleNamespace(set_modal_progress=lambda _value: None)
+    )
+    loaded = manager._load_data(["Время ЭМП, с", "Напряжение заряда ГИТ, кВ"])
+
+    assert "Время ГИТ, с" in loaded.columns
+    assert "Время ГИТ, с" not in model.dict_all_signals
+    assert loaded["Время ЭМП, с"].notna().all()
+    assert loaded["Время ГИТ, с"].notna().sum() == 247
 
 
 def test_plot_manager_loads_log_values_and_none_as_nan(tmp_path) -> None:

@@ -251,3 +251,38 @@ def test_datetime_labels_do_not_reorder_signal_points(tmp_path, monkeypatch) -> 
 
     window.close()
     application.processEvents()
+
+
+def test_veik_voltage_uses_git_time_on_shared_x_axis(tmp_path, monkeypatch) -> None:
+    application = _application()
+    monkeypatch.setattr(cfg, "PLOT_FILENAME", str(tmp_path / "plot.png"))
+    data = pd.DataFrame(
+        {
+            cfg.VEIK_EMP_TIME: [0.0, 1.0, 2.0, 3.0, 4.0],
+            cfg.VEIK_GIT_TIME: [0.0, 2.0, 4.0, np.nan, np.nan],
+            cfg.VEIK_GIT_VOLTAGE: [10.0, 20.0, 30.0, np.nan, np.nan],
+            "Положение верхнего пуансона, мм": [5.0, 6.0, 7.0, 8.0, 9.0],
+        }
+    )
+    window = WindowGraph(
+        data=data,
+        selected_signals=[cfg.VEIK_GIT_VOLTAGE, "Положение верхнего пуансона, мм"],
+        time_signals=cfg.VEIK_EMP_TIME,
+        filenames=["diagram.csv"],
+        step=1,
+        preserve_sampling_step=True,
+    )
+
+    voltage_line = window.signal_lines[cfg.VEIK_GIT_VOLTAGE]
+    assert window.points_combobox.currentText() == "1"
+    position_line = window.signal_lines["Положение верхнего пуансона, мм"]
+    assert voltage_line.get_xdata().tolist() == [0.0, 2.0, 4.0]
+    assert position_line.get_xdata().tolist() == [0.0, 1.0, 2.0, 3.0, 4.0]
+    assert window.signal_display_indices[cfg.VEIK_GIT_VOLTAGE].tolist() == [0, 1, 2]
+
+    window._set_marker_from_x(2.0)
+    assert window.marker_labels[cfg.VEIK_GIT_VOLTAGE].get_text() == "20.000"
+    assert window.marker_labels["Положение верхнего пуансона, мм"].get_text() == "7.000"
+
+    window.close()
+    application.processEvents()

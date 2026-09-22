@@ -50,6 +50,7 @@ class WindowGraph(QMainWindow):
         step (int, optional): Шаг выборки данных. По умолчанию 10.
         filename (str, optional): Имя файла с данными для заголовка.
         enable_button: Можно ли активировать кнопку "АНАЛИЗА"
+        preserve_sampling_step: Не менять шаг автоматически для диаграммы ВЭИК.
     """
 
     def __init__(
@@ -60,6 +61,7 @@ class WindowGraph(QMainWindow):
         filenames: List[str],
         step: int = 10,
         enable_analys: bool = False,
+        preserve_sampling_step: bool = False,
     ) -> None:
         super().__init__()
         logger.info(
@@ -74,6 +76,7 @@ class WindowGraph(QMainWindow):
         self.step = int(step)
         self.filenames = filenames
         self.enable_analys = enable_analys
+        self.preserve_sampling_step = preserve_sampling_step
         self.save_path_plot: Optional[Path] = None
 
         self.analyzer: RegulatorAnalyzer
@@ -92,6 +95,9 @@ class WindowGraph(QMainWindow):
         self.x_is_datetime = False
         self.datetime_values: Optional[pd.Series] = None
         self.displayed_data_indices = np.array([], dtype=int)
+        self.signal_display_indices: dict[str, np.ndarray] = {}
+        self.signal_lines: dict[str, Any] = {}
+        self.primary_plot_x: Optional[pd.Series] = None
         self.ax1: Optional[plt.Axes] = None
         self.signal_axes: dict[str, plt.Axes] = {}
 
@@ -251,9 +257,11 @@ class WindowGraph(QMainWindow):
         ax1 = self.figure.add_subplot()
         self.lines_list = []
         self.signal_axes = {}
+        self.signal_display_indices = {}
+        self.signal_lines = {}
 
         # При больших данных, который не родные QP
-        if len(self.data) > 1_000_000:
+        if len(self.data) > 1_000_000 and not self.preserve_sampling_step:
             adjusted_step = len(self.data) // 1000
             logger.info(
                 "plot_graphs: большой датасет (%d строк), шаг скорректирован %d -> %d",
@@ -270,6 +278,7 @@ class WindowGraph(QMainWindow):
         ]
         plot_x = self._prepare_plot_x()
         self.displayed_data_indices = self._build_display_indices(plot_x)
+        self.primary_plot_x = plot_x
         displayed_indices = self.displayed_data_indices
         for axis_index, signal in enumerate(visible_signals):
             axis = ax1 if axis_index == 0 else ax1.twinx()
@@ -290,15 +299,29 @@ class WindowGraph(QMainWindow):
             axis.yaxis.set_major_locator(ticker.MaxNLocator(cfg.TICK_MARK_COUNT_Y))
 
             if signal in self.data.columns and self.line_visibility.get(signal, True):
+                signal_x = plot_x
+                signal_indices = displayed_indices
+                if (
+                    signal == cfg.VEIK_GIT_VOLTAGE
+                    and self.time_signals == cfg.VEIK_EMP_TIME
+                    and cfg.VEIK_GIT_TIME in self.data.columns
+                ):
+                    signal_x = pd.to_numeric(
+                        self.data[cfg.VEIK_GIT_TIME], errors="coerce"
+                    )
+                    valid_indices = np.flatnonzero(signal_x.notna().to_numpy())
+                    signal_indices = valid_indices[:: self.step]
                 (line,) = axis.plot(
-                    plot_x.iloc[displayed_indices],
-                    self.data[signal].iloc[displayed_indices],
+                    signal_x.iloc[signal_indices],
+                    self.data[signal].iloc[signal_indices],
                     lw=2,
                     label=signal,
                     color=color,
                 )
                 self.lines_list.append(line)
                 self.signal_axes[signal] = axis
+                self.signal_lines[signal] = line
+                self.signal_display_indices[signal] = signal_indices
 
         self._synchronize_similar_y_axes(visible_signals)
 
@@ -672,15 +695,19 @@ class WindowGraph(QMainWindow):
 
     def _set_marker_from_x(self, x: float) -> None:
         """Привязывает маркер к ближайшей отображаемой точке."""
-        if not self.lines_list:
+        primary_plot_x = self.primary_plot_x
+        if primary_plot_x is None or not len(self.displayed_data_indices):
             return
         try:
             displayed_x = np.asarray(
-                self.lines_list[0].get_xdata(orig=False), dtype=float
+                primary_plot_x.iloc[self.displayed_data_indices], dtype=float
             )
         except (TypeError, ValueError):
-            logger.debug("Не удалось преобразовать ось X", exc_info=True)
-            return
+            if not self.lines_list:
+                return
+            displayed_x = np.asarray(
+                self.lines_list[0].get_xdata(orig=False), dtype=float
+            )
         finite = np.isfinite(displayed_x)
         if not finite.any():
             return
@@ -702,7 +729,19 @@ class WindowGraph(QMainWindow):
         self.marker_index = index
         x_val = self.data[self.time_signals].iloc[index]
         if vline_x is None:
-            line_x = np.asarray(self.lines_list[0].get_xdata(orig=False), dtype=float)
+            primary_plot_x = self.primary_plot_x
+            if primary_plot_x is None:
+                return
+            try:
+                line_x = np.asarray(
+                    primary_plot_x.iloc[self.displayed_data_indices], dtype=float
+                )
+            except (TypeError, ValueError):
+                if not self.lines_list:
+                    return
+                line_x = np.asarray(
+                    self.lines_list[0].get_xdata(orig=False), dtype=float
+                )
             if not len(line_x) or not len(self.displayed_data_indices):
                 return
             displayed_index = int(
@@ -714,8 +753,22 @@ class WindowGraph(QMainWindow):
         self.annotation.set_text(f"Время: {self.format_time(x_val)}")
         self.annotation.set_visible(True)
         for signal, label in self.marker_labels.items():
+            signal_line = self.signal_lines.get(signal)
+            signal_indices = self.signal_display_indices.get(signal)
+            if signal_line is None or signal_indices is None or not len(signal_indices):
+                label.set_visible(False)
+                continue
+            signal_x = np.asarray(signal_line.get_xdata(orig=False), dtype=float)
+            finite = np.isfinite(signal_x)
+            if not finite.any():
+                label.set_visible(False)
+                continue
+            nearest = int(
+                np.nanargmin(np.where(finite, np.abs(signal_x - vline_x), np.nan))
+            )
+            signal_index = int(signal_indices[nearest])
             value = pd.to_numeric(
-                pd.Series([self.data[signal].iloc[index]]), errors="coerce"
+                pd.Series([self.data[signal].iloc[signal_index]]), errors="coerce"
             ).iloc[0]
             if pd.isna(value):
                 label.set_visible(False)

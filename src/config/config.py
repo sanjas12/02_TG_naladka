@@ -56,6 +56,9 @@ FORMAT: Final[str] = "%(asctime)s:%(levelname)s:%(name)s:%(message)s"
 COMBINED_TIME: Final[str] = "Время"
 DEFAULT_TIME: Final[str] = "дата/время"
 DEFAULT_MS: Final[str] = "миллисекунды"
+VEIK_EMP_TIME: Final[str] = "Время ЭМП, с"
+VEIK_GIT_TIME: Final[str] = "Время ГИТ, с"
+VEIK_GIT_VOLTAGE: Final[str] = "Напряжение заряда ГИТ, кВ"
 
 
 # --- Настройки ---

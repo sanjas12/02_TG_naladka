@@ -20,6 +20,7 @@ class Model:
     is_kol_1_2: bool = False
     is_time: bool = False
     is_ms: bool = False
+    has_veik_dual_time: bool = False
     ready_plot: bool = False
     ready_to_analysis: bool = False
 

@@ -24,7 +24,12 @@ from ui.graph_matplot import WindowGraph  # noqa: E402
 from ui.main_window import MainWindowUI, MyGroupBox  # noqa: E402
 from ui.plc_archive_window import PlkArchiveWindow  # noqa: E402
 
-TIME_COLUMN_ALIASES = (cfg.DEFAULT_TIME, "timestamp")
+TIME_COLUMN_ALIASES = (
+    cfg.DEFAULT_TIME,
+    "timestamp",
+    cfg.VEIK_EMP_TIME,
+    cfg.VEIK_GIT_TIME,
+)
 TIMESTAMP_COUNTER_MODULUS = 65_536
 
 
@@ -119,15 +124,12 @@ class FileHandler:
 
         self.model.is_kol_1_2 = sample_str.startswith("Count=")
         header = sample_str.splitlines()[1 if self.model.is_kol_1_2 else 0]
-        delimiter_counts = {
-            ";": header.count(";"),
-            "\t": header.count("\t"),
-            ",": header.count(","),
+        delimiter_scores = {
+            delimiter: min(header.count(delimiter), second_row_str.count(delimiter))
+            for delimiter in (";", "\t", ",")
         }
-        self.model.delimiter = max(
-            delimiter_counts, key=lambda delimiter: delimiter_counts[delimiter]
-        )
-        if delimiter_counts[self.model.delimiter] == 0:
+        self.model.delimiter = max(delimiter_scores, key=delimiter_scores.__getitem__)
+        if delimiter_scores[self.model.delimiter] == 0:
             raise ValueError("Не удалось определить разделитель столбцов")
 
         self.model.decimal = (
@@ -207,6 +209,16 @@ class SignalManager:
         self.model.time_signal = time_signal
         self.model.is_time = time_signal is not None
         self.model.is_ms = cfg.DEFAULT_MS in self.model.dict_all_signals
+        self.model.has_veik_dual_time = (
+            time_signal == cfg.VEIK_EMP_TIME
+            and cfg.VEIK_GIT_TIME in self.model.dict_all_signals
+            and cfg.VEIK_GIT_VOLTAGE in self.model.dict_all_signals
+        )
+
+        # В диаграмме ВЭИК время ГИТ — служебная ось только для напряжения заряда.
+        # Не предлагать её оператору как самостоятельный измерительный сигнал.
+        if self.model.has_veik_dual_time:
+            self.model.dict_all_signals.pop(cfg.VEIK_GIT_TIME)
 
         if time_signal == cfg.DEFAULT_TIME and self.model.is_ms:
             self.model.dict_all_signals[cfg.COMBINED_TIME] = (
@@ -248,7 +260,7 @@ class PlotManager:
             self.ui.show_error("Не выбраны сигналы для построения графика")
             return False
 
-        self.model.step = 10
+        self.model.step = 1 if self.model.has_veik_dual_time else 10
 
         # Проверка, если среди выбранных сигналов есть дла АНАЛИЗА РЕГУлятора
         all_signals: List[str] = selected_signals + [self.model.time_signal]
@@ -297,6 +309,11 @@ class PlotManager:
     def _load_data(self, signals: List[str]) -> pd.DataFrame:
         """Загружает данные из файлов с использованием pandas"""
         usecols = signals.copy()
+        if (
+            cfg.VEIK_GIT_VOLTAGE in usecols
+            and self.model.time_signal == cfg.VEIK_EMP_TIME
+        ):
+            usecols.append(cfg.VEIK_GIT_TIME)
 
         # если в архивах есть колонка миллисекунды,
         # то необходимо создать Время -> 'дата/время' + 'миллисекунды'
@@ -685,6 +702,7 @@ class MainLogic:
                 step=self.model.step,
                 filenames=self.model.filenames,
                 enable_analys=self.model.ready_to_analysis,
+                preserve_sampling_step=self.model.has_veik_dual_time,
             )
 
             self.graph_window = graph_window
