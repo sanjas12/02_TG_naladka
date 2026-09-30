@@ -4,6 +4,7 @@ import logging
 import random
 import re
 import sys
+from contextlib import suppress
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, List, Optional
@@ -91,6 +92,9 @@ class WindowGraph(QMainWindow):
         self.marker_index: Optional[int] = None
         self.marker_dragging = False
         self.marker_cids: list[int] = []
+        self.measurement_points: List[float] = []
+        self.measurement_artists: List[Any] = []
+        self.dragging_measurement_index: Optional[int] = None
         self.date_label: Optional[Text] = None
         self.x_is_datetime = False
         self.datetime_values: Optional[pd.Series] = None
@@ -169,8 +173,26 @@ class WindowGraph(QMainWindow):
         regulator_layout.addWidget(analyze_button)
         regulator_group.setLayout(regulator_layout)
 
+        measurement_group = QGroupBox("Измерение времени")
+        measurement_layout = QVBoxLayout()
+        self.measurement_button = QPushButton("Измерить Δt")
+        self.measurement_button.setCheckable(True)
+        self.measurement_button.toggled.connect(self._toggle_time_measurement)
+        self.clear_measurement_button = QPushButton("Очистить")
+        self.clear_measurement_button.setEnabled(False)
+        self.clear_measurement_button.clicked.connect(
+            lambda: self._clear_time_measurement()
+        )
+        self.measurement_status = QLabel("")
+        self.measurement_status.setWordWrap(True)
+        measurement_layout.addWidget(self.measurement_button)
+        measurement_layout.addWidget(self.clear_measurement_button)
+        measurement_layout.addWidget(self.measurement_status)
+        measurement_group.setLayout(measurement_layout)
+
         control_layout.addWidget(sampling_group, stretch=1)
         control_layout.addWidget(scroll_area, stretch=6)
+        control_layout.addWidget(measurement_group, stretch=1)
         control_layout.addWidget(regulator_group, stretch=1)
 
         control_panel.setLayout(control_layout)
@@ -237,6 +259,13 @@ class WindowGraph(QMainWindow):
         logger.debug("plot_graphs: начало, строк=%d, шаг=%d", len(self.data), self.step)
         self.figure.clear()
         self.date_label = None
+        self.measurement_artists.clear()
+        self.measurement_points.clear()
+        self.dragging_measurement_index = None
+        self.clear_measurement_button.setEnabled(False)
+        self.measurement_status.setText(
+            "Выберите начало" if self.measurement_button.isChecked() else ""
+        )
         for cid in self.marker_cids:
             self.canvas.mpl_disconnect(cid)
         self.marker_cids.clear()
@@ -365,8 +394,13 @@ class WindowGraph(QMainWindow):
         self._create_marker_labels()
         self.marker_cids = [
             self.canvas.mpl_connect("button_press_event", self.on_marker_press),
+            self.canvas.mpl_connect("button_press_event", self._on_measurement_click),
             self.canvas.mpl_connect("motion_notify_event", self.on_marker_move),
+            self.canvas.mpl_connect("motion_notify_event", self._on_measurement_drag),
             self.canvas.mpl_connect("button_release_event", self.on_marker_release),
+            self.canvas.mpl_connect(
+                "button_release_event", self._on_measurement_release
+            ),
         ]
         if self.marker_index is not None:
             self._set_marker_from_index(self.marker_index)
@@ -475,7 +509,7 @@ class WindowGraph(QMainWindow):
         positions = np.arange(len(datetime_values), dtype=float)[valid]
         timestamps_ns = datetime_values[valid].astype("int64").to_numpy(dtype=float)
         clamped_value = min(max(value, positions[0]), positions[-1])
-        timestamp_ns = np.interp(clamped_value, positions, timestamps_ns)
+        timestamp_ns = float(np.interp(clamped_value, positions, timestamps_ns))
         return pd.Timestamp(round(timestamp_ns))
 
     def _format_datetime_tick_at_position(
@@ -607,8 +641,9 @@ class WindowGraph(QMainWindow):
         first: tuple[float, float], second: tuple[float, float]
     ) -> bool:
         """Определяет, можно ли без потери читаемости объединить шкалы."""
-        first_span = max(first[1] - first[0], np.finfo(float).eps)
-        second_span = max(second[1] - second[0], np.finfo(float).eps)
+        epsilon = float(np.finfo(float).eps)
+        first_span = max(first[1] - first[0], epsilon)
+        second_span = max(second[1] - second[0], epsilon)
         if max(first_span, second_span) / min(first_span, second_span) > 4:
             return False
 
@@ -671,9 +706,210 @@ class WindowGraph(QMainWindow):
         """Проверяет, не включено ли масштабирование или панорамирование."""
         return bool(self.toolbar.mode)
 
+    def _toggle_time_measurement(self, enabled: bool) -> None:
+        """Включает выбор двух точек времени и очищает предыдущее измерение."""
+        self._clear_time_measurement()
+        if enabled:
+            self.marker_dragging = False
+            self.measurement_status.setText("Выберите начало")
+
+    def _clear_time_measurement(self, redraw: bool = True) -> None:
+        """Удаляет маркеры, заливку и результат измерения Δt."""
+        for artist in self.measurement_artists:
+            with suppress(ValueError):
+                artist.remove()
+        self.measurement_artists.clear()
+        self.measurement_points.clear()
+        self.dragging_measurement_index = None
+        self.clear_measurement_button.setEnabled(False)
+        self.measurement_status.setText(
+            "Выберите начало" if self.measurement_button.isChecked() else ""
+        )
+        if redraw:
+            self.canvas.draw_idle()
+
+    def _on_measurement_click(self, event: Any) -> None:
+        """Устанавливает или выбирает для перемещения маркер A/B."""
+        if (
+            not self.measurement_button.isChecked()
+            or event.button != 1
+            or event.inaxes not in self.signal_axes.values()
+            or event.xdata is None
+            or self._toolbar_is_busy()
+        ):
+            return
+        marker_index = self._measurement_marker_at(event)
+        if marker_index is not None:
+            self.dragging_measurement_index = marker_index
+            self.measurement_status.setText("Перемещение маркера…")
+            return
+        if len(self.measurement_points) == 2:
+            self._clear_time_measurement(redraw=False)
+        self.measurement_points.append(float(event.xdata))
+        self._render_time_measurement()
+        self.canvas.draw_idle()
+
+    def _measurement_marker_at(self, event: Any) -> Optional[int]:
+        """Возвращает индекс маркера, находящегося не дальше десяти пикселей."""
+        if event.inaxes is None or event.x is None or not self.measurement_points:
+            return None
+        distances = [
+            abs(event.inaxes.transData.transform((value, 0))[0] - event.x)
+            for value in self.measurement_points
+        ]
+        nearest = min(range(len(distances)), key=distances.__getitem__)
+        return nearest if distances[nearest] <= 10 else None
+
+    def _on_measurement_drag(self, event: Any) -> None:
+        """Перемещает активный маркер и сразу пересчитывает интервал."""
+        marker_index = self.dragging_measurement_index
+        if (
+            marker_index is None
+            or event.inaxes not in self.signal_axes.values()
+            or event.xdata is None
+        ):
+            return
+        self.measurement_points[marker_index] = float(event.xdata)
+        self._render_time_measurement()
+        self.canvas.draw_idle()
+
+    def _on_measurement_release(self, event: Any) -> None:
+        """Завершает перемещение маркера измерения."""
+        if self.dragging_measurement_index is None:
+            return
+        self.dragging_measurement_index = None
+        self._render_time_measurement()
+        self.canvas.draw_idle()
+
+    def _render_time_measurement(self) -> None:
+        """Рисует маркеры A/B, интервал и рассчитанное значение Δt."""
+        for artist in self.measurement_artists:
+            with suppress(ValueError):
+                artist.remove()
+        self.measurement_artists.clear()
+        axis = self.ax1
+        if axis is None:
+            return
+        colors = ("#e11d48", "#7c3aed")
+        labels = ("A", "B")
+        y_min = axis.get_ylim()[0]
+        for index, value in enumerate(self.measurement_points):
+            color = colors[index]
+            line = axis.axvline(
+                value, color=color, linewidth=1.5, linestyle="--", zorder=8
+            )
+            self.measurement_artists.append(line)
+            (handle,) = axis.plot(
+                [value],
+                [y_min],
+                marker="o",
+                markersize=7,
+                color=color,
+                markeredgecolor="white",
+                zorder=9,
+            )
+            self.measurement_artists.append(handle)
+            label = axis.annotate(
+                labels[index],
+                xy=(value, y_min),
+                xytext=(0, 8),
+                textcoords="offset points",
+                ha="center",
+                va="bottom",
+                color=color,
+                fontweight="bold",
+                fontsize=8,
+                zorder=9,
+            )
+            self.measurement_artists.append(label)
+        if len(self.measurement_points) == 1:
+            self.measurement_status.setText("Выберите конец")
+        elif len(self.measurement_points) == 2:
+            self._complete_time_measurement()
+        self.clear_measurement_button.setEnabled(bool(self.measurement_points))
+
+    def _complete_time_measurement(self) -> None:
+        """Подсвечивает интервал и показывает начало, конец и Δt."""
+        axis = self.ax1
+        if axis is None:
+            return
+        start, end = self.measurement_points
+        interval_start, interval_end = sorted((start, end))
+        span = axis.axvspan(
+            interval_start,
+            interval_end,
+            color="#f59e0b",
+            alpha=0.12,
+            zorder=0.5,
+        )
+        self.measurement_artists.append(span)
+        delta_seconds = self._measurement_delta_seconds(start, end)
+        text = (
+            f"Начало: {self._format_measurement_position(start)}\n"
+            f"Конец: {self._format_measurement_position(end)}\n"
+            f"Δt: {self._format_time_delta(delta_seconds)}"
+        )
+        annotation = axis.annotate(
+            text,
+            xy=(end, axis.get_ylim()[0]),
+            xytext=(16, 28),
+            textcoords="offset points",
+            ha="left",
+            va="bottom",
+            fontsize=8.5,
+            bbox={
+                "boxstyle": "round,pad=0.35",
+                "fc": "white",
+                "ec": "#7c3aed",
+                "alpha": 0.97,
+            },
+            arrowprops={"arrowstyle": "->", "color": "#7c3aed"},
+            annotation_clip=False,
+            zorder=10,
+        )
+        self.measurement_artists.append(annotation)
+        self.measurement_status.setText(
+            f"Δt: {self._format_time_delta(delta_seconds)} — перетащите A или B"
+        )
+
+    def _datetime_at_plot_position(self, position: float) -> Optional[pd.Timestamp]:
+        """Интерполирует календарное время для позиционной оси X."""
+        values = self.datetime_values
+        if values is None or values.empty:
+            return None
+        timestamps = pd.to_datetime(values, errors="coerce")
+        valid = timestamps.notna().to_numpy()
+        if not valid.any():
+            return None
+        positions = np.arange(len(timestamps), dtype=float)[valid]
+        nanoseconds = timestamps.astype("int64").to_numpy(dtype=np.int64)[valid]
+        interpolated = float(np.interp(position, positions, nanoseconds.astype(float)))
+        return pd.Timestamp(int(round(interpolated)))
+
+    def _measurement_delta_seconds(self, start: float, end: float) -> float:
+        """Возвращает дельту с учётом типа исходной временной оси."""
+        if self.x_is_datetime:
+            start_time = self._datetime_at_plot_position(start)
+            end_time = self._datetime_at_plot_position(end)
+            if start_time is not None and end_time is not None:
+                return abs((end_time - start_time).total_seconds())
+        return abs(end - start)
+
+    def _format_measurement_position(self, position: float) -> str:
+        """Форматирует выбранную точку в исходных единицах времени."""
+        if self.x_is_datetime:
+            value = self._datetime_at_plot_position(position)
+            if value is not None:
+                return value.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        return f"{position:.3f} с"
+
     def on_marker_press(self, event: Any) -> None:
         """Ставит маркер и начинает его перетаскивание."""
-        if event.button != 1 or self._toolbar_is_busy():
+        if (
+            self.measurement_button.isChecked()
+            or event.button != 1
+            or self._toolbar_is_busy()
+        ):
             return
         if event.inaxes not in self.signal_axes.values() or event.xdata is None:
             return

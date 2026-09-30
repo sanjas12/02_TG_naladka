@@ -184,6 +184,69 @@ def test_movable_marker_displays_value_on_each_y_axis(tmp_path, monkeypatch) -> 
     application.processEvents()
 
 
+def test_time_measurement_on_numeric_x_axis(tmp_path, monkeypatch) -> None:
+    application = _application()
+    monkeypatch.setattr(cfg, "PLOT_FILENAME", str(tmp_path / "plot.png"))
+    window = WindowGraph(
+        data=pd.DataFrame({"time": [0.0, 1.0, 2.0], "signal": [1.0, 2.0, 3.0]}),
+        selected_signals=["signal"],
+        time_signals="time",
+        filenames=["test.csv"],
+        step=1,
+    )
+    axis = window.signal_axes["signal"]
+    window.measurement_button.setChecked(True)
+    window._on_measurement_click(
+        SimpleNamespace(button=1, inaxes=axis, xdata=0.25, x=-1000)
+    )
+    window._on_measurement_click(
+        SimpleNamespace(button=1, inaxes=axis, xdata=1.75, x=-1000)
+    )
+
+    assert window.measurement_points == [0.25, 1.75]
+    assert window.measurement_status.text() == "Δt: 1.500 с — перетащите A или B"
+    assert window.clear_measurement_button.isEnabled()
+    assert any(
+        "Начало: 0.250 с" in artist.get_text()
+        for artist in window.measurement_artists
+        if hasattr(artist, "get_text")
+    )
+
+    window._clear_time_measurement()
+    assert window.measurement_points == []
+    assert window.measurement_status.text() == "Выберите начало"
+    window.close()
+    application.processEvents()
+
+
+def test_time_measurement_uses_real_datetime_delta(tmp_path, monkeypatch) -> None:
+    application = _application()
+    monkeypatch.setattr(cfg, "PLOT_FILENAME", str(tmp_path / "plot.png"))
+    window = WindowGraph(
+        data=pd.DataFrame(
+            {
+                "date/time": [
+                    "2026-08-24 10:17:44,000",
+                    "2026-08-24 10:17:44,100",
+                    "2026-08-24 10:17:44,400",
+                ],
+                "signal": [1.0, 2.0, 3.0],
+            }
+        ),
+        selected_signals=["signal"],
+        time_signals="date/time",
+        filenames=["test.csv"],
+        step=1,
+    )
+
+    assert window._measurement_delta_seconds(0.0, 2.0) == 0.4
+    assert window._measurement_delta_seconds(0.5, 1.5) == 0.2
+    assert window._format_measurement_position(1.0).endswith("10:17:44.100")
+
+    window.close()
+    application.processEvents()
+
+
 def test_datetime_x_axis_matches_plc_archive_style(tmp_path, monkeypatch) -> None:
     application = _application()
     monkeypatch.setattr(cfg, "PLOT_FILENAME", str(tmp_path / "plot.png"))
