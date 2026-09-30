@@ -1,3 +1,11 @@
+## 0.5.3 (2026-09-30)
+
+### Feat
+
+- определение проекта архива
+- **graph**: добавить измерение времени на графике
+- **data**: add new experimental data file for VEIK diagram analysis
+
 ## 0.5.2 (2026-09-18)
 
 ### Feat
