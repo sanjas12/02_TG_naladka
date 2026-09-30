@@ -1,33 +1,111 @@
 #!/bin/bash
 
+# версия: 0.1
+
+# Назначение: полностью подготавливает окружение разработки проекта.
+# Скрипт удаляет существующую .venv, создаёт её заново, устанавливает runtime-,
+# dev- и build-зависимости, а затем устанавливает Git hooks pre-commit.
+# Поддерживает uv и fallback на pip, а также онлайн- и офлайн-установку из
+# локального каталога python_Library на дисках D, E или F.
+# Ход выполнения и ошибки записываются в каталог logs/.
+# ВАЖНО: запуск удаляет текущую .venv вместе с установленными в ней пакетами.
+
 # uv + интернет → uv sync (если есть pyproject.toml) или uv pip install -r requirements.txt
 # uv + офлайн → uv sync --no-index --find-links=... или uv pip install --no-index
 # нет uv + интернет → fallback на pip install -r requirements.txt
 # нет uv + офлайн → fallback на pip install --no-index -f ...
+
 set -e
 
-cd "$(dirname "$0")/.." || exit 1
+# Определяем абсолютные пути
+PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+BACKEND_DIR="$PROJECT_ROOT"
 
-# ── Вспомогательные функции ───────────────────────────────────────────────────
+SCRIPT_NAME=$(basename "$0" .sh)
+
+cd "$PROJECT_ROOT" || exit 1
+
+# ── НАСТРОЙКА ЛОГИРОВАНИЯ ───────────────────────────────────────────────────
+
+LOG_DIR="$PROJECT_ROOT/logs"
+mkdir -p "$LOG_DIR"
+
+LOG_FILE="$LOG_DIR/${SCRIPT_NAME}_$(date +%Y%m%d_%H%M%S).log"
+ERROR_LOG="$LOG_DIR/${SCRIPT_NAME}_errors.log"
+
+# Функция логирования
 log() {
-    echo -e "$1"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo -e "$timestamp - $1" | tee -a "$LOG_FILE"
 }
 
+# Функция логирования ошибок
+log_error() {
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo -e "$timestamp - ❌ $1" | tee -a "$LOG_FILE" "$ERROR_LOG"
+}
+
+# Функция логирования успеха
+log_success() {
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo -e "$timestamp - ✅ $1" | tee -a "$LOG_FILE"
+}
+
+# Функция логирования предупреждений
+log_warning() {
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo -e "$timestamp - ⚠ $1" | tee -a "$LOG_FILE"
+}
+
+# Обработчик ошибок
+error_handler() {
+    local line_no=$1
+    local command=$2
+    local exit_code=$3
+
+    log_error "Ошибка на строке $line_no"
+    log_error "Команда: $command"
+    log_error "Код возврата: $exit_code"
+    log_error "Текущая директория: $(pwd)"
+    log_error "Скрипт завершен с ошибкой. Лог: $LOG_FILE"
+
+    exit $exit_code
+}
+
+trap 'error_handler ${LINENO} "$BASH_COMMAND" $?' ERR
+
+# ── Вспомогательные функции ───────────────────────────────────────────────────
+
 activate_venv() {
-    if [[ -f ".venv/Scripts/activate" ]]; then
-        source .venv/Scripts/activate
-        echo "venv активирована (Windows)"
-    elif [[ -f ".venv/bin/activate" ]]; then
-        source .venv/bin/activate
-        echo "venv активирована (Linux/Mac)"
+    local venv_path=$1
+    if [[ -f "$venv_path/Scripts/activate" ]]; then
+        source "$venv_path/Scripts/activate"
+        log_success "venv активирована (Windows): $venv_path"
+    elif [[ -f "$venv_path/bin/activate" ]]; then
+        source "$venv_path/bin/activate"
+        log_success "venv активирована (Linux/Mac): $venv_path"
     else
-        echo "❌ activate не найден"
+        log_error "Скрипт activate не найден в $venv_path"
         exit 1
     fi
 }
 
+# Проверка интернета
+check_internet() {
+    if command -v python >/dev/null 2>&1; then
+        python -c "import urllib.request; urllib.request.urlopen('https://pypi.org/simple/', timeout=3)" 2>/dev/null && return 0
+    fi
+
+    return 1
+}
+
 # --- CONFIG ---
 PIP_VERSION="25.0.1"
+
+log "=== НАЧАЛО BOOTSTRAP ==="
+log "Лог-файл: $LOG_FILE"
+log "Корень проекта: $PROJECT_ROOT"
+log "Директория бэкенда: $BACKEND_DIR"
 
 # Поиск LOCAL_PACKAGES_DIR на дисках D, E, F
 LOCAL_PACKAGES_DIR=""
@@ -35,47 +113,70 @@ for drive in d e f; do
     candidate="/$drive/temp/python_Library"
     if [[ -d "$candidate" ]]; then
         LOCAL_PACKAGES_DIR="$candidate"
-        log "📦 локальный каталог найден: $LOCAL_PACKAGES_DIR"
+        log_success "Локальный каталог найден: $LOCAL_PACKAGES_DIR"
         break
     fi
 done
 
 if [[ -z "$LOCAL_PACKAGES_DIR" ]]; then
-    log "⚠ локальный каталог python_Library не найден ни на одном из дисков (d/e/f)"
+    log_warning "Локальный каталог python_Library не найден ни на одном из дисков (d/e/f)"
 fi
 
 # --- CLEAN ---
-log "удаляем .venv ..."
-rm -rf .venv
+log "Удаляем старые .venv ..."
+rm -rf .venv "$BACKEND_DIR/.venv"
+log_success ".venv удалены"
 
 # --- DETECT UV ---
 if command -v uv >/dev/null 2>&1; then
     HAS_UV=1
-    log "uv найден"
+    log_success "uv найден"
 else
     HAS_UV=0
-    log "uv  не найден -> fallback на pip"
+    log_warning "uv не найден -> fallback на pip"
 fi
 
-# интернет
-set +e
-python - <<EOF 2>/dev/null
-import urllib.request
-urllib.request.urlopen("https://pypi.org/simple/", timeout=3)
-EOF
-NET_OK=$?
-set -e
+# Проверка интернета
+log "Проверка доступа в интернет..."
+if check_internet; then
+    NET_OK=0
+    log_success "Интернет доступен"
+else
+    NET_OK=1
+    log_warning "Интернет НЕ доступен"
+fi
 
 # --- DETECT PROJECT TYPE ---
-[ -f "pyproject.toml" ] && USE_PYPROJECT=1 || USE_PYPROJECT=0
+USE_PYPROJECT=0
+REQUIREMENTS_FILE=""
+VENV_LOCATION=""
 
-if [ $USE_PYPROJECT -eq 0 ] && [ ! -f "requirements.txt" ]; then
-    echo "❌ нет зависимостей"
+log "Поиск файлов зависимостей в: $BACKEND_DIR"
+
+if [ -f "$BACKEND_DIR/pyproject.toml" ]; then
+    USE_PYPROJECT=1
+    VENV_LOCATION="$BACKEND_DIR/.venv"
+    log_success "pyproject.toml найден: $BACKEND_DIR/pyproject.toml"
+    if [ -f "$BACKEND_DIR/requirements.txt" ]; then
+	REQUIREMENTS_FILE="$BACKEND_DIR/requirements.txt"
+    	VENV_LOCATION="$BACKEND_DIR/.venv"
+    	log_success "requirements.txt найден: $REQUIREMENTS_FILE"
+    fi
+elif [ -f "$BACKEND_DIR/requirements.txt" ]; then
+    REQUIREMENTS_FILE="$BACKEND_DIR/requirements.txt"
+    VENV_LOCATION="$BACKEND_DIR/.venv"
+    log_success "requirements.txt найден: $REQUIREMENTS_FILE"
+elif [ -f "$PROJECT_ROOT/requirements.txt" ]; then
+    REQUIREMENTS_FILE="$PROJECT_ROOT/requirements.txt"
+    VENV_LOCATION="$PROJECT_ROOT/.venv"
+    log_success "requirements.txt найден в корне проекта"
+else
+    log_error "Файлы зависимостей не найдены (искали $BACKEND_DIR/pyproject.toml и requirements.txt)"
     exit 1
 fi
 
 if [ $NET_OK -ne 0 ] && [ ! -d "$LOCAL_PACKAGES_DIR" ]; then
-    echo "❌ нет офлайн-каталога: $LOCAL_PACKAGES_DIR"
+    log_error "Нет интернета и нет офлайн-каталога: $LOCAL_PACKAGES_DIR"
     exit 1
 fi
 
@@ -86,24 +187,53 @@ USE_OFFLINE=0
 PIP_ARGS=()
 [ $USE_OFFLINE -eq 1 ] && PIP_ARGS+=(--no-index --find-links="$LOCAL_PACKAGES_DIR")
 
+if [ $USE_OFFLINE -eq 1 ]; then
+    log "Режим: ОФЛАЙН"
+else
+    log "Режим: ОНЛАЙН"
+fi
+
 # ─────────────────────────────────────────────────────────────────────────────
 # INSTALL WITH UV
 # ─────────────────────────────────────────────────────────────────────────────
 install_with_uv() {
-    log "⚡ uv режим"
-
-    uv venv
+    log "=== УСТАНОВКА ЧЕРЕЗ UV ==="
 
     if [ $USE_PYPROJECT -eq 1 ]; then
-        UV_ARGS=(--group build)
-        [ $USE_OFFLINE -eq 1 ] && UV_ARGS+=(--no-index --find-links="$LOCAL_PACKAGES_DIR" --frozen)
+        log "Переход в директорию бэкенда: $BACKEND_DIR"
+        cd "$BACKEND_DIR"
 
+        log "Создание виртуального окружения..."
+        uv venv
+        log_success "Виртуальное окружение создано в $BACKEND_DIR/.venv"
+
+        UV_ARGS=(--group build --group dev)
+        [ $USE_OFFLINE -eq 1 ] && UV_ARGS+=(--no-index --find-links="$LOCAL_PACKAGES_DIR")
+
+        log "Выполнение: uv sync ${UV_ARGS[*]}"
         uv sync "${UV_ARGS[@]}"
+        log_success "Зависимости установлены через uv sync"
+
+        cd "$PROJECT_ROOT"
     else
-        # dry-run
-        uv pip install "${PIP_ARGS[@]}" -r requirements.txt --dry-run
-        # install
-        uv pip install "${PIP_ARGS[@]}" -r requirements.txt
+        # Обработка requirements.txt
+        local work_dir="$(dirname "$REQUIREMENTS_FILE")"
+        cd "$work_dir"
+
+        log "Создание виртуального окружения в $work_dir..."
+        uv venv
+        log_success "Виртуальное окружение создано"
+
+        local req_basename="$(basename "$REQUIREMENTS_FILE")"
+        log "Выполнение: uv pip install из $req_basename"
+
+        uv pip install "${PIP_ARGS[@]}" -r "$req_basename" --dry-run
+        log "Dry-run выполнен успешно"
+
+        uv pip install "${PIP_ARGS[@]}" -r "$req_basename"
+        log_success "Зависимости установлены через uv pip"
+
+        cd "$PROJECT_ROOT"
     fi
 }
 
@@ -111,51 +241,69 @@ install_with_uv() {
 # INSTALL WITH PIP
 # ─────────────────────────────────────────────────────────────────────────────
 install_with_pip() {
-    log "установка через pip"
+    log "=== УСТАНОВКА ЧЕРЕЗ PIP ==="
 
-    py -3.8 -m venv .venv
-    activate_venv
+    local work_dir="$BACKEND_DIR"
+    [ -n "$REQUIREMENTS_FILE" ] && work_dir="$(dirname "$REQUIREMENTS_FILE")"
+
+    cd "$work_dir"
+
+    log "Создание виртуального окружения в $work_dir..."
+    python3 -m venv .venv || python -m venv .venv
+    log_success "Виртуальное окружение создано"
+
+    activate_venv ".venv"
 
     # обновление pip
+    log "Обновление pip до версии $PIP_VERSION..."
     python -m pip install "${PIP_ARGS[@]}" --upgrade pip=="$PIP_VERSION"
+    log_success "Pip обновлен"
 
-
-    # dry-run (если доступен)
     if python -m pip install --help | grep -q -- "--dry-run"; then
-        pip install "${PIP_ARGS[@]}" -r requirements.txt --dry-run
+        log "Выполнение dry-run..."
+        pip install "${PIP_ARGS[@]}" -r "$REQUIREMENTS_FILE" --dry-run
+        log_success "Dry-run выполнен"
     else
-        log "⚠ pip без --dry-run, пропускаем проверку"
+        log_warning "pip без --dry-run, пропускаем проверку"
     fi
 
-    pip install "${PIP_ARGS[@]}" -r requirements.txt
+    log "Установка зависимостей из $REQUIREMENTS_FILE..."
+    pip install "${PIP_ARGS[@]}" -r "$REQUIREMENTS_FILE"
+    log_success "Зависимости установлены через pip"
+
+    cd "$PROJECT_ROOT"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # INSTALL GIT HOOKS
 # ─────────────────────────────────────────────────────────────────────────────
 install_hooks() {
-    log "🔗 установка git hooks"
+    log "=== УСТАНОВКА GIT HOOKS ==="
 
-    if [ ! -d ".git" ]; then
-        echo "❌ это не git репозиторий"
-        exit 1
+    if [ ! -d "$PROJECT_ROOT/.git" ]; then
+        log_warning "Это не git репозиторий, пропускаем установку хуков"
+        return 0
     fi
 
-    if command -v uv >/dev/null 2>&1; then
-        uv run pre-commit install
-        uv run pre-commit install --hook-type commit-msg
+    # Активируем окружение, чтобы получить доступ к pre-commit
+    activate_venv "$VENV_LOCATION"
+
+    log "Установка pre-commit hooks..."
+    if pre-commit install 2>/dev/null; then
+        log_success "Git hooks установлены"
     else
-        pre-commit install
-        pre-commit install --hook-type commit-msg
+        log_warning "pre-commit не найден в окружении. Убедитесь, что он есть в зависимостях."
     fi
+    pre-commit install --hook-type commit-msg 2>/dev/null || true
 
-    log "✅ git hooks установлены"
+    # Деактивация окружения (для чистоты)
+    deactivate 2>/dev/null || true
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # RUN
 # ─────────────────────────────────────────────────────────────────────────────
-log "=== START BOOTSTRAP ==="
+START_TIME=$(date +%s)
 
 if [ $HAS_UV -eq 1 ]; then
     install_with_uv
@@ -165,4 +313,14 @@ fi
 
 install_hooks
 
-log "🎉 ГОТОВО: окружение + зависимости + git hooks готовы"
+END_TIME=$(date +%s)
+DURATION=$((END_TIME - START_TIME))
+
+log_success "=== ГОТОВО ==="
+log_success "Окружение + зависимости + git hooks готовы"
+log_success "Время выполнения: ${DURATION} секунд"
+log_success "Полный лог: $LOG_FILE"
+
+echo ""
+echo "🎉 ГОТОВО: окружение + зависимости + git hooks готовы"
+echo "📝 Лог сохранен в: $LOG_FILE"
