@@ -7,6 +7,7 @@ from logic.logic import (
     FileHandler,
     PlotManager,
     SignalManager,
+    detect_archive_project,
     unwrap_timestamp_counter,
 )
 from model.basemodel import Model
@@ -17,6 +18,47 @@ VEIK_DIAGRAM = (
     / "veik"
     / "diagram_1789700659884-2-1_22092026_203708_206256.csv"
 )
+
+
+def test_archive_project_detection_uses_headers_before_path() -> None:
+    assert (
+        detect_archive_project(
+            "D:/archives/sarz/diagram.csv",
+            ["Время ЭМП, с", "Напряжение заряда ГИТ, кВ"],
+        )
+        == "ВЭИК"
+    )
+    assert (
+        detect_archive_project(
+            "D:/archives/unknown.csv",
+            [
+                "Значение развертки. Положение ГСМ",
+                "ГСМ-А.Текущее положение",
+            ],
+        )
+        == "САРЗ"
+    )
+
+
+def test_archive_project_detection_falls_back_to_path_and_format() -> None:
+    assert detect_archive_project("D:/input/veik/archive.log", ["timestamp"]) == "ВЭИК"
+    assert detect_archive_project("D:/input/rk/archive.csv", ["дата/время"]) == "РК"
+    assert detect_archive_project("D:/input/САРЗ/archive.csv", ["time"]) == "САРЗ"
+    assert detect_archive_project("D:/input/archive.csv", ["time"], True) == "САРЗ"
+    assert detect_archive_project("D:/input/archive.csv", ["time"]) == "Не определён"
+
+
+def test_archive_project_detection_recognizes_rk_headers() -> None:
+    assert (
+        detect_archive_project(
+            "D:/input/archive.csv",
+            [
+                "Этот канал: ошибка управления ЭМП РК ВД 2",
+                "Этот канал: контур позиционирования СМ РК НД 1 в работе",
+            ],
+        )
+        == "РК"
+    )
 
 
 def test_log_format_detects_comma_delimiter_and_decimal_point() -> None:
@@ -55,6 +97,7 @@ def test_veik_diagram_detects_complete_time_axis_and_all_columns() -> None:
     assert model.is_time
     assert model.time_signal == "Время ЭМП, с"
     assert model.has_veik_dual_time
+    assert model.archive_project == "ВЭИК"
     assert list(model.dict_all_signals) == [
         "Напряжение заряда ГИТ, кВ",
         "Время ЭМП, с",

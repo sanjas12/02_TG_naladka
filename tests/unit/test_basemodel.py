@@ -45,6 +45,7 @@ def test_model_init_default_state_is_empty():
     assert model.df is None
     assert model.dict_all_signals == {}
     assert model.dict_selected_signals == {}
+    assert model.archive_project == "Не определён"
     assert model.filenames == []
     assert model.ready_plot is False
     assert model.step is None

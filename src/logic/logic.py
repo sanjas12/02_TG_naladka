@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, Iterable, List, Optional, Union
 
 import chardet
 import pandas as pd
@@ -31,6 +31,46 @@ TIME_COLUMN_ALIASES = (
     cfg.VEIK_GIT_TIME,
 )
 TIMESTAMP_COUNTER_MODULUS = 65_536
+
+
+def detect_archive_project(
+    filepath: Optional[str], signal_names: Iterable[str], is_kol_1_2: bool = False
+) -> str:
+    """Определяет проект архива по заголовкам и, во вторую очередь, по пути."""
+    normalized_signals = {str(name).strip().casefold() for name in signal_names}
+    veik_signals = {
+        cfg.VEIK_EMP_TIME.casefold(),
+        cfg.VEIK_GIT_TIME.casefold(),
+        cfg.VEIK_GIT_VOLTAGE.casefold(),
+    }
+    sarz_signals = {
+        cfg.ANALYS_AIM.casefold(),
+        cfg.GSM_A_CUR.casefold(),
+        cfg.GSM_B_CUR.casefold(),
+    }
+    if normalized_signals & veik_signals:
+        return "ВЭИК"
+    rk_signal_count = sum(
+        "рк нд" in name or "рк вд" in name or "см рк" in name
+        for name in normalized_signals
+    )
+    if rk_signal_count >= 2:
+        return "РК"
+    if is_kol_1_2 or len(normalized_signals & sarz_signals) >= 2:
+        return "САРЗ"
+
+    path_parts = (
+        {part.casefold() for part in Path(filepath).parts if part}
+        if filepath
+        else set()
+    )
+    if path_parts & {"veik", "вэик"}:
+        return "ВЭИК"
+    if path_parts & {"rk", "рк"}:
+        return "РК"
+    if path_parts & {"sarz", "сарз"}:
+        return "САРЗ"
+    return "Не определён"
 
 
 def unwrap_timestamp_counter(series: pd.Series) -> pd.Series:
@@ -149,6 +189,7 @@ class FileHandler:
             "first_filename": self.model.first_filename,
             "filenames": self.model.filenames,
             "selected_filter": self.model.selected_filter_file,
+            "archive_project": self.model.archive_project,
         }
 
 
@@ -194,6 +235,11 @@ class SignalManager:
         """Обрабатывает заголовки и определяет временные метки"""
         df = df.loc[:, ~df.columns.str.contains("^Unnamed")]
         self.model.dict_all_signals = {sig: i for i, sig in enumerate(df.columns, 1)}
+        self.model.archive_project = detect_archive_project(
+            self.model.first_filename,
+            df.columns,
+            self.model.is_kol_1_2,
+        )
 
         headers_by_normalized_name = {
             str(column).strip().casefold(): str(column) for column in df.columns
@@ -404,11 +450,14 @@ class MainLogic:
             group_box.btn_second.clicked.connect(
                 lambda _, gb=group_box, ds=dict_signal: self.remove_signal(gb, ds)
             )
-        self.ui.gb_selected_signals.ch_analyzer.stateChanged.connect(
-            self.on_checkbox_changed
+        self.ui.action_analysis_sarz_gsm.toggled.connect(
+            self.on_regulator_analysis_toggled
         )
         self.ui.action_analysis_plk_archives.triggered.connect(
             self.show_plk_archive_analysis
+        )
+        self.ui.action_add_all_veik_signals.triggered.connect(
+            self.add_all_available_signals
         )
 
     def show_plk_archive_analysis(self) -> None:
@@ -419,10 +468,21 @@ class MainLogic:
         self.plk_archive_window.raise_()
         self.plk_archive_window.activateWindow()
 
-    def on_checkbox_changed(self):
-        if self.ui.gb_selected_signals.ch_analyzer.isChecked():
-            # Добавляем сигналы только если они существуют в общем списке
-            for signal_name in [cfg.ANALYS_AIM, cfg.GSM_A_CUR, cfg.GSM_B_CUR]:
+    def add_all_available_signals(self) -> None:
+        """Добавляет все доступные измерительные сигналы в выбранные."""
+        self.model.dict_selected_signals.update(self.model.dict_all_signals)
+        self.model.dict_all_signals.clear()
+        self.ui.action_add_all_veik_signals.setEnabled(False)
+        self._update_qtable(
+            self.ui.gb_selected_signals, self.model.dict_selected_signals
+        )
+        self._update_qtable(self.ui.gb_signals, self.model.dict_all_signals)
+
+    def on_regulator_analysis_toggled(self, enabled: bool) -> None:
+        """Добавляет или убирает сигналы анализа через пункт меню САРЗ Курская."""
+        analysis_signals = (cfg.ANALYS_AIM, cfg.GSM_A_CUR, cfg.GSM_B_CUR)
+        if enabled:
+            for signal_name in analysis_signals:
                 if signal_name in self.model.dict_all_signals:
                     self.add_signal(
                         self.ui.gb_selected_signals,
@@ -430,8 +490,7 @@ class MainLogic:
                         signal_name,
                     )
         else:
-            # Удаляем сигналы только если они есть в группе
-            for signal_name in [cfg.ANALYS_AIM, cfg.GSM_A_CUR, cfg.GSM_B_CUR]:
+            for signal_name in analysis_signals:
                 if signal_name in self.model.dict_selected_signals:
                     self.remove_signal(
                         self.ui.gb_selected_signals,
@@ -458,10 +517,13 @@ class MainLogic:
             delimiter = file_param["delimiter"]
             decimal = file_param["decimal"]
             is_kol_1_2 = file_param["is_kol_1_2"]
+            archive_project = file_param["archive_project"]
 
             self.ui.ql_info.setText(
                 f"Исходные файлы: {file} \n"
-                f"Delimiter: {delimiter} Decimal: {decimal} Кольский САРЗ 1,2 блок: {is_kol_1_2} "
+                f"Delimiter: {delimiter} Decimal: {decimal} "
+                f"Кольский САРЗ 1,2 блок: {is_kol_1_2} "
+                f"Проект: {archive_project}"
             )
 
             self._update_ui()
@@ -475,8 +537,12 @@ class MainLogic:
         self.model.clear_state()
         self.ui.ql_info.setText("")
         self.ui.button_graph.setEnabled(False)
-        self.ui.gb_selected_signals.ch_analyzer.setEnabled(False)
-        self.ui.gb_selected_signals.ch_analyzer.setChecked(False)
+        self.ui.action_add_all_veik_signals.setEnabled(False)
+        analysis_action = self.ui.action_analysis_sarz_gsm
+        analysis_action.setEnabled(False)
+        was_blocked = analysis_action.blockSignals(True)
+        analysis_action.setChecked(False)
+        analysis_action.blockSignals(was_blocked)
         self.ui.gb_x_axe.enable_first_btn = False
         self.ui.gb_x_axe.enable_second_btn = False
 
@@ -496,13 +562,20 @@ class MainLogic:
         self._update_qtable(self.ui.gb_signals, self.model.dict_all_signals)
         self._setup_time_axis()
         self.ui.button_graph.setEnabled(True)
+        self.ui.action_add_all_veik_signals.setEnabled(
+            self.model.has_veik_dual_time and bool(self.model.dict_all_signals)
+        )
         required_analysis_signals = {
             cfg.ANALYS_AIM,
             cfg.GSM_A_CUR,
             cfg.GSM_B_CUR,
         }
-        if required_analysis_signals.issubset(self.model.dict_all_signals):
-            self.ui.gb_selected_signals.ch_analyzer.setEnabled(True)
+        available_signals = (
+            self.model.dict_all_signals.keys() | self.model.dict_selected_signals.keys()
+        )
+        self.ui.action_analysis_sarz_gsm.setEnabled(
+            required_analysis_signals.issubset(available_signals)
+        )
 
     def _update_qtable(
         self, group_box: MyGroupBox, dict_signals: Dict[str, int]

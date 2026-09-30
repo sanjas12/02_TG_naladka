@@ -8,7 +8,6 @@ from PyQt5.QtWidgets import (
     QAbstractItemView,
     QAction,
     QApplication,
-    QCheckBox,
     QDialog,
     QGridLayout,
     QGroupBox,
@@ -87,7 +86,6 @@ class MainWindowUI(QMainWindow):
             title=AxeName.LIST_SIGNALS.value,
             name_first_button="Open files",
             enable_second_btn=False,
-            enable_analyzer=False,
             enable_filter=True,
         )
         self.gb_selected_signals = MyGroupBox(title=AxeName.SELECTED_SIGNALS.value)
@@ -95,7 +93,6 @@ class MainWindowUI(QMainWindow):
             title=AxeName.TIME_AXE.value,
             enable_first_btn=False,
             enable_second_btn=False,
-            enable_analyzer=False,
         )
 
         # Первый горизонтальный слой
@@ -159,13 +156,15 @@ class MainWindowUI(QMainWindow):
 
         rk_kalina_4: QMenu = analysis_menu.addMenu("РК Калина 4")
 
-        self.action_analysis_sarz_gsm = QAction("Анализ регулятора ГСМ", self)
-        rk_kalina_4.addAction(self.action_analysis_sarz_gsm)
+        self.action_analysis_rk_gsm = QAction("Анализ регулятора ГСМ", self)
+        rk_kalina_4.addAction(self.action_analysis_rk_gsm)
 
         ##── Подменю САРЗ Курская ─────────────────────────────────────────────
         sarz_kuaes_menu: QMenu = analysis_menu.addMenu("САРЗ Курская")
 
         self.action_analysis_sarz_gsm = QAction("Анализ регулятора ГСМ", self)
+        self.action_analysis_sarz_gsm.setCheckable(True)
+        self.action_analysis_sarz_gsm.setEnabled(False)
         sarz_kuaes_menu.addAction(self.action_analysis_sarz_gsm)
 
         self.action_analysis_plk_archives = QAction("Анализ архивов PLC", self)
@@ -190,6 +189,11 @@ class MainWindowUI(QMainWindow):
 
         self.vd = QAction("VD", self)
         rk_kalina4_menu.addAction(self.vd)
+
+        veik_menu: QMenu = quick_add_signals_menu.addMenu("ВЭИК")
+        self.action_add_all_veik_signals = QAction("Все сигналы", self)
+        self.action_add_all_veik_signals.setEnabled(False)
+        veik_menu.addAction(self.action_add_all_veik_signals)
 
         # ── Настройки ────────────────────────────────────────────────────────
         settings_menu: QMenu = menu_bar.addMenu("Настройки")
@@ -297,7 +301,6 @@ class MyGroupBox(QGroupBox):
         name_second_button: str = "Remove from Axe",
         enable_first_btn: bool = True,
         enable_second_btn: bool = True,
-        enable_analyzer: bool = True,
         enable_filter: bool = False,
     ):
         super().__init__(title)
@@ -317,18 +320,12 @@ class MyGroupBox(QGroupBox):
 
         self.btn_first = self._create_button(name_first_button, enable_first_btn)
         self.btn_second = self._create_button(name_second_button, enable_second_btn)
-        self.ch_analyzer = QCheckBox("Анализ регулятора ГСМ")
-        self.ch_analyzer.setEnabled(False)
-        self.ch_analyzer.setChecked(False)
-
         layout = QVBoxLayout()
         if self.filter_input:
             layout.addWidget(self.filter_input)
         layout.addWidget(self.qtable_axe)
         layout.addWidget(self.btn_first)
         layout.addWidget(self.btn_second)
-        if enable_analyzer:
-            layout.addWidget(self.ch_analyzer)
         self.setLayout(layout)
 
     def _create_button(self, name: str, is_enabled: bool) -> QPushButton:

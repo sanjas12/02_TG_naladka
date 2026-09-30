@@ -9,6 +9,7 @@ import pandas as pd
 from PyQt5.QtWidgets import QApplication
 
 import config.config as cfg
+from logic.logic import MainLogic
 from ui.graph_matplot import WindowGraph
 from ui.main_window import MainWindowUI
 
@@ -26,6 +27,119 @@ def test_main_window_has_single_selected_signals_group() -> None:
 
     assert window.gb_selected_signals.title() == "Выбранные сигналы"
     assert not hasattr(window, "gb_secondary_axe")
+    assert not hasattr(window.gb_selected_signals, "ch_analyzer")
+
+    analysis_menu = next(
+        action.menu()
+        for action in window.menuBar().actions()
+        if action.text() == "Анализ"
+    )
+    kursk_menu = next(
+        action.menu()
+        for action in analysis_menu.actions()
+        if action.text() == "САРЗ Курская"
+    )
+    action = window.action_analysis_sarz_gsm
+    assert action in kursk_menu.actions()
+    assert action.isCheckable()
+    assert not action.isEnabled()
+
+    window.close()
+    application.processEvents()
+
+
+def test_veik_menu_adds_all_available_signals(monkeypatch) -> None:
+    application = _application()
+    window = MainWindowUI("test")
+    logic = MainLogic(window)
+    logic.model.time_signal = cfg.VEIK_EMP_TIME
+    logic.model.has_veik_dual_time = True
+    logic.model.dict_all_signals.update(
+        {
+            "Напряжение заряда ГИТ, кВ": 2,
+            "Положение верхнего пуансона, мм": 4,
+            "Усилие верхнего ЭМП, кН": 6,
+        }
+    )
+    monkeypatch.setattr(logic, "_setup_time_axis", lambda: None)
+    logic._update_ui()
+    assert window.action_add_all_veik_signals.isEnabled()
+
+    window.action_add_all_veik_signals.trigger()
+
+    assert logic.model.dict_all_signals == {}
+    assert logic.model.dict_selected_signals == {
+        "Напряжение заряда ГИТ, кВ": 2,
+        "Положение верхнего пуансона, мм": 4,
+        "Усилие верхнего ЭМП, кН": 6,
+    }
+    assert cfg.VEIK_EMP_TIME not in logic.model.dict_selected_signals
+    assert window.gb_signals.qtable_axe.rowCount() == 0
+    assert window.gb_selected_signals.qtable_axe.rowCount() == 3
+    assert not window.action_add_all_veik_signals.isEnabled()
+
+    window.close()
+    application.processEvents()
+
+
+def test_loaded_archive_project_is_shown_in_info_line(monkeypatch) -> None:
+    application = _application()
+    window = MainWindowUI("test")
+    logic = MainLogic(window)
+    monkeypatch.setattr(logic.file_handler, "open_files", lambda _ui: True)
+    monkeypatch.setattr(logic.file_handler, "analyze_file", lambda _path: True)
+    monkeypatch.setattr(logic.signal_manager, "load_all_signals", lambda: True)
+    monkeypatch.setattr(logic, "_update_ui", lambda: None)
+    monkeypatch.setattr(
+        logic.file_handler,
+        "get_file_params",
+        lambda: {
+            "first_filename": "D:/input/rk/archive.csv",
+            "delimiter": ";",
+            "decimal": ",",
+            "is_kol_1_2": False,
+            "archive_project": "РК",
+        },
+    )
+
+    logic.load_and_prepare_data()
+
+    assert "Проект: РК" in window.ql_info.text()
+    window.close()
+    application.processEvents()
+
+
+def test_kursk_regulator_menu_adds_and_removes_analysis_signals(monkeypatch) -> None:
+    application = _application()
+    window = MainWindowUI("test")
+    logic = MainLogic(window)
+    analysis_signals = (cfg.ANALYS_AIM, cfg.GSM_A_CUR, cfg.GSM_B_CUR)
+    logic.model.dict_all_signals.update(
+        {signal: index for index, signal in enumerate(analysis_signals, start=1)}
+    )
+    monkeypatch.setattr(logic, "_setup_time_axis", lambda: None)
+    logic._update_ui()
+    assert window.action_analysis_sarz_gsm.isEnabled()
+
+    window.action_analysis_sarz_gsm.trigger()
+    assert window.action_analysis_sarz_gsm.isChecked()
+    assert set(logic.model.dict_selected_signals) == set(analysis_signals)
+    assert not logic.model.dict_all_signals
+    assert window.gb_selected_signals.qtable_axe.rowCount() == 3
+
+    window.action_analysis_sarz_gsm.trigger()
+    assert not window.action_analysis_sarz_gsm.isChecked()
+    assert not logic.model.dict_selected_signals
+    assert set(logic.model.dict_all_signals) == set(analysis_signals)
+    assert window.gb_selected_signals.qtable_axe.rowCount() == 0
+
+    logic._clear_state()
+    assert not window.action_analysis_sarz_gsm.isEnabled()
+    assert not window.action_analysis_sarz_gsm.isChecked()
+
+    logic.model.dict_all_signals.update({cfg.ANALYS_AIM: 1, cfg.GSM_A_CUR: 2})
+    logic._update_ui()
+    assert not window.action_analysis_sarz_gsm.isEnabled()
 
     window.close()
     application.processEvents()

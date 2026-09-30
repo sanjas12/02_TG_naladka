@@ -21,6 +21,7 @@ class Model:
     is_time: bool = False
     is_ms: bool = False
     has_veik_dual_time: bool = False
+    archive_project: str = "Не определён"
     ready_plot: bool = False
     ready_to_analysis: bool = False
 
@@ -46,6 +47,7 @@ class Model:
         self.df = None
         self.dict_all_signals.clear()
         self.dict_selected_signals.clear()
+        self.archive_project = "Не определён"
         # self.time_signal = None
         self.ready_plot = False
         self.ready_to_analysis = False
