@@ -319,6 +319,7 @@ def test_time_measurement_on_numeric_x_axis(tmp_path, monkeypatch) -> None:
 
     assert window.measurement_points == [0.25, 1.75]
     assert window.measurement_status.text() == "Δt: 1.500 с — перетащите A или B"
+    assert axis.get_ylabel() == "signal (Δ: +2.000)"
     assert window.clear_measurement_button.isEnabled()
     assert any(
         "Начало: 0.250 с" in artist.get_text()
@@ -329,6 +330,7 @@ def test_time_measurement_on_numeric_x_axis(tmp_path, monkeypatch) -> None:
     window._clear_time_measurement()
     assert window.measurement_points == []
     assert window.measurement_status.text() == "Выберите начало"
+    assert axis.get_ylabel() == "signal"
     window.close()
     application.processEvents()
 
@@ -460,6 +462,18 @@ def test_veik_voltage_uses_git_time_on_shared_x_axis(tmp_path, monkeypatch) -> N
     window._set_marker_from_x(2.0)
     assert window.marker_labels[cfg.VEIK_GIT_VOLTAGE].get_text() == "20.000"
     assert window.marker_labels["Положение верхнего пуансона, мм"].get_text() == "7.000"
+
+    window.measurement_button.setChecked(True)
+    window.measurement_points = [1.8, 3.9]
+    window._render_time_measurement()
+    assert (
+        window.signal_axes[cfg.VEIK_GIT_VOLTAGE].get_ylabel()
+        == f"{cfg.VEIK_GIT_VOLTAGE} (Δ: +10.000)"
+    )
+    assert (
+        window.signal_axes["Положение верхнего пуансона, мм"].get_ylabel()
+        == "Положение верхнего пуансона, мм (Δ: +2.000)"
+    )
 
     window.close()
     application.processEvents()

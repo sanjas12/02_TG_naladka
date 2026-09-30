@@ -721,6 +721,7 @@ class WindowGraph(QMainWindow):
         self.measurement_artists.clear()
         self.measurement_points.clear()
         self.dragging_measurement_index = None
+        self._restore_signal_axis_labels()
         self.clear_measurement_button.setEnabled(False)
         self.measurement_status.setText(
             "Выберите начало" if self.measurement_button.isChecked() else ""
@@ -844,6 +845,7 @@ class WindowGraph(QMainWindow):
         )
         self.measurement_artists.append(span)
         delta_seconds = self._measurement_delta_seconds(start, end)
+        self._update_signal_axis_deltas(start, end)
         text = (
             f"Начало: {self._format_measurement_position(start)}\n"
             f"Конец: {self._format_measurement_position(end)}\n"
@@ -871,6 +873,40 @@ class WindowGraph(QMainWindow):
         self.measurement_status.setText(
             f"Δt: {self._format_time_delta(delta_seconds)} — перетащите A или B"
         )
+
+    def _restore_signal_axis_labels(self) -> None:
+        """Восстанавливает исходные подписи осей Y без результатов измерения."""
+        for signal, axis in self.signal_axes.items():
+            axis.set_ylabel(signal)
+
+    def _signal_value_at_measurement_position(
+        self, signal: str, position: float
+    ) -> Optional[float]:
+        """Возвращает значение сигнала в ближайшей фактической точке по X."""
+        line = self.signal_lines.get(signal)
+        if line is None:
+            return None
+        try:
+            x_values = np.asarray(line.get_xdata(orig=False), dtype=float)
+            y_values = np.asarray(line.get_ydata(orig=False), dtype=float)
+        except (TypeError, ValueError):
+            return None
+        valid = np.isfinite(x_values) & np.isfinite(y_values)
+        if not valid.any():
+            return None
+        valid_indexes = np.flatnonzero(valid)
+        nearest_valid = int(np.argmin(np.abs(x_values[valid] - position)))
+        return float(y_values[valid_indexes[nearest_valid]])
+
+    def _update_signal_axis_deltas(self, start: float, end: float) -> None:
+        """Добавляет к каждой подписи Y изменение сигнала от A к B."""
+        for signal, axis in self.signal_axes.items():
+            start_value = self._signal_value_at_measurement_position(signal, start)
+            end_value = self._signal_value_at_measurement_position(signal, end)
+            if start_value is None or end_value is None:
+                axis.set_ylabel(f"{signal} (Δ: нет данных)")
+                continue
+            axis.set_ylabel(f"{signal} (Δ: {end_value - start_value:+.3f})")
 
     def _datetime_at_plot_position(self, position: float) -> Optional[pd.Timestamp]:
         """Интерполирует календарное время для позиционной оси X."""
