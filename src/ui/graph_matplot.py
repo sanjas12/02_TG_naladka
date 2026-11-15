@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.lines import Line2D
 from matplotlib.text import Annotation, Text
 from PyQt5.QtWidgets import (
     QApplication,
@@ -38,6 +39,8 @@ import config.config as cfg  # noqa: E402
 from logic.regulator_analyzer import RegulatorAnalyzer  # noqa: E402
 
 logger = logging.getLogger(__name__)
+
+MEASUREMENT_COLORS = ("#e11d48", "#7c3aed")
 
 
 class WindowGraph(QMainWindow):
@@ -791,28 +794,31 @@ class WindowGraph(QMainWindow):
         axis = self.ax1
         if axis is None:
             return
-        colors = ("#e11d48", "#7c3aed")
         labels = ("A", "B")
-        y_min = axis.get_ylim()[0]
+        x_axis_transform = axis.get_xaxis_transform()
         for index, value in enumerate(self.measurement_points):
-            color = colors[index]
+            color = MEASUREMENT_COLORS[index]
             line = axis.axvline(
                 value, color=color, linewidth=1.5, linestyle="--", zorder=8
             )
             self.measurement_artists.append(line)
-            (handle,) = axis.plot(
+            # Декорация привязана к низу графика и не входит в пределы данных.
+            handle = Line2D(
                 [value],
-                [y_min],
+                [0],
+                transform=x_axis_transform,
                 marker="o",
                 markersize=7,
                 color=color,
                 markeredgecolor="white",
                 zorder=9,
             )
+            axis.add_artist(handle)
             self.measurement_artists.append(handle)
             label = axis.annotate(
                 labels[index],
-                xy=(value, y_min),
+                xy=(value, 0),
+                xycoords=x_axis_transform,
                 xytext=(0, 8),
                 textcoords="offset points",
                 ha="center",
@@ -830,7 +836,7 @@ class WindowGraph(QMainWindow):
         self.clear_measurement_button.setEnabled(bool(self.measurement_points))
 
     def _complete_time_measurement(self) -> None:
-        """Подсвечивает интервал и показывает начало, конец и Δt."""
+        """Подсвечивает интервал и показывает Δt и дельты сигналов."""
         axis = self.ax1
         if axis is None:
             return
@@ -845,12 +851,17 @@ class WindowGraph(QMainWindow):
         )
         self.measurement_artists.append(span)
         delta_seconds = self._measurement_delta_seconds(start, end)
-        self._update_signal_axis_deltas(start, end)
-        text = (
-            f"Начало: {self._format_measurement_position(start)}\n"
-            f"Конец: {self._format_measurement_position(end)}\n"
-            f"Δt: {self._format_time_delta(delta_seconds)}"
+        signal_deltas = self._update_signal_axis_deltas(start, end)
+        result_lines = [
+            f"Начало: {self._format_measurement_position(start)}",
+            f"Конец: {self._format_measurement_position(end)}",
+            f"Δt: {self._format_time_delta(delta_seconds)}",
+        ]
+        result_lines.extend(
+            f"Δ {signal}: " + ("нет данных" if delta is None else f"{delta:+.3f}")
+            for signal, delta in signal_deltas.items()
         )
+        text = "\n".join(result_lines)
         annotation = axis.annotate(
             text,
             xy=(end, axis.get_ylim()[0]),
@@ -898,15 +909,42 @@ class WindowGraph(QMainWindow):
         nearest_valid = int(np.argmin(np.abs(x_values[valid] - position)))
         return float(y_values[valid_indexes[nearest_valid]])
 
-    def _update_signal_axis_deltas(self, start: float, end: float) -> None:
-        """Добавляет к каждой подписи Y изменение сигнала от A к B."""
+    def _update_signal_axis_deltas(
+        self, start: float, end: float
+    ) -> dict[str, Optional[float]]:
+        """Обновляет подписи Y и возвращает изменения сигналов от A к B."""
+        signal_deltas: dict[str, Optional[float]] = {}
         for signal, axis in self.signal_axes.items():
             start_value = self._signal_value_at_measurement_position(signal, start)
             end_value = self._signal_value_at_measurement_position(signal, end)
             if start_value is None or end_value is None:
+                signal_deltas[signal] = None
                 axis.set_ylabel(f"{signal} (Δ: нет данных)")
                 continue
-            axis.set_ylabel(f"{signal} (Δ: {end_value - start_value:+.3f})")
+            for label, value, color, offset in zip(
+                ("A", "B"), (start_value, end_value), MEASUREMENT_COLORS, (9, -9)
+            ):
+                endpoint = axis.annotate(
+                    label,
+                    xy=(0, value),
+                    xycoords=lambda renderer, signal_axis=axis: (
+                        signal_axis.get_yaxis_transform(which="tick1")
+                    ),
+                    xytext=(offset, 0),
+                    textcoords="offset points",
+                    ha="center",
+                    va="center",
+                    color=color,
+                    fontsize=8,
+                    fontweight="bold",
+                    arrowprops={"arrowstyle": "-", "color": color, "shrinkB": 0},
+                    zorder=11,
+                )
+                self.measurement_artists.append(endpoint)
+            delta = end_value - start_value
+            signal_deltas[signal] = delta
+            axis.set_ylabel(f"{signal} (Δ: {delta:+.3f})")
+        return signal_deltas
 
     def _datetime_at_plot_position(self, position: float) -> Optional[pd.Timestamp]:
         """Интерполирует календарное время для позиционной оси X."""

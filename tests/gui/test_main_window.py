@@ -358,15 +358,25 @@ def test_time_measurement_on_numeric_x_axis(tmp_path, monkeypatch) -> None:
     assert window.measurement_points == [0.25, 1.75]
     assert window.measurement_status.text() == "Δt: 1.500 с — перетащите A или B"
     assert axis.get_ylabel() == "signal (Δ: +2.000)"
+    assert [
+        (artist.get_text(), artist.xy)
+        for artist in window.measurement_artists
+        if getattr(artist, "axes", None) is axis
+        and hasattr(artist, "get_text")
+        and artist.get_text() in ("A", "B")
+    ][-2:] == [("A", (0, 1.0)), ("B", (0, 3.0))]
     assert window.clear_measurement_button.isEnabled()
     assert any(
         "Начало: 0.250 с" in artist.get_text()
+        and "Δt: 1.500 с" in artist.get_text()
+        and "Δ signal: +2.000" in artist.get_text()
         for artist in window.measurement_artists
         if hasattr(artist, "get_text")
     )
 
     window._clear_time_measurement()
     assert window.measurement_points == []
+    assert window.measurement_artists == []
     assert window.measurement_status.text() == "Выберите начало"
     assert axis.get_ylabel() == "signal"
     window.close()
@@ -501,6 +511,10 @@ def test_veik_voltage_uses_git_time_on_shared_x_axis(tmp_path, monkeypatch) -> N
     assert window.marker_labels[cfg.VEIK_GIT_VOLTAGE].get_text() == "20.000"
     assert window.marker_labels["Положение верхнего пуансона, мм"].get_text() == "7.000"
 
+    voltage_axis = window.signal_axes[cfg.VEIK_GIT_VOLTAGE]
+    voltage_axis.set_autoscaley_on(True)
+    window.canvas.draw()
+    initial_ylim = voltage_axis.get_ylim()
     window.measurement_button.setChecked(True)
     window.measurement_points = [1.8, 3.9]
     window._render_time_measurement()
@@ -512,6 +526,22 @@ def test_veik_voltage_uses_git_time_on_shared_x_axis(tmp_path, monkeypatch) -> N
         window.signal_axes["Положение верхнего пуансона, мм"].get_ylabel()
         == "Положение верхнего пуансона, мм (Δ: +2.000)"
     )
+    assert any(
+        f"Δ {cfg.VEIK_GIT_VOLTAGE}: +10.000" in artist.get_text()
+        and "Δ Положение верхнего пуансона, мм: +2.000" in artist.get_text()
+        for artist in window.measurement_artists
+        if hasattr(artist, "get_text")
+    )
+    window.dragging_measurement_index = 1
+    for position in (3.5, 3.0, 2.7):
+        window._on_measurement_drag(
+            SimpleNamespace(inaxes=voltage_axis, xdata=position)
+        )
+        window.canvas.draw()
+        assert voltage_axis.get_ylim() == initial_ylim
+
+    assert window.measurement_points == [1.8, 2.7]
+    assert voltage_axis.get_ylabel() == f"{cfg.VEIK_GIT_VOLTAGE} (Δ: +0.000)"
 
     window.close()
     application.processEvents()
