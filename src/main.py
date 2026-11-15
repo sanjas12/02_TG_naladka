@@ -1,3 +1,4 @@
+import ctypes
 import logging
 import os
 import sys
@@ -102,12 +103,19 @@ def main() -> None:
     t0 = time.monotonic()
 
     try:
-        app = QApplication(sys.argv)
-        if not getattr(sys, "frozen", False):
-            icon_path = (
-                Path(__file__).resolve().parents[1] / "assets" / "TG-Naladka.ico"
+        if sys.platform == "win32":
+            result = ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+                "TG-Naladka.ArchiveViewer"
             )
-            app.setWindowIcon(QIcon(str(icon_path)))
+            if result != 0:
+                logger.warning("Не удалось установить AppUserModelID: %s", result)
+
+        app = QApplication(sys.argv)
+        if getattr(sys, "frozen", False):
+            app_dir = Path(sys.executable).resolve().parent
+        else:
+            app_dir = Path(__file__).resolve().parents[1]
+        app.setWindowIcon(QIcon(str(app_dir / "assets" / "TG-Naladka.ico")))
         app.setStyleSheet(app_stylesheet())
 
         main_window = MainWindowUI()

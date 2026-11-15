@@ -27,10 +27,12 @@ output_name = f"{__app_name__}-{__version__}+{__revision__}-{_sys}_{_arch}-py{_p
 project_root = os.path.dirname(os.path.abspath(__file__))
 src_root = os.path.join(project_root, "src")
 build_dir = os.path.join("build", output_name)
+icon_relative_path = os.path.join("assets", "TG-Naladka.ico")
+icon_path = os.path.join(project_root, icon_relative_path)
 
 
 def get_include_files() -> List[Tuple[str, str]]:
-    files: List[Tuple[str, str]] = []
+    files: List[Tuple[str, str]] = [(icon_path, icon_relative_path)]
     config_path = os.path.join(project_root, "settings.json")
     if os.path.exists(config_path):
         files.append((config_path, "settings.json"))
@@ -136,7 +138,7 @@ setup(
             os.path.join(src_root, "main.py"),
             target_name=exe_name,
             base="Win32GUI",  # раскомментировать чтобы скрыть консоль на Windows
-            icon=os.path.join(project_root, "assets", "TG-Naladka.ico"),
+            icon=icon_path,
         )
     ],
 )
