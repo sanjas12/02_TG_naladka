@@ -136,6 +136,7 @@ setup(
             os.path.join(src_root, "main.py"),
             target_name=exe_name,
             base="Win32GUI",  # раскомментировать чтобы скрыть консоль на Windows
+            icon=os.path.join(project_root, "assets", "TG-Naladka.ico"),
         )
     ],
 )
