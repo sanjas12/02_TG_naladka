@@ -3,8 +3,10 @@ import os
 import sys
 import time
 import traceback
+from pathlib import Path
 from typing import Any, Dict
 
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QMessageBox
 
 import config.config as cfg
@@ -101,6 +103,11 @@ def main() -> None:
 
     try:
         app = QApplication(sys.argv)
+        if not getattr(sys, "frozen", False):
+            icon_path = (
+                Path(__file__).resolve().parents[1] / "assets" / "TG-Naladka.ico"
+            )
+            app.setWindowIcon(QIcon(str(icon_path)))
         app.setStyleSheet(app_stylesheet())
 
         main_window = MainWindowUI()
