@@ -76,6 +76,7 @@ _DEFAULTS: Final[Dict[str, Any]] = {
     "GSM_A_CUR": "ГСМ-А.Текущее положение",
     "GSM_B_CUR": "ГСМ-Б.Текущее положение",
     "PLC_ARCHIVE_SHORTCUT": "D",
+    "ADD_ALL_SIGNALS_SHORTCUT": "A",
     "PLC_ARCHIVE_EVENT_WINDOW_SECONDS": 1.0,
     "PLC_ARCHIVE_MIN_TIME_WINDOW_SECONDS": 0.2,
 }
@@ -134,7 +135,7 @@ def load_runtime_settings() -> None:
     global ANALYS_AIM, FONT_FAMILY, FONT_SIZE, GSM_A_CUR, GSM_B_CUR
     global JUMP_THRESHOLD_MM, LEVEL_LOG, MAX_JUMP_THRESHOLD_MM
     global PLC_ARCHIVE_EVENT_WINDOW_SECONDS, PLC_ARCHIVE_MIN_TIME_WINDOW_SECONDS
-    global PLC_ARCHIVE_SHORTCUT
+    global ADD_ALL_SIGNALS_SHORTCUT, PLC_ARCHIVE_SHORTCUT
     global TICK_MARK_COUNT_X, TICK_MARK_COUNT_Y
     global _SETTINGS
 
@@ -168,6 +169,8 @@ def load_runtime_settings() -> None:
     GSM_B_CUR = str(_get("GSM_B_CUR", _DEFAULTS["GSM_B_CUR"]))
     loaded_shortcut = str(_get("PLC_ARCHIVE_SHORTCUT", "D")).strip()
     PLC_ARCHIVE_SHORTCUT = loaded_shortcut or "D"
+    loaded_add_all_shortcut = str(_get("ADD_ALL_SIGNALS_SHORTCUT", "A")).strip()
+    ADD_ALL_SIGNALS_SHORTCUT = loaded_add_all_shortcut or "A"
     try:
         PLC_ARCHIVE_EVENT_WINDOW_SECONDS = float(
             _get("PLC_ARCHIVE_EVENT_WINDOW_SECONDS", 1.0)
@@ -243,6 +246,7 @@ GSM_A_CUR: str = _get("GSM_A_CUR", "ГСМ-А.Текущее положение"
 GSM_B_CUR: str = _get("GSM_B_CUR", "ГСМ-Б.Текущее положение")
 
 PLC_ARCHIVE_SHORTCUT: str = str(_get("PLC_ARCHIVE_SHORTCUT", "D"))
+ADD_ALL_SIGNALS_SHORTCUT: str = str(_get("ADD_ALL_SIGNALS_SHORTCUT", "A"))
 PLC_ARCHIVE_EVENT_WINDOW_SECONDS: float = float(
     _get("PLC_ARCHIVE_EVENT_WINDOW_SECONDS", 1.0)
 )
@@ -263,6 +267,25 @@ def save_plc_archive_shortcut(shortcut: str) -> None:
     _save_settings(updated_settings)
     _SETTINGS = updated_settings
     PLC_ARCHIVE_SHORTCUT = normalized_shortcut
+
+
+def save_shortcuts(plc_archive_shortcut: str, add_all_signals_shortcut: str) -> None:
+    """Сохраняет назначения горячих клавиш одним обновлением файла."""
+    normalized_plc = plc_archive_shortcut.strip()
+    normalized_add_all = add_all_signals_shortcut.strip()
+    if not normalized_plc or not normalized_add_all:
+        raise ValueError("Горячая клавиша не может быть пустой")
+    if normalized_plc.casefold() == normalized_add_all.casefold():
+        raise ValueError("Горячие клавиши не должны совпадать")
+
+    global ADD_ALL_SIGNALS_SHORTCUT, PLC_ARCHIVE_SHORTCUT, _SETTINGS
+    updated_settings = {**_DEFAULTS, **_SETTINGS}
+    updated_settings["PLC_ARCHIVE_SHORTCUT"] = normalized_plc
+    updated_settings["ADD_ALL_SIGNALS_SHORTCUT"] = normalized_add_all
+    _save_settings(updated_settings)
+    _SETTINGS = updated_settings
+    PLC_ARCHIVE_SHORTCUT = normalized_plc
+    ADD_ALL_SIGNALS_SHORTCUT = normalized_add_all
 
 
 def save_plc_archive_event_window(seconds: float) -> None:

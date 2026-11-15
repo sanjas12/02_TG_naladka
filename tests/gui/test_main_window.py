@@ -6,6 +6,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import matplotlib.ticker as ticker
 import numpy as np
 import pandas as pd
+from PyQt5.QtCore import Qt
+from PyQt5.QtTest import QTest
 from PyQt5.QtWidgets import QApplication
 
 import config.config as cfg
@@ -64,6 +66,7 @@ def test_veik_menu_adds_all_available_signals(monkeypatch) -> None:
     monkeypatch.setattr(logic, "_setup_time_axis", lambda: None)
     logic._update_ui()
     assert window.action_add_all_veik_signals.isEnabled()
+    assert window.action_add_all_signals.isEnabled()
 
     window.action_add_all_veik_signals.trigger()
 
@@ -77,6 +80,41 @@ def test_veik_menu_adds_all_available_signals(monkeypatch) -> None:
     assert window.gb_signals.qtable_axe.rowCount() == 0
     assert window.gb_selected_signals.qtable_axe.rowCount() == 3
     assert not window.action_add_all_veik_signals.isEnabled()
+    assert not window.action_add_all_signals.isEnabled()
+
+    window.close()
+    application.processEvents()
+
+
+def test_general_add_all_action_works_for_any_project(monkeypatch) -> None:
+    application = _application()
+    window = MainWindowUI("test")
+    logic = MainLogic(window)
+    logic.model.dict_all_signals.update({"Первый": 1, "Второй": 2})
+    monkeypatch.setattr(logic, "_setup_time_axis", lambda: None)
+
+    logic._update_ui()
+
+    assert window.action_add_all_signals.shortcut().toString() == "A"
+    assert window.action_add_all_signals.isEnabled()
+    assert not window.action_add_all_veik_signals.isEnabled()
+    window.show()
+    filter_input = window.gb_signals.filter_input
+    assert filter_input is not None
+    filter_input.setFocus()
+    QTest.keyClick(filter_input, Qt.Key_A)
+    application.processEvents()
+    assert filter_input.text().casefold() == "a"
+    assert logic.model.dict_all_signals == {"Первый": 1, "Второй": 2}
+    filter_input.clear()
+    filter_input.clearFocus()
+    window.activateWindow()
+    QTest.keyClick(window, Qt.Key_A)
+    application.processEvents()
+    assert logic.model.dict_all_signals == {}
+    assert logic.model.dict_selected_signals == {"Первый": 1, "Второй": 2}
+    assert window.gb_selected_signals.qtable_axe.rowCount() == 2
+    assert not window.action_add_all_signals.isEnabled()
 
     window.close()
     application.processEvents()

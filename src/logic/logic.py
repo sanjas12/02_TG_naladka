@@ -459,6 +459,7 @@ class MainLogic:
         self.ui.action_add_all_veik_signals.triggered.connect(
             self.add_all_available_signals
         )
+        self.ui.action_add_all_signals.triggered.connect(self.add_all_available_signals)
 
     def show_plk_archive_analysis(self) -> None:
         """Открывает сравнение архивов двух каналов PLC."""
@@ -472,7 +473,7 @@ class MainLogic:
         """Добавляет все доступные измерительные сигналы в выбранные."""
         self.model.dict_selected_signals.update(self.model.dict_all_signals)
         self.model.dict_all_signals.clear()
-        self.ui.action_add_all_veik_signals.setEnabled(False)
+        self._update_add_all_actions()
         self._update_qtable(
             self.ui.gb_selected_signals, self.model.dict_selected_signals
         )
@@ -537,7 +538,7 @@ class MainLogic:
         self.model.clear_state()
         self.ui.ql_info.setText("")
         self.ui.button_graph.setEnabled(False)
-        self.ui.action_add_all_veik_signals.setEnabled(False)
+        self._update_add_all_actions()
         analysis_action = self.ui.action_analysis_sarz_gsm
         analysis_action.setEnabled(False)
         was_blocked = analysis_action.blockSignals(True)
@@ -562,9 +563,7 @@ class MainLogic:
         self._update_qtable(self.ui.gb_signals, self.model.dict_all_signals)
         self._setup_time_axis()
         self.ui.button_graph.setEnabled(True)
-        self.ui.action_add_all_veik_signals.setEnabled(
-            self.model.has_veik_dual_time and bool(self.model.dict_all_signals)
-        )
+        self._update_add_all_actions()
         required_analysis_signals = {
             cfg.ANALYS_AIM,
             cfg.GSM_A_CUR,
@@ -575,6 +574,14 @@ class MainLogic:
         )
         self.ui.action_analysis_sarz_gsm.setEnabled(
             required_analysis_signals.issubset(available_signals)
+        )
+
+    def _update_add_all_actions(self) -> None:
+        """Обновляет доступность общих и проектных команд добавления сигналов."""
+        has_available_signals = bool(self.model.dict_all_signals)
+        self.ui.action_add_all_signals.setEnabled(has_available_signals)
+        self.ui.action_add_all_veik_signals.setEnabled(
+            self.model.has_veik_dual_time and has_available_signals
         )
 
     def _update_qtable(
@@ -693,6 +700,7 @@ class MainLogic:
         # Обновляем таблицы
         self._update_qtable(group_box, dict_signals)
         self._update_qtable(self.ui.gb_signals, self.model.dict_all_signals)
+        self._update_add_all_actions()
 
         # self.ui.gb_signals.qtable_axe.selectRow(current_row)
 
@@ -730,6 +738,7 @@ class MainLogic:
         # Обновляем таблицы
         self._update_qtable(group_box, dict_signals)
         self._update_qtable(self.ui.gb_signals, self.model.dict_all_signals)
+        self._update_add_all_actions()
 
         # # Восстанавливаем фокус (если удаляли по текущей строке)
         # if signal_name is None:

@@ -55,10 +55,14 @@ class CreateTable:
         table.setSelectionBehavior(QAbstractItemView.SelectRows)
         table.setColumnCount(2)
         table.setColumnWidth(0, 1)
-        table.horizontalHeader().hide()
-        table.verticalHeader().hide()
+        horizontal_header = table.horizontalHeader()
+        if horizontal_header is not None:
+            horizontal_header.hide()
+            horizontal_header.setStretchLastSection(True)
+        vertical_header = table.verticalHeader()
+        if vertical_header is not None:
+            vertical_header.hide()
         table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        table.horizontalHeader().setStretchLastSection(True)
         table.resizeRowsToContents()
         return table
 
@@ -134,11 +138,13 @@ class MainWindowUI(QMainWindow):
         self.setCentralWidget(wid)
 
     def _setup_menu(self) -> None:
-        menu_bar: QMenuBar = self.menuBar()
+        menu_bar = self.menuBar()
+        if menu_bar is None:
+            raise RuntimeError("Не удалось создать строку меню")
         menu_bar.setStyleSheet(MENU_BAR_STYLE)
 
         # ── Файл ──────────────────────────────────────────────────────────────
-        file_menu: QMenu = menu_bar.addMenu("Файл")
+        file_menu = self._add_menu(menu_bar, "Файл")
 
         self.action_open = QAction("Открыть", self)
         self.action_open.setShortcut("Ctrl+O")
@@ -148,19 +154,19 @@ class MainWindowUI(QMainWindow):
 
         self.action_exit = QAction("Выход", self)
         self.action_exit.setShortcut("Ctrl+Q")
-        self.action_exit.triggered.connect(self.close)
+        self.action_exit.triggered.connect(self._close_window)
         file_menu.addAction(self.action_exit)
 
         # ── Анализ ────────────────────────────────────────────────────────────
-        analysis_menu: QMenu = menu_bar.addMenu("Анализ")
+        analysis_menu = self._add_menu(menu_bar, "Анализ")
 
-        rk_kalina_4: QMenu = analysis_menu.addMenu("РК Калина 4")
+        rk_kalina_4 = self._add_menu(analysis_menu, "РК Калина 4")
 
         self.action_analysis_rk_gsm = QAction("Анализ регулятора ГСМ", self)
         rk_kalina_4.addAction(self.action_analysis_rk_gsm)
 
         ##── Подменю САРЗ Курская ─────────────────────────────────────────────
-        sarz_kuaes_menu: QMenu = analysis_menu.addMenu("САРЗ Курская")
+        sarz_kuaes_menu = self._add_menu(analysis_menu, "САРЗ Курская")
 
         self.action_analysis_sarz_gsm = QAction("Анализ регулятора ГСМ", self)
         self.action_analysis_sarz_gsm.setCheckable(True)
@@ -179,10 +185,19 @@ class MainWindowUI(QMainWindow):
         sarz_kuaes_menu.addAction(self.action_sarz_kuaes_test)
 
         # ── Быстрое добавление сигналов ────────────────────────────────────────────────────────────
-        quick_add_signals_menu: QMenu = menu_bar.addMenu("Добавление сигналов")
+        quick_add_signals_menu = self._add_menu(menu_bar, "Добавление сигналов")
+
+        self.action_add_all_signals = QAction("Добавить все сигналы", self)
+        self.action_add_all_signals.setShortcut(cfg.ADD_ALL_SIGNALS_SHORTCUT)
+        self.action_add_all_signals.setShortcutContext(
+            Qt.WidgetShortcut  # type: ignore[attr-defined]
+        )
+        self.action_add_all_signals.setEnabled(False)
+        quick_add_signals_menu.addAction(self.action_add_all_signals)
+        quick_add_signals_menu.addSeparator()
 
         ##── Подменю РК Калина 4 ─────────────────────────────────────────────
-        rk_kalina4_menu: QMenu = quick_add_signals_menu.addMenu("РК Калина 4")
+        rk_kalina4_menu = self._add_menu(quick_add_signals_menu, "РК Калина 4")
 
         self.nd = QAction("ND", self)
         rk_kalina4_menu.addAction(self.nd)
@@ -190,36 +205,51 @@ class MainWindowUI(QMainWindow):
         self.vd = QAction("VD", self)
         rk_kalina4_menu.addAction(self.vd)
 
-        veik_menu: QMenu = quick_add_signals_menu.addMenu("ВЭИК")
+        veik_menu = self._add_menu(quick_add_signals_menu, "ВЭИК")
         self.action_add_all_veik_signals = QAction("Все сигналы", self)
         self.action_add_all_veik_signals.setEnabled(False)
         veik_menu.addAction(self.action_add_all_veik_signals)
 
         # ── Настройки ────────────────────────────────────────────────────────
-        settings_menu: QMenu = menu_bar.addMenu("Настройки")
+        settings_menu = self._add_menu(menu_bar, "Настройки")
 
         self.action_shortcut_settings = QAction("Горячие клавиши…", self)
         self.action_shortcut_settings.triggered.connect(self._show_shortcut_settings)
         settings_menu.addAction(self.action_shortcut_settings)
 
         # ── О программе ───────────────────────────────────────────────────────
-        about_menu: QMenu = menu_bar.addMenu("О программе")
+        about_menu = self._add_menu(menu_bar, "О программе")
 
         self.action_about = QAction("О программе", self)
         self.action_about.triggered.connect(self._show_about)
         about_menu.addAction(self.action_about)
 
+    @staticmethod
+    def _add_menu(parent: Union[QMenuBar, QMenu], title: str) -> QMenu:
+        """Создаёт подменю и сужает Optional из PyQt-заглушек типов."""
+        menu = parent.addMenu(title)
+        if menu is None:
+            raise RuntimeError(f"Не удалось создать меню: {title}")
+        return menu
+
+    def _close_window(self) -> None:
+        """Закрывает главное окно без возврата bool в Qt-сигнал."""
+        self.close()
+
     def _show_shortcut_settings(self) -> None:
         """Открывает окно переназначения горячих клавиш."""
         dialog = ShortcutSettingsDialog(
-            self.action_analysis_plk_archives.shortcut().toString(), self
+            self.action_analysis_plk_archives.shortcut().toString(),
+            self.action_add_all_signals.shortcut().toString(),
+            self,
         )
         if dialog.exec_() != QDialog.Accepted:
             return
 
-        shortcut = dialog.shortcut()
+        plc_shortcut = dialog.plc_shortcut()
+        add_all_shortcut = dialog.add_all_shortcut()
         try:
-            cfg.save_plc_archive_shortcut(shortcut)
+            cfg.save_shortcuts(plc_shortcut, add_all_shortcut)
         except (OSError, ValueError) as error:
             QMessageBox.critical(
                 self,
@@ -227,7 +257,8 @@ class MainWindowUI(QMainWindow):
                 f"Не удалось сохранить горячую клавишу:\n{error}",
             )
             return
-        self.action_analysis_plk_archives.setShortcut(shortcut)
+        self.action_analysis_plk_archives.setShortcut(plc_shortcut)
+        self.action_add_all_signals.setShortcut(add_all_shortcut)
 
     def _show_about(self) -> None:
         """Показывает диалог с информацией о программе."""
@@ -238,10 +269,13 @@ class MainWindowUI(QMainWindow):
             "Программа для анализа и визуализации сигналов.",
         )
 
-    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802
+    def eventFilter(  # noqa: N802
+        self, watched: Optional[QObject], event: Optional[QEvent]
+    ) -> bool:
         """Перехватывает глобальный хоткей PLC до активного поля ввода."""
         if (
-            event.type() == QEvent.KeyPress
+            event is not None
+            and event.type() == QEvent.KeyPress  # type: ignore[attr-defined]
             and isinstance(event, QKeyEvent)
             and not event.isAutoRepeat()
             and QApplication.activeModalWidget() is None
@@ -251,6 +285,14 @@ class MainWindowUI(QMainWindow):
             if shortcut.count() == 1 and shortcut[0] == pressed_key:
                 self.action_analysis_plk_archives.trigger()
                 return True
+            add_all_shortcut = self.action_add_all_signals.shortcut()
+            if (
+                not isinstance(watched, QLineEdit)
+                and add_all_shortcut.count() == 1
+                and add_all_shortcut[0] == pressed_key
+            ):
+                self.action_add_all_signals.trigger()
+                return True
         return super().eventFilter(watched, event)
 
     # ================= Модальный прогресс ===================
@@ -259,7 +301,9 @@ class MainWindowUI(QMainWindow):
     ) -> None:
         self.progress_dialog = QProgressDialog(title, None, 0, maximum, self)
         self.progress_dialog.setWindowTitle("Пожалуйста, подождите")
-        self.progress_dialog.setWindowModality(Qt.ApplicationModal)
+        self.progress_dialog.setWindowModality(
+            Qt.ApplicationModal  # type: ignore[attr-defined]
+        )
         self.progress_dialog.setCancelButton(None)
         self.progress_dialog.setMinimumWidth(500)
         self.progress_dialog.show()

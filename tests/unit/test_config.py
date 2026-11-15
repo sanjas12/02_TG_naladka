@@ -21,6 +21,7 @@ DEFAULTS = {
     "GSM_A_CUR": "ГСМ-А.Текущее положение",
     "GSM_B_CUR": "ГСМ-Б.Текущее положение",
     "PLC_ARCHIVE_SHORTCUT": "D",
+    "ADD_ALL_SIGNALS_SHORTCUT": "A",
     "PLC_ARCHIVE_EVENT_WINDOW_SECONDS": 1.0,
     "PLC_ARCHIVE_MIN_TIME_WINDOW_SECONDS": 0.2,
 }
@@ -429,6 +430,29 @@ class TestPublicConstants:
 
         with pytest.raises(ValueError, match="не может быть пустой"):
             cfg.save_plc_archive_shortcut("   ")
+
+    def test_save_shortcuts_persists_both_assignments(self, tmp_path, monkeypatch):
+        import config.config as cfg
+
+        settings_file = tmp_path / "settings.json"
+        monkeypatch.setattr(cfg, "_SETTINGS_FILE", settings_file)
+        monkeypatch.setattr(cfg, "_SETTINGS", {})
+        monkeypatch.setattr(cfg, "PLC_ARCHIVE_SHORTCUT", "D")
+        monkeypatch.setattr(cfg, "ADD_ALL_SIGNALS_SHORTCUT", "A")
+
+        cfg.save_shortcuts("Ctrl+D", "Ctrl+A")
+
+        saved = json.loads(settings_file.read_text(encoding="utf-8"))
+        assert saved["PLC_ARCHIVE_SHORTCUT"] == "Ctrl+D"
+        assert saved["ADD_ALL_SIGNALS_SHORTCUT"] == "Ctrl+A"
+        assert cfg.PLC_ARCHIVE_SHORTCUT == "Ctrl+D"
+        assert cfg.ADD_ALL_SIGNALS_SHORTCUT == "Ctrl+A"
+
+    def test_save_shortcuts_rejects_conflicts(self):
+        import config.config as cfg
+
+        with pytest.raises(ValueError, match="не должны совпадать"):
+            cfg.save_shortcuts("A", "a")
 
     def test_save_plc_archive_event_window_persists_setting(
         self, tmp_path, monkeypatch
